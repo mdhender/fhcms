@@ -125,7 +125,7 @@ var (
 		90, 999, 999, 999, 999, 999,
 	}
 	just_opened_file     int
-	last_random          int
+	last_random          uint32 = 1924085713;        /* Random seed. */
 	loc                  [MAX_LOCATIONS]sp_loc_data
 	log_file             io.Writer
 	log_indentation      int
@@ -317,6 +317,437 @@ extern FILE *log_file;
 extern struct species_data *species;
 extern struct nampla_data * nampla_base;
 extern struct ship_data *   ship_base;
+
+extern int   num_transactions;
+extern char  field_distorted[MAX_SPECIES];
+extern short germ_bombs_used[MAX_SPECIES][MAX_SPECIES];
+extern struct planet_data * planet_base;
+extern struct species_data *c_species[MAX_SPECIES];
+extern struct nampla_data * c_nampla[MAX_SPECIES];
+extern struct ship_data *   c_ship[MAX_SPECIES];
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+extern int   doing_production, first_pass, abbr_index;
+extern long  value, balance;
+extern char  input_line[256];
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct nampla_data * nampla;
+
+extern int   abbr_index, species_number;
+extern char  input_line[256];
+extern long  value;
+extern FILE *log_file;
+extern struct galaxy_data   galaxy;
+extern struct species_data *species;
+extern struct nampla_data * nampla;
+
+
+int num_intercepts;
+
+struct {
+    char x, y, z;
+    long amount_spent;
+} intercept[MAX_INTERCEPTS];
+
+extern int doing_production, first_pass, abbr_index,
+           species_number, num_transactions;
+extern long  value, balance;
+extern char  input_line[256], *ship_name();
+extern FILE *log_file;
+extern struct galaxy_data   galaxy;
+extern struct species_data *species;
+extern struct nampla_data * nampla;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+
+extern int  first_pass, num_transactions, species_number;
+extern long value;
+extern char input_line[256], original_line[256],
+            *input_line_pointer, *ship_name();
+extern FILE *log_file;
+extern struct galaxy_data   galaxy;
+extern struct species_data *species;
+extern struct nampla_data * nampla;
+extern struct ship_data *   ship;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+
+extern int species_number, species_index, num_locs;
+
+extern struct galaxy_data   galaxy;
+extern struct species_data *species;
+extern struct nampla_data * nampla_base, *nampla;
+extern struct ship_data *   ship_base, *ship;
+extern struct sp_loc_data   loc[MAX_LOCATIONS];
+
+
+extern int abbr_type, first_pass, species_number,
+           g_spec_number, num_transactions, end_of_file;
+extern char input_line[256], g_spec_name[32],
+            *input_line_pointer;
+extern FILE *log_file, *input_file;
+extern struct species_data *species;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+
+extern int x, y, z, pn, num_stars, nampla_index,
+           species_index;
+extern char input_line[256], upper_name[32],
+            original_name[32], *input_line_pointer;
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct star_data *   star;
+extern struct planet_data * planet_base;
+extern struct nampla_data * nampla_base, *nampla;
+
+extern int   abbr_type, g_spec_number;
+extern char  input_line[256], g_spec_name[32];
+extern FILE *log_file;
+extern struct species_data *species;
+
+
+extern int  first_pass, num_stars;
+extern long value;
+extern char input_line[256], original_line[256],
+            *input_line_pointer;
+extern FILE *log_file;
+extern struct galaxy_data   galaxy;
+extern struct star_data *   star_base, *star;
+extern struct species_data *species;
+extern struct nampla_data * nampla, *nampla_base;
+extern struct ship_data *   ship;
+
+int last_planet_produced = false;
+
+int shipyard_built, shipyard_capacity;
+
+extern int nampla_index, doing_production, first_pass, next_nampla_index,
+           planet_data_modified, species_number, num_transactions;
+extern long balance, raw_material_units, production_capacity,
+            EU_spending_limit;
+extern char  production_done[1000], input_line[256], upper_name[32];
+extern FILE *log_file;
+
+extern struct planet_data * planet_base, *planet, *home_planet;
+extern struct species_data *species;
+extern struct nampla_data * nampla_base, *nampla, *next_nampla;
+extern struct ship_data *   ship_base;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+
+extern int ship_index, doing_production, correct_spelling_required,
+           abbr_index;
+extern long  value, raw_material_units, balance, EU_spending_limit;
+extern char  input_line[256];
+extern FILE *log_file;
+
+extern struct species_data *species;
+extern struct nampla_data * nampla;
+extern struct ship_data *   ship, *ship_base;
+
+extern long  value;
+extern char  input_line[256], original_line[256], *input_line_pointer;
+extern FILE *log_file;
+
+
+extern struct species_data *species;
+extern struct ship_data *   ship_base, *ship;
+
+extern int   doing_production, first_pass, abbr_index;
+extern short sp_tech_level[6];
+extern long  value, balance, EU_spending_limit;
+extern char  input_line[256];
+extern FILE *log_file;
+extern struct species_data *species;
+
+long    power();
+
+char x_attacked_y[MAX_SPECIES][MAX_SPECIES];
+
+short germ_bombs_used[MAX_SPECIES][MAX_SPECIES];
+
+
+extern int log_summary, ignore_field_distorters,
+           log_to_file;
+extern char field_distorted[MAX_SPECIES];
+extern struct species_data *c_species[MAX_SPECIES];
+
+extern int               first_pass, test_mode;
+extern char              input_line[256];
+extern FILE *            log_file;
+extern struct ship_data *ship;
+
+extern int abbr_type, abbr_index, species_number,
+           g_spec_number, first_pass, num_transactions;
+extern long value;
+extern char input_line[256], g_spec_name[32],
+            *input_line_pointer;
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+
+extern int doing_production, first_pass, abbr_index,
+           shipyard_built;
+extern long  value, balance;
+extern char  input_line[256];
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct nampla_data * nampla;
+
+extern int  num_transactions;
+extern char x_attacked_y[MAX_SPECIES][MAX_SPECIES];
+
+extern struct species_data *c_species[MAX_SPECIES];
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+extern int abbr_index, species_number, g_spec_number,
+           first_pass, num_transactions;
+extern char input_line[256], g_spec_name[32],
+            *input_line_pointer;
+extern long  value;
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+extern int abbr_index, first_pass, species_number,
+           g_spec_number, num_transactions;
+extern char  input_line[256], g_spec_name[32];
+extern long  value;
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+extern int first_pass, species_number, truncate_name,
+           num_transactions;
+extern char  input_line[256], *ship_name();
+extern FILE *log_file;
+extern struct galaxy_data   galaxy;
+extern struct species_data *species;
+extern struct ship_data *   ship;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+
+extern int   planet_data_modified, first_pass;
+extern long  value;
+extern char  input_line[256];
+extern FILE *log_file;
+extern struct planet_data * planet_base, *planet;
+extern struct species_data *species;
+extern struct nampla_data * nampla_base, *nampla;
+
+extern int abbr_type, abbr_index, species_number,
+           first_pass, num_transactions,
+           post_arrival_phase;
+extern long value;
+extern char input_line[256], original_line[256],
+            *input_line_pointer;
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct nampla_data * nampla, *nampla_base;
+extern struct ship_data *   ship;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+
+
+extern int   species_number;
+extern char  input_line[256];
+extern FILE *log_file;
+extern struct galaxy_data   galaxy;
+extern struct species_data *species;
+extern struct nampla_data * nampla, *nampla_base;
+extern struct ship_data *   ship;
+
+
+
+extern int   doing_production;
+extern long  value, balance, EU_spending_limit;
+extern char  input_line[256], original_line[256], *input_line_pointer;
+extern FILE *log_file;
+
+extern struct species_data *species;
+extern struct nampla_data * nampla;
+extern struct ship_data *   ship;
+
+extern int deep_space_defense, attacking_ML, defending_ML;
+
+extern struct species_data *c_species[MAX_SPECIES];
+extern struct nampla_data * c_nampla[MAX_SPECIES];
+extern struct ship_data *   c_ship[MAX_SPECIES];
+
+long    power();
+
+
+extern int   log_summary, ignore_field_distorters;
+extern char  field_distorted[MAX_SPECIES];
+extern FILE *log_file;
+extern struct species_data *c_species[MAX_SPECIES];
+extern struct galaxy_data   galaxy;
+
+
+extern struct galaxy_data galaxy;
+
+
+
+
+
+extern int  x, y, z, pn, num_stars, abbr_type;
+extern long value;
+extern char upper_name[32], *input_line_pointer;
+extern struct species_data *species;
+extern struct nampla_data * nampla_base, *nampla;
+extern struct star_data *   star_base, *star;
+
+
+
+
+int num_planets, planet_data_modified;
+
+struct planet_data *planet_base;
+
+
+
+
+int correct_spelling_required = false;
+
+
+extern int  ship_index, abbr_type, abbr_index;
+extern char upper_name[32], *input_line_pointer;
+extern struct species_data *species;
+extern struct ship_data *   ship_base, *ship;
+
+
+
+
+int  g_spec_number;
+char g_spec_name[32];
+
+extern int  abbr_type;
+extern char upper_name[32], *input_line_pointer;
+extern struct galaxy_data galaxy;
+
+
+
+
+
+
+int num_stars, star_data_modified;
+
+struct star_data *star_base;
+
+
+int num_transactions;
+
+struct trans_data transaction[MAX_TRANSACTIONS];
+
+
+extern int   correct_spelling_required;
+extern char *input_line_pointer;
+extern struct nampla_data *nampla;
+
+
+
+long balance, raw_material_units, production_capacity, EU_spending_limit;
+
+
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct nampla_data * nampla;
+
+
+
+int   end_of_file = false;
+int   abbr_type, abbr_index, sub_light, tonnage, just_opened_file;
+char  input_abbr[256], input_line[256], original_line[256], *input_line_pointer;
+char  original_name[32], upper_name[32];
+long  value;
+FILE *input_file;
+
+extern struct species_data *c_species[MAX_SPECIES];
+
+extern int num_planets;
+
+extern struct planet_data *planet_base;
+
+extern int num_stars;
+
+extern struct star_data *star_base;
+
+
+
+
+extern int num_transactions;
+
+extern struct trans_data transaction[MAX_TRANSACTIONS];
+
+
+int print_LSN = true;
+
+extern int                  num_stars;
+extern FILE *               log_file;
+extern struct star_data *   star_base;
+extern struct planet_data * planet_base;
+extern struct species_data *species;
+extern struct nampla_data * nampla_base;
+
+unsigned long last_random = 1924085713L;
+
+long extra_namplas = NUM_EXTRA_NAMPLAS;
+long extra_ships   = NUM_EXTRA_SHIPS;
+
+extern struct galaxy_data galaxy;
+
+
+char result_plus_commas[33];
+
+int truncate_name           = false;
+int ignore_field_distorters = false;
+
+char full_ship_id[64];
+
+FILE *log_file, *summary_file;
+
+int log_start_of_line = true;
+int log_indentation   = 0;
+int log_position      = 0;
+int logging_disabled  = false;
+int log_to_file       = true;
+int log_summary       = false;
+int log_stdout        = true;
+
+char log_line[128];
+
+int num_locs = 0;
+
+struct sp_loc_data loc[MAX_LOCATIONS];
+
+extern int num_stars, species_number, star_data_modified;
+extern struct star_data *star_base;
+
+
+
+extern int   truncate_name, ignore_field_distorters;
+extern char  field_distorted[MAX_SPECIES];
+extern FILE *log_file, *summary_file;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -38,7 +38,6 @@ func power(tonnage int) int {
     return 1149 * (power(t1) + power(t2)) / 1000;
 }
 
-
 func battle_error(species_number int) {
     fprintf(log_file, "!!! Order ignored:\n");
     fprintf(log_file, "!!! %s", input_line);
@@ -233,7 +232,6 @@ func do_AMBUSH_command() {
 
 //*************************************************************************
 // do_base.c
-
 
 func do_BASE_command() {
     int i, n, found, su_count, original_count, item_class, name_length,
@@ -502,7 +500,6 @@ func do_BASE_command() {
 
 //*************************************************************************
 // do_bat.c
-
 
 func do_battle(bat *battle_data) {
     int i, j, k, species_index, species_number, num_sp, save,
@@ -1201,8 +1198,6 @@ do_combat:
     }
 }
 
-
-
 func do_ambush(ambushing_species_index int, bat *battle_dat) {
     int i, j, n, num_sp, ambushed_species_index, num_ships,
         age_increment, species_number, old_truncate_name;
@@ -1371,8 +1366,6 @@ func do_ambush(ambushing_species_index int, bat *battle_dat) {
     }
 }
 
-
-
 /* This routine will find all species that have declared alliance with
  * both a traitor and betrayed species. It will then set a flag to indicate
  * that their allegiance should be changed from ALLY to ENEMY. */
@@ -1416,7 +1409,6 @@ func auto_enemy(traitor_species_number, betrayed_species_number int) {
 
 //*************************************************************************
 // do_bomb.c
-
 
 func do_bombardment(unit_index int, act *action_data) {
     int i, new_mi, new_ma, defending_species;
@@ -3237,7 +3229,6 @@ done:
 //*************************************************************************
 // do_disband.c
 
-
 func do_DISBAND_command() {
     int found;
 
@@ -3286,7 +3277,6 @@ func do_DISBAND_command() {
 //*************************************************************************
 // do_enemy.c
 
-
 func do_ENEMY_command() {
     int i, array_index, bit_number;
 
@@ -3332,7 +3322,6 @@ func do_ENEMY_command() {
 
 //*************************************************************************
 // do_est.c
-
 
 func do_ESTIMATE_command() {
     int i, max_error, estimate[6], contact_word_number,
@@ -3424,24 +3413,7 @@ func do_ESTIMATE_command() {
 //*************************************************************************
 // do_germ.c
 
-
-extern int   num_transactions;
-extern char  field_distorted[MAX_SPECIES];
-extern short germ_bombs_used[MAX_SPECIES][MAX_SPECIES];
-extern struct planet_data * planet_base;
-extern struct species_data *c_species[MAX_SPECIES];
-extern struct nampla_data * c_nampla[MAX_SPECIES];
-extern struct ship_data *   c_ship[MAX_SPECIES];
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_germ_warfare(attacking_species, defending_species, defender_index, bat, act)
-
-int attacking_species, defending_species, defender_index;
-struct battle_data *bat;
-struct action_data *act;
-
-{
+func do_germ_warfare(attacking_species, defending_species, defender_index int, bat *battle_data, act *action_data) {
     int i, attacker_BI, defender_BI, success_chance, num_bombs,
         success;
 
@@ -3581,16 +3553,7 @@ struct action_data *act;
 //*************************************************************************
 // do_hide.c
 
-
-extern int   doing_production, first_pass, abbr_index;
-extern long  value, balance;
-extern char  input_line[256];
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-
-
-do_HIDE_command() {
+func do_HIDE_command() {
     int n, status;
 
     long cost;
@@ -3655,17 +3618,7 @@ do_HIDE_command() {
 //*************************************************************************
 // do_inst.c
 
-
-extern int   abbr_index, species_number;
-extern char  input_line[256];
-extern long  value;
-extern FILE *log_file;
-extern struct galaxy_data   galaxy;
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-
-
-do_INSTALL_command() {
+func do_INSTALL_command() {
     int i, item_class, item_count, num_available, do_all_units,
         recovering_home_planet, alien_index;
 
@@ -3857,26 +3810,7 @@ check_items:
 //*************************************************************************
 // do_int.c
 
-int num_intercepts;
-
-struct {
-    char x, y, z;
-    long amount_spent;
-} intercept[MAX_INTERCEPTS];
-
-extern int doing_production, first_pass, abbr_index,
-           species_number, num_transactions;
-extern long  value, balance;
-extern char  input_line[256], *ship_name();
-extern FILE *log_file;
-extern struct galaxy_data   galaxy;
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-
-do_INTERCEPT_command() {
+func do_INTERCEPT_command() {
     int i, n, status;
 
     long cost;
@@ -3961,14 +3895,7 @@ do_INTERCEPT_command() {
     ++num_intercepts;
 }
 
-
-
-
-handle_intercept(intercept_index)
-
-int intercept_index;
-
-{
+func handle_intercept(intercept_index int) {
     int i, j, n, num_enemy_ships, alien_index, enemy_index, enemy_num,
         num_ships_left, array_index, bit_number, is_an_enemy,
         is_distorted;
@@ -4147,20 +4074,7 @@ int intercept_index;
 //*************************************************************************
 // do_land.c
 
-
-extern int  first_pass, num_transactions, species_number;
-extern long value;
-extern char input_line[256], original_line[256],
-            *input_line_pointer, *ship_name();
-extern FILE *log_file;
-extern struct galaxy_data   galaxy;
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-extern struct ship_data *   ship;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_LAND_command() {
+func do_LAND_command() {
     int i, n, found, siege_effectiveness, landing_detected, landed,
         alien_number, alien_index, alien_pn, array_index, bit_number,
         requested_alien_landing, alien_here, already_logged;
@@ -4512,18 +4426,8 @@ finish_up:
 //*************************************************************************
 // do_locs.c
 
-
-extern int species_number, species_index, num_locs;
-
-extern struct galaxy_data   galaxy;
-extern struct species_data *species;
-extern struct nampla_data * nampla_base, *nampla;
-extern struct ship_data *   ship_base, *ship;
-extern struct sp_loc_data   loc[MAX_LOCATIONS];
-
-
 /* This routine will create the "loc" array based on current species' data. */
-do_locations() {
+func do_locations() {
     int i;
 
 
@@ -4567,13 +4471,7 @@ do_locations() {
     }
 }
 
-
-
-add_location(x, y, z)
-
-char x, y, z;
-
-{
+func add_location(x, y, z int) {
     int i;
 
 
@@ -4612,17 +4510,7 @@ char x, y, z;
 //*************************************************************************
 // do_mes.c
 
-
-extern int abbr_type, first_pass, species_number,
-           g_spec_number, num_transactions, end_of_file;
-extern char input_line[256], g_spec_name[32],
-            *input_line_pointer;
-extern FILE *log_file, *input_file;
-extern struct species_data *species;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_MESSAGE_command() {
+func do_MESSAGE_command() {
     int i, message_number, message_fd, bad_species,
         unterminated_message;
 
@@ -4738,20 +4626,7 @@ do_MESSAGE_command() {
 //*************************************************************************
 // do_name.c
 
-
-
-extern int x, y, z, pn, num_stars, nampla_index,
-           species_index;
-extern char input_line[256], upper_name[32],
-            original_name[32], *input_line_pointer;
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct star_data *   star;
-extern struct planet_data * planet_base;
-extern struct nampla_data * nampla_base, *nampla;
-
-
-do_NAME_command() {
+func do_NAME_command() {
     int i, found, name_length, unused_nampla_available;
 
     char upper_nampla_name[32], *original_line_pointer;
@@ -4874,14 +4749,7 @@ do_NAME_command() {
 //*************************************************************************
 // do_neutral.c
 
-
-extern int   abbr_type, g_spec_number;
-extern char  input_line[256], g_spec_name[32];
-extern FILE *log_file;
-extern struct species_data *species;
-
-
-do_NEUTRAL_command() {
+func do_NEUTRAL_command() {
     int i, array_index, bit_number;
 
     long bit_mask;
@@ -4927,19 +4795,7 @@ do_NEUTRAL_command() {
 //*************************************************************************
 // do_orbit.c
 
-extern int  first_pass, num_stars;
-extern long value;
-extern char input_line[256], original_line[256],
-            *input_line_pointer;
-extern FILE *log_file;
-extern struct galaxy_data   galaxy;
-extern struct star_data *   star_base, *star;
-extern struct species_data *species;
-extern struct nampla_data * nampla, *nampla_base;
-extern struct ship_data *   ship;
-
-
-do_ORBIT_command() {
+func do_ORBIT_command() {
     int i, found, specified_planet_number;
 
     char *original_line_pointer;
@@ -5109,30 +4965,7 @@ finish_up:
 //*************************************************************************
 // do_prod.c
 
-
-int last_planet_produced = false;
-
-int shipyard_built, shipyard_capacity;
-
-extern int nampla_index, doing_production, first_pass, next_nampla_index,
-           planet_data_modified, species_number, num_transactions;
-extern long balance, raw_material_units, production_capacity,
-            EU_spending_limit;
-extern char  production_done[1000], input_line[256], upper_name[32];
-extern FILE *log_file;
-
-extern struct planet_data * planet_base, *planet, *home_planet;
-extern struct species_data *species;
-extern struct nampla_data * nampla_base, *nampla, *next_nampla;
-extern struct ship_data *   ship_base;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_PRODUCTION_command(missing_production_order)
-
-int missing_production_order;
-
-{
+func do_PRODUCTION_command(missing_production_order bool) {
     int i, j, abbr_type, name_length, found, alien_number, under_siege,
         siege_percent_effectiveness, new_alien, num_siege_ships,
         mining_colony, resort_colony, special_colony, ship_index,
@@ -5808,19 +5641,7 @@ got_nampla:
 //*************************************************************************
 // do_recy.c
 
-
-extern int ship_index, doing_production, correct_spelling_required,
-           abbr_index;
-extern long  value, raw_material_units, balance, EU_spending_limit;
-extern char  input_line[256];
-extern FILE *log_file;
-
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-extern struct ship_data *   ship, *ship_base;
-
-
-do_RECYCLE_command() {
+func do_RECYCLE_command() {
     int i, class, cargo;
 
     long recycle_value, original_cost, units_available;
@@ -5989,17 +5810,7 @@ recycle_ship:
 //*************************************************************************
 // do_rep.c
 
-
-extern long  value;
-extern char  input_line[256], original_line[256], *input_line_pointer;
-extern FILE *log_file;
-
-
-extern struct species_data *species;
-extern struct ship_data *   ship_base, *ship;
-
-
-do_REPAIR_command() {
+func do_REPAIR_command() {
     int i, j, n, x, y, z, age_reduction, num_dr_units,
         total_dr_units, dr_units_used, max_age, desired_age;
 
@@ -6262,16 +6073,7 @@ pool_repair:
 //*************************************************************************
 // do_res.c
 
-
-extern int   doing_production, first_pass, abbr_index;
-extern short sp_tech_level[6];
-extern long  value, balance, EU_spending_limit;
-extern char  input_line[256];
-extern FILE *log_file;
-extern struct species_data *species;
-
-
-do_RESEARCH_command() {
+func do_RESEARCH_command() {
     int n, status, tech, initial_level, current_level,
         need_amount_to_spend;
 
@@ -6396,31 +6198,10 @@ do_cost:
 //*************************************************************************
 // do_round.c
 
-long    power();
-
-char x_attacked_y[MAX_SPECIES][MAX_SPECIES];
-
-short germ_bombs_used[MAX_SPECIES][MAX_SPECIES];
-
-
-extern int log_summary, ignore_field_distorters,
-           log_to_file;
-extern char field_distorted[MAX_SPECIES];
-extern struct species_data *c_species[MAX_SPECIES];
-
-
 /* The following routine will return true if a round of combat actually
  * occurred. Otherwise, it will return false. */
 
-int do_round(option, round_number, bat, act)
-
-char option;
-
-int round_number;
-struct battle_data *bat;
-struct action_data *act;
-
-{
+func do_round(option int, round_number bool, bat *battle_data, act *action_data) int {
     int i, j, n, unit_index, combat_occurred, total_shots,
         attacker_index, defender_index, found, chance_to_hit,
         attacker_ml, attacker_gv, defender_ml, target_index[MAX_SHIPS],
@@ -7069,14 +6850,7 @@ fire:
 //*************************************************************************
 // do_scan.c
 
-
-extern int               first_pass, test_mode;
-extern char              input_line[256];
-extern FILE *            log_file;
-extern struct ship_data *ship;
-
-
-do_SCAN_command() {
+func do_SCAN_command() {
     int i, found, x, y, z;
 
 
@@ -7128,18 +6902,7 @@ do_SCAN_command() {
 //*************************************************************************
 // do_send.c
 
-
-extern int abbr_type, abbr_index, species_number,
-           g_spec_number, first_pass, num_transactions;
-extern long value;
-extern char input_line[256], g_spec_name[32],
-            *input_line_pointer;
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_SEND_command() {
+func do_SEND_command() {
     int i, n, found, contact_word_number, contact_bit_number;
 
     char *temp_pointer;
@@ -7248,17 +7011,7 @@ do_SEND_command() {
 //*************************************************************************
 // do_shipyard.c
 
-
-extern int doing_production, first_pass, abbr_index,
-           shipyard_built;
-extern long  value, balance;
-extern char  input_line[256];
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-
-
-do_SHIPYARD_command() {
+func do_SHIPYARD_command() {
     long cost;
 
 
@@ -7309,21 +7062,7 @@ do_SHIPYARD_command() {
 //*************************************************************************
 // do_siege.c
 
-
-
-extern int  num_transactions;
-extern char x_attacked_y[MAX_SPECIES][MAX_SPECIES];
-
-extern struct species_data *c_species[MAX_SPECIES];
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_siege(bat, act)
-
-struct battle_data *bat;
-struct action_data *act;
-
-{
+func do_siege(bat *battle_data, act *action_data) {
     int a, d, i, attacker_index, defender_index,
         attacking_species_number, defending_species_number;
 
@@ -7389,18 +7128,7 @@ struct action_data *act;
 //*************************************************************************
 // do_teach.c
 
-
-extern int abbr_index, species_number, g_spec_number,
-           first_pass, num_transactions;
-extern char input_line[256], g_spec_name[32],
-            *input_line_pointer;
-extern long  value;
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_TEACH_command() {
+func do_TEACH_command() {
     int i, tech, contact_word_number, contact_bit_number,
         max_level_specified, need_technology;
 
@@ -7495,17 +7223,7 @@ do_TEACH_command() {
 //*************************************************************************
 // do_tech.c
 
-
-extern int abbr_index, first_pass, species_number,
-           g_spec_number, num_transactions;
-extern char  input_line[256], g_spec_name[32];
-extern long  value;
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_TECH_command() {
+func do_TECH_command() {
     int i, tech, contact_word_number, contact_bit_number,
         max_level_specified, max_tech_level, max_cost_specified,
         need_technology;
@@ -7630,21 +7348,7 @@ do_TECH_command() {
 //*************************************************************************
 // do_tel.c
 
-
-
-
-
-extern int first_pass, species_number, truncate_name,
-           num_transactions;
-extern char  input_line[256], *ship_name();
-extern FILE *log_file;
-extern struct galaxy_data   galaxy;
-extern struct species_data *species;
-extern struct ship_data *   ship;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_TELESCOPE_command() {
+func do_TELESCOPE_command() {
     int i, n, found, range_in_parsecs, max_range, alien_index,
         alien_number, alien_nampla_index, alien_ship_index,
         location_printed, industry, detection_chance, num_obs_locs,
@@ -8029,17 +7733,7 @@ do_TELESCOPE_command() {
 //*************************************************************************
 // do_terr.c
 
-
-extern int   planet_data_modified, first_pass;
-extern long  value;
-extern char  input_line[256];
-extern FILE *log_file;
-extern struct planet_data * planet_base, *planet;
-extern struct species_data *species;
-extern struct nampla_data * nampla_base, *nampla;
-
-
-do_TERRAFORM_command() {
+func do_TERRAFORM_command() {
     int i, j, ls_needed, num_plants, got_required_gas,
         correct_percentage;
 
@@ -8197,12 +7891,7 @@ next_change:
     }
 }
 
-
-fix_gases(pl)
-
-struct planet_data *pl;
-
-{
+func fix_gases(pl *planet_data) {
     int i, j, total, left, add_neutral;
 
     long n;
@@ -8301,21 +7990,7 @@ add_neutral_gas:
 //*************************************************************************
 // do_tran.c
 
-
-extern int abbr_type, abbr_index, species_number,
-           first_pass, num_transactions,
-           post_arrival_phase;
-extern long value;
-extern char input_line[256], original_line[256],
-            *input_line_pointer;
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct nampla_data * nampla, *nampla_base;
-extern struct ship_data *   ship;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_TRANSFER_command() {
+func do_TRANSFER_command() {
     int i, n, item_class, item_count, capacity, transfer_ttype,
         attempt_during_siege, siege_1_chance, siege_2_chance,
         alien_number, first_try, both_args_present, need_destination;
@@ -8846,17 +8521,7 @@ do_capacity:
 //*************************************************************************
 // do_unl.c
 
-
-extern int   species_number;
-extern char  input_line[256];
-extern FILE *log_file;
-extern struct galaxy_data   galaxy;
-extern struct species_data *species;
-extern struct nampla_data * nampla, *nampla_base;
-extern struct ship_data *   ship;
-
-
-do_UNLOAD_command() {
+func do_UNLOAD_command() {
     int i, found, item_count, recovering_home_planet, alien_index;
 
     long n, reb, current_pop;
@@ -9052,18 +8717,7 @@ do_UNLOAD_command() {
 //*************************************************************************
 // do_upg.c
 
-
-extern int   doing_production;
-extern long  value, balance, EU_spending_limit;
-extern char  input_line[256], original_line[256], *input_line_pointer;
-extern FILE *log_file;
-
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-extern struct ship_data *   ship;
-
-
-do_UPGRADE_command() {
+func do_UPGRADE_command() {
     int age_reduction, value_specified;
 
     char *original_line_pointer;
@@ -9205,16 +8859,6 @@ try_again:
 //*************************************************************************
 // fight_par.c
 
-extern int deep_space_defense, attacking_ML, defending_ML;
-
-extern struct species_data *c_species[MAX_SPECIES];
-extern struct nampla_data * c_nampla[MAX_SPECIES];
-extern struct ship_data *   c_ship[MAX_SPECIES];
-
-long    power();
-
-
-
 /* The following routine will fill "act" with ship and nampla data necessary
  * for an action; i.e., number of shots per round, damage done per shot,
  * total shield power, etc. Note that this routine always restores shields
@@ -9225,14 +8869,7 @@ long    power();
  * false.
  */
 
-int fighting_params(option, location, bat, act)
-
-char option, location;
-
-struct battle_data *bat;
-struct action_data *act;
-
-{
+func fighting_params(option, location int, bat *battle_data, act *action_data) int {
     char x, y, z, pn;
 
     int i, j, found, ttype, num_sp, unit_index, species_index,
@@ -9671,15 +9308,7 @@ next_step:
     return(true);        /* There will be a fight here. */
 }
 
-
-
-int disbanded_ship(species_index, sh)
-
-int species_index;
-
-struct ship_data *sh;
-
-{
+func disbanded_ship(species_index int, sh *ship_data_) {
     int nampla_index;
 
     struct nampla_data *nam;
@@ -9721,26 +9350,11 @@ struct ship_data *sh;
 // for_jum.c
 
 
-extern int   log_summary, ignore_field_distorters;
-extern char  field_distorted[MAX_SPECIES];
-extern FILE *log_file;
-extern struct species_data *c_species[MAX_SPECIES];
-extern struct galaxy_data   galaxy;
-
-
 /* This routine will return true if forced jump or misjump units are used,
  * even if they fail. It will return false if the attacker has none or
  * not enough. */
 
-int forced_jump_units_used(attacker_index, defender_index, total_shots,
-                           bat, act)
-
-int attacker_index, defender_index, *total_shots;
-
-struct battle_data *bat;
-struct action_data *act;
-
-{
+func forced_jump_units_used(attacker_index, defender_index int, total_shots *int, bat *battle_data, act *action_data) {
     int i, att_sp_index, def_sp_index, attacker_gv, defender_gv,
         ttype, fj_num, fm_num, number, success_chance, failure;
 
@@ -9879,8 +9493,7 @@ struct action_data *act;
 //*************************************************************************
 // gam_abo.c
 
-
-gamemaster_abort_option() {
+func gamemaster_abort_option() {
     char answer[16];
 
     /* Give the gamemaster a chance to abort. */
@@ -9892,16 +9505,10 @@ gamemaster_abort_option() {
     }
 }
 
-
-
 //*************************************************************************
 // get_gal.c
 
-
-extern struct galaxy_data galaxy;
-
-
-get_galaxy_data() {
+func get_galaxy_data() {
     int galaxy_fd;
 
     long n, num_bytes, byte_size;
@@ -9929,23 +9536,14 @@ get_galaxy_data() {
 
 //*************************************************************************
 // get_loc.c
+
 /* This routine will assign values to global variables x, y, z, pn, star
  * and nampla. If the location is not a named planet, then nampla will be
  * set to NULL. If planet is not specified, pn will be set to zero. If
  * location is valid, true will be returned, otherwise false will be
  * returned. */
 
-
-
-extern int  x, y, z, pn, num_stars, abbr_type;
-extern long value;
-extern char upper_name[32], *input_line_pointer;
-extern struct species_data *species;
-extern struct nampla_data * nampla_base, *nampla;
-extern struct star_data *   star_base, *star;
-
-
-int get_location() {
+func get_location() int {
     int i, n, found, temp_nampla_index, first_try, name_length,
         best_score, next_best_score, best_nampla_index,
         minimum_score;
@@ -10135,15 +9733,7 @@ done:
 //*************************************************************************
 // get_plan.c
 
-
-
-
-int num_planets, planet_data_modified;
-
-struct planet_data *planet_base;
-
-
-get_planet_data() {
+func get_planet_data() {
     int planet_fd;
 
     long n, data_size, mem_size;
@@ -10195,18 +9785,7 @@ get_planet_data() {
  * false. The algorithm employed allows minor spelling errors, as well as
  * accidental deletion of a ship abbreviation. */
 
-
-
-int correct_spelling_required = false;
-
-
-extern int  ship_index, abbr_type, abbr_index;
-extern char upper_name[32], *input_line_pointer;
-extern struct species_data *species;
-extern struct ship_data *   ship_base, *ship;
-
-
-int get_ship() {
+func get_ship() bool {
     int i, n, name_length, best_score, next_best_score, best_ship_index,
         first_try, minimum_score;
 
@@ -10353,17 +9932,7 @@ yet_again:
  * "g_species_name". The algorithm employed allows minor spelling errors,
  * as well as accidental deletion of the SP abbreviation. */
 
-
-
-int  g_spec_number;
-char g_spec_name[32];
-
-extern int  abbr_type;
-extern char upper_name[32], *input_line_pointer;
-extern struct galaxy_data galaxy;
-
-
-int get_species_name() {
+func get_species_name() bool {
     int i, n, species_index, best_score, best_species_index,
         next_best_score, first_try, minimum_score, name_length;
 
@@ -10492,16 +10061,7 @@ yet_again:
 //*************************************************************************
 // get_star.c
 
-
-
-
-
-int num_stars, star_data_modified;
-
-struct star_data *star_base;
-
-
-get_star_data() {
+func get_star_data() {
     int star_fd;
 
     long byte_size, star_data_size, mem_size;
@@ -10547,13 +10107,7 @@ get_star_data() {
 //*************************************************************************
 // get_transact.c
 
-
-int num_transactions;
-
-struct trans_data transaction[MAX_TRANSACTIONS];
-
-
-get_transaction_data() {
+func get_transaction_data() {
     int  i, trans_fd;
     long num_bytes;
 
@@ -10591,13 +10145,7 @@ get_transaction_data() {
 //*************************************************************************
 // get_transfer.c
 
-
-extern int   correct_spelling_required;
-extern char *input_line_pointer;
-extern struct nampla_data *nampla;
-
-
-int get_transfer_point() {
+func get_transfer_point() bool {
     char *temp_ptr;
 
 
@@ -10630,20 +10178,7 @@ int get_transfer_point() {
 //*************************************************************************
 // money.c
 
-
-long balance, raw_material_units, production_capacity, EU_spending_limit;
-
-
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-
-
-int check_bounced(amount_needed)
-
-long amount_needed;
-
-{
+func check_bounced(amount_needed int) int {
     long take_from_EUs, limiting_balance;
 
 
@@ -10691,9 +10226,7 @@ long amount_needed;
     return(false);
 }
 
-
-
-transfer_balance() {
+func transfer_balance() {
     long limiting_amount;
 
 
@@ -10724,17 +10257,8 @@ transfer_balance() {
 //*************************************************************************
 // parse.c
 
-
-int   end_of_file = false;
-int   abbr_type, abbr_index, sub_light, tonnage, just_opened_file;
-char  input_abbr[256], input_line[256], original_line[256], *input_line_pointer;
-char  original_name[32], upper_name[32];
-long  value;
-FILE *input_file;
-
-
 /* Skip white space and comments. */
-skip_junk() {
+func skip_junk() {
 again:
 
     /* Read next line. */
@@ -10788,8 +10312,7 @@ again:
     }
 }
 
-
-skip_whitespace() {
+func skip_whitespace() {
     for {
         switch (*input_line_pointer) {
         case '\t':                      /* Tab. */
@@ -10804,12 +10327,9 @@ skip_whitespace() {
     }
 }
 
-
-
 /* The following "get" routines will return 0 if the item found was not
  * of the appropriate ttype, and 1 or greater if an item of the correct
  * ttype was found. */
-
 
 /* Get a command and return its index. */
 int get_command() {
@@ -10872,7 +10392,7 @@ find_cmd:
  * and "sub_light" will be true or false. (Tonnage value returned is based
  * ONLY on abbreviation.) */
 
-int get_class_abbr() {
+func get_class_abbr() int {
     int i;
 
     char *digit_start;
@@ -10969,7 +10489,7 @@ int get_class_abbr() {
 
 /* Get a name and copy original version to "original_name" and upper
  * case version to "upper_name". Return length of name. */
-int get_name() {
+func get_name() int {
     int name_length;
 
     char c;
@@ -11011,7 +10531,7 @@ int get_name() {
 }
 
 /* Read a long decimal and place its value in 'value'. */
-int get_value() {
+func get_value() bool {
     int n;
 
 
@@ -11035,7 +10555,7 @@ int get_value() {
  * try to insert a comma in the proper position.  This routine should
  * be called only AFTER an error has been detected. */
 
-fix_separator() {
+func fix_separator() {
     int n, first_class, fix_made, num_commas;
 
     char c, *temp_ptr, *temp2_ptr, *first_comma;
@@ -11149,15 +10669,7 @@ fix_separator() {
 //*************************************************************************
 // regen_sh.c
 
-
-extern struct species_data *c_species[MAX_SPECIES];
-
-
-regenerate_shields(act)
-
-struct action_data *act;
-
-{
+func regenerate_shields(act *action_data) {
     int i, species_index, unit_index;
 
     long ls, max_shield_strength, percent;
@@ -11180,19 +10692,10 @@ struct action_data *act;
     }
 }
 
-
-
-
 //*************************************************************************
 // sav_plan.c
 
-
-extern int num_planets;
-
-extern struct planet_data *planet_base;
-
-
-save_planet_data() {
+func save_planet_data() {
     int planet_fd;
 
     long n, byte_size;
@@ -11223,19 +10726,10 @@ save_planet_data() {
     close(planet_fd);
 }
 
-
-
-
 //*************************************************************************
 // sav_star.c
 
-
-extern int num_stars;
-
-extern struct star_data *star_base;
-
-
-save_star_data() {
+func save_star_data() {
     int star_fd;
 
     long n, byte_size;
@@ -11266,19 +10760,10 @@ save_star_data() {
     close(star_fd);
 }
 
-
-
-
 //*************************************************************************
 // sav_transact.c
 
-
-extern int num_transactions;
-
-extern struct trans_data transaction[MAX_TRANSACTIONS];
-
-
-save_transaction_data() {
+func save_transaction_data() {
     int  i, trans_fd;
     long num_bytes;
 
@@ -11304,28 +10789,10 @@ save_transaction_data() {
     close(trans_fd);
 }
 
-
-
-
 //*************************************************************************
 // scan.c
 
-
-int print_LSN = true;
-
-extern int                  num_stars;
-extern FILE *               log_file;
-extern struct star_data *   star_base;
-extern struct planet_data * planet_base;
-extern struct species_data *species;
-extern struct nampla_data * nampla_base;
-
-
-scan(x, y, z)
-
-char x, y, z;
-
-{
+func scan(x, y, z int) {
     int i, j, k, n, found, num_gases, ls_needed;
 
     char filename[32];
@@ -11433,9 +10900,6 @@ char x, y, z;
     return;
 }
 
-
-
-
 //*************************************************************************
 // utils.c
 
@@ -11443,13 +10907,7 @@ char x, y, z;
  * It uses the so-called "Algorithm M" method, which is a combination
  * of the congruential and shift-register methods. */
 
-unsigned long last_random = 1924085713L;        /* Random seed. */
-
-int rnd(max)
-
-unsigned int max;
-
-{
+func rnd(max uint32) int {
     unsigned long a, b, c, cong_result, shift_result;
 
     /* For congruential method, multiply previous value by the
@@ -11473,8 +10931,6 @@ unsigned int max;
     return((int)((a * (long)max) >> 16) + 1L);
 }
 
-
-
 /* Routine "get_species_data" will read in data files for all species,
  *      "save_species_data" will write all data that has been modified, and
  *      "free_species_data" will free memory used for all species data. */
@@ -11483,13 +10939,7 @@ unsigned int max;
  * name planets. Here are the default 'extras', which may be changed, if
  * necessary, by the main program. */
 
-long extra_namplas = NUM_EXTRA_NAMPLAS;
-long extra_ships   = NUM_EXTRA_SHIPS;
-
-extern struct galaxy_data galaxy;
-
-
-get_species_data() {
+func get_species_data() {
     int species_fd, species_index;
 
     long n, num_bytes;
@@ -11563,9 +11013,7 @@ get_species_data() {
     }
 }
 
-
-
-save_species_data() {
+func save_species_data() {
     int species_fd, species_index;
 
     long n, num_bytes;
@@ -11623,11 +11071,8 @@ save_species_data() {
     }
 }
 
-
-
-free_species_data() {
+func free_species_data() {
     int species_index;
-
 
     for (species_index = 0; species_index < galaxy.num_species; species_index++) {
         if (data_in_memory[species_index]) {
@@ -11643,15 +11088,9 @@ free_species_data() {
     }
 }
 
-
-
 /* The following two routines will delete a ship or nampla record. */
 
-delete_ship(ship)
-
-struct ship_data *ship;
-
-{
+func delete_ship(ship *ship_data_) {
     int i;
 
     char *cp;
@@ -11667,12 +11106,7 @@ struct ship_data *ship;
     strcpy(ship.name, "Unused");
 }
 
-
-delete_nampla(nampla)
-
-struct nampla_data *nampla;
-
-{
+func delete_nampla(nampla *nampla_data) {
     int i;
 
     char *cp;
@@ -11688,18 +11122,10 @@ struct nampla_data *nampla;
     strcpy(nampla.name, "Unused");
 }
 
-
-
 /* This routine is intended to take a long argument and return a pointer
  * to a string that has embedded commas to make the string more readable. */
 
-char result_plus_commas[33];
-
-char *commas(value)
-
-long value;
-
-{
+func commas(value int) string {
     int i, j, n, length, negative;
 
     char *ptr, temp[32];
@@ -11741,23 +11167,12 @@ long value;
     return(&result_plus_commas[j]);
 }
 
-
-
 /* This routine will return a pointer to a string containing a complete
  * ship name, including its orbital/landed status and age. If global
  * variable "truncate_name" is true, then orbital/landed status and age
  * will not be included. */
 
-int truncate_name           = false;
-int ignore_field_distorters = false;
-
-char full_ship_id[64];
-
-char *ship_name(ship)
-
-struct ship_data *ship;
-
-{
+func ship_name(ship *ship_data_) string {
     int effective_age, status, ship_is_distorted;
 
     char temp[16];
@@ -11857,171 +11272,7 @@ struct ship_data *ship;
     return(&full_ship_id[0]);
 }
 
-
-
-/* The following routines will post an item to standard output and to
- * an externally defined log file and summary file. */
-
-FILE *log_file, *summary_file;
-
-int log_start_of_line = true;
-int log_indentation   = 0;
-int log_position      = 0;
-int logging_disabled  = false;
-int log_to_file       = true;
-int log_summary       = false;
-int log_stdout        = true;
-
-char log_line[128];
-
-
-log_char(c)
-
-char c;
-
-{
-    int i, temp_position;
-
-    char temp_char;
-
-
-    if (logging_disabled) {
-        return;
-    }
-
-    /* Check if current line is getting too long. */
-    if ((c == ' ' || c == '\n') && log_position > 77) {
-        /* Find closest preceeding space. */
-        temp_position = log_position - 1;
-        for (;log_line[temp_position] != ' ';) {
-            --temp_position;
-        }
-
-        /* Write front of line to files. */
-        temp_char = log_line[temp_position + 1];
-        log_line[temp_position]     = '\n';
-        log_line[temp_position + 1] = '\0';
-        if (log_to_file) {
-            fputs(log_line, log_file);
-        }
-        if (log_stdout) {
-            fputs(log_line, stdout);
-        }
-        if (log_summary) {
-            fputs(log_line, summary_file);
-        }
-        log_line[temp_position + 1] = temp_char;
-
-        /* Copy overflow word to beginning of next line. */
-        log_line[log_position] = '\0';
-        log_position           = log_indentation + 2;
-        for (i = 0; i < log_position; i++) {
-            log_line[i] = ' ';
-        }
-        strcpy(&log_line[log_position], &log_line[temp_position + 1]);
-
-        log_position = strlen(log_line);
-
-        if (c == ' ') {
-            log_line[log_position++] = ' ';
-            return;
-        }
-    }
-
-    /* Check if line is being manually terminated. */
-    if (c == '\n') {
-        /* Write current line to output. */
-        log_line[log_position]     = '\n';
-        log_line[log_position + 1] = '\0';
-        if (log_to_file) {
-            fputs(log_line, log_file);
-        }
-        if (log_stdout) {
-            fputs(log_line, stdout);
-        }
-        if (log_summary) {
-            fputs(log_line, summary_file);
-        }
-
-        /* Set up for next line. */
-        log_position      = 0;
-        log_indentation   = 0;
-        log_start_of_line = true;
-
-        return;
-    }
-
-    /* Save this character. */
-    log_line[log_position] = c;
-    ++log_position;
-
-    if (log_start_of_line && c == ' ') {  /* Determine number of indenting */
-        ++log_indentation;                /*  spaces for current line. */
-    }else {
-        log_start_of_line = false;
-    }
-}
-
-
-log_string(string)
-
-char string[];
-
-{
-    int i, length;
-
-
-    if (logging_disabled) {
-        return;
-    }
-
-    length = strlen(string);
-    for (i = 0; i < length; i++) {
-        log_char(string[i]);
-    }
-}
-
-
-log_int(value)
-
-int value;
-
-{
-    char string[16];
-
-
-    if (logging_disabled) {
-        return;
-    }
-
-    sprintf(string, "%d\0", value);
-    log_string(string);
-}
-
-
-log_long(value)
-
-long value;
-
-{
-    char string[16];
-
-
-    if (logging_disabled) {
-        return;
-    }
-
-    sprintf(string, "%ld\0", value);
-    log_string(string);
-}
-
-
-
-int num_locs = 0;
-
-struct sp_loc_data loc[MAX_LOCATIONS];
-
-get_location_data() {
+func get_location_data() {
     int locations_fd;
 
     long n, file_size;
@@ -12049,9 +11300,7 @@ get_location_data() {
     close(locations_fd);
 }
 
-
-
-save_location_data() {
+func save_location_data() {
     int locations_fd;
 
     long n, num_bytes;
@@ -12081,18 +11330,12 @@ save_location_data() {
     close(locations_fd);
 }
 
-
-
 /* The following routine provides the 'distorted' species number used to
  *      identify a species that uses field distortion units. The input
  *      variable 'species_number' is the same number used in filename
  *      creation for the species. */
 
-int distorted(species_number)
-
-int species_number;
-
-{
+func distorted(species_number int) int {
     int i, j, n, ls;
 
 
@@ -12110,11 +11353,7 @@ int species_number;
     return(n);
 }
 
-int undistorted(distorted_species_number)
-
-int distorted_species_number;
-
-{
+func undistorted(distorted_species_number int) int {
     int i, species_number;
 
 
@@ -12129,44 +11368,11 @@ int distorted_species_number;
     return(0);   /* Not a legitimate species. */
 }
 
-
-
-log_message(message_filename)
-
-char *message_filename;
-
-{
-    char message_line[256];
-
-    FILE *message_file;
-
-
-    /* Open message file. */
-    message_file = fopen(message_filename, "r");
-    if (message_file == NULL) {
-        fprintf(stderr, "\n\tWARNING! utils.c: cannot open message file '%s'!\n\n", message_filename);
-        return;
-    }
-
-    /* Copy message to log file. */
-    for (;fgets(message_line, 256, message_file) != NULL;) {
-        fputs(message_line, log_file);
-    }
-
-    fclose(message_file);
-}
-
-
-
 /* This routine will set or clear the POPULATED bit for a nampla.  It will
  * return true if the nampla is populated or false if not. It will also
  * check if a message associated with this planet should be logged. */
 
-int check_population(nampla)
-
-struct nampla_data *nampla;
-
-{
+func check_population(nampla *nampla_data) int {
     int is_now_populated, was_already_populated;
 
     long total_pop;
@@ -12211,12 +11417,7 @@ struct nampla_data *nampla;
 
 /* Get life support tech level needed. */
 
-int life_support_needed(species, home, colony)
-
-struct species_data *species;
-struct planet_data * home, *colony;
-
-{
+func life_support_needed(species *species, home *planet_data, colony *planet_data) int {
     int i, j, k, ls_needed;
 
 
@@ -12254,13 +11455,7 @@ struct planet_data * home, *colony;
     return(ls_needed);
 }
 
-
-
-check_high_tech_items(tech, old_tech_level, new_tech_level)
-
-int tech, old_tech_level, new_tech_level;
-
-{
+func check_high_tech_items(tech, old_tech_level, new_tech_level int) {
     int i;
 
 
@@ -12287,8 +11482,6 @@ int tech, old_tech_level, new_tech_level;
     }
 }
 
-
-
 /* The following routine will return a score indicating how closely two
  * strings match.  If the score is exactly 10000, then the strings are
  * identical.  Otherwise, the value returned is the number of character
@@ -12302,11 +11495,7 @@ int tech, old_tech_level, new_tech_level;
  * best match is less than the highest score.  A non-10000 score will never
  * be higher than the length of the correct string. */
 
-int agrep_score(correct_string, unknown_string)
-
-char *correct_string, *unknown_string;
-
-{
+func agrep_score(correct_string, unknown_string string) int {
     int score;
 
     char c1, c2, *p1, *p2;
@@ -12354,21 +11543,12 @@ char *correct_string, *unknown_string;
     return(score);
 }
 
-
-extern int num_stars, species_number, star_data_modified;
-extern struct star_data *star_base;
-
-
 /* The following routine will check if coordinates x-y-z contain a star and,
  * if so, will set the appropriate bit in the "visited_by" variable for the
  * star. If the star exists, true will be returned; otherwise, false will
  * be returned. */
 
-int star_visited(x, y, z)
-
-int x, y, z;
-
-{
+func star_visited(x, y, z int) bool {
     int i, found, species_array_index, species_bit_number;
 
     long species_bit_mask;
@@ -12412,23 +11592,10 @@ int x, y, z;
     return(found);
 }
 
-
-
 //*************************************************************************
 // with_check.c
 
-
-extern int   truncate_name, ignore_field_distorters;
-extern char  field_distorted[MAX_SPECIES];
-extern FILE *log_file, *summary_file;
-
-
-withdrawal_check(bat, act)
-
-struct battle_data *bat;
-struct action_data *act;
-
-{
+func withdrawal_check(bat *battle_data, act *action_data) {
     /* This routine will check all fighting ships and see if any wish to
      *  withdraw. If so, it will set the ship's status to JUMPED_IN_COMBAT.
      *  The actual jump will be handled by the Jump program. */
