@@ -38,48 +38,7 @@ package main
  *      throughout the combat routines.
  */
 
-
-#define THIS_IS_MAIN
-
-#include "fh.h"
-#include "combat.h"
-
-
-int strike_phase = false;
-int ship_index, test_mode, verbose_mode;
-
-struct galaxy_data   galaxy;
-struct species_data *species, *c_species[MAX_SPECIES];
-struct nampla_data * nampla_base, *c_nampla[MAX_SPECIES];
-struct ship_data *   ship_base, *ship, *c_ship[MAX_SPECIES];
-struct battle_data * battle_base;
-
-
-int prompt_gm;
-
-extern int end_of_file, num_locs, log_stdout,
-           just_opened_file;
-extern char input_line[], upper_name[], *input_line_pointer,
-            append_log[MAX_SPECIES],
-            original_line[256],
-            make_enemy[MAX_SPECIES][MAX_SPECIES];
-extern long  last_random;
-extern long  value;
-extern FILE *input_file, *log_file;
-extern struct sp_loc_data loc[MAX_LOCATIONS];
-
-
-/* Some unused routines in utils.c need the following items. */
-int num_stars, species_number, star_data_modified;
-struct star_data *star_base;
-
-
-CombatMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+CombatMain(argc int, argv []string) {
     int i, j, k, found, command, species_number, sp_index, num_battles,
         location_index, species_fd, num_enemies, battle_index,
         option_index, num_species, sp_num[MAX_SPECIES], arg_index,
@@ -1168,35 +1127,8 @@ done_orders:
  */
 
 
-#define THIS_IS_MAIN
 
-#include "fh.h"
-
-
-int species_number, species_index, header_printed;
-int test_mode, verbose_mode;
-
-struct galaxy_data   galaxy;
-struct planet_data * planet;
-struct species_data *species;
-struct nampla_data * nampla_base, *nampla;
-struct ship_data *   ship_base, *ship;
-
-extern int           log_stdout, num_planets, num_transactions, num_locs;
-extern unsigned long last_random;
-extern FILE *        log_file;
-
-extern struct planet_data *planet_base;
-extern struct trans_data   transaction[MAX_TRANSACTIONS];
-extern struct sp_loc_data  loc[MAX_LOCATIONS];
-
-
-FinishMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func FinishMain(argc int, argv []string) {
     int i, j, n, rec, don, nampla_index, ship_index, ls_needed,
         ls_actual, tech, turn_number, percent_increase, old_tech_level,
         new_tech_level, experience_points, their_level, my_level,
@@ -2484,33 +2416,7 @@ int species_number, alien_number;
  * be run if you run Finish on fewer than all species and decide to keep the
  * resulting planets.dat file. */
 
-
-#define THIS_IS_MAIN
-
-#include "fh.h"
-
-
-int species_number, species_index;
-int test_mode, verbose_mode;
-
-struct galaxy_data   galaxy;
-struct planet_data * planet;
-struct species_data *species;
-struct nampla_data * nampla_base, *nampla;
-struct ship_data *   ship_base, *ship;
-
-extern int num_locs, num_planets;
-
-extern struct sp_loc_data  loc[MAX_LOCATIONS];
-extern struct planet_data *planet_base;
-
-
-LocationsMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func LocationsMain(argc int, argv []string) {
     int i, nampla_index;
 
     long diff, total, *total_econ_base;
@@ -2603,39 +2509,8 @@ char *argv[];
 
 
 // Jump.c
-#define THIS_IS_MAIN
 
-#include "fh.h"
-
-
-int x, y, z, pn, nampla_index, first_pass, ship_index, species_number;
-
-int test_mode, verbose_mode;
-
-extern int star_data_modified, planet_data_modified;
-extern struct star_data *  star_base;
-extern struct planet_data *planet_base;
-
-struct galaxy_data   galaxy;
-struct star_data *   star;
-struct species_data *species;
-struct nampla_data * nampla_base, *nampla;
-struct ship_data *   ship_base, *ship;
-
-
-extern int truncate_name, end_of_file, num_stars, num_planets, log_stdout,
-           ignore_field_distorters, just_opened_file;
-extern long  last_random;
-extern char  input_line[256], *input_line_pointer;
-extern FILE *input_file, *log_file;
-
-
-JumpMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func JumpMain(argc int, argv []string) {
     int i, n, found, num_species, sp_num[MAX_SPECIES], sp_index,
         command, log_file_open, do_all_species;
 
@@ -2996,34 +2871,7 @@ do_jump_orders() {
 /* This program will generate default orders for a species if no explicit
  *      orders have been provided. */
 
-#define THIS_IS_MAIN
-
-#include "fh.h"
-
-
-struct galaxy_data   galaxy;
-struct planet_data * planet, *home_planet;
-struct species_data *species;
-struct nampla_data * nampla_base;
-struct ship_data *   ship_base;
-
-int x, y, z, species_number, species_index;
-
-FILE *orders_file;
-
-extern int                 num_locs, truncate_name, num_stars;
-extern unsigned long       last_random;
-extern struct sp_loc_data  loc[MAX_LOCATIONS];
-extern struct star_data *  star_base;
-extern struct planet_data *planet_base;
-
-
-NoOrdersMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func NoOrdersMain(argc int, argv []string) {
     int i, j, k, ship_index, locations_fd, my_loc_index,
         nampla_index, its_loc_index, tonnage, found, alien_number,
         alien_index, array_index, bit_number, ls_needed,
@@ -3751,43 +3599,8 @@ struct ship_data *ship;
 
 
 // PostArrival.c
-#define THIS_IS_MAIN
 
-#include "fh.h"
-
-
-int post_arrival_phase = true;
-
-int x, y, z, pn, nampla_index, ship_index, first_pass, species_number,
-    species_index;
-
-int verbose_mode, test_mode;
-
-extern int star_data_modified, planet_data_modified;
-extern struct star_data *  star_base;
-extern struct planet_data *planet_base;
-
-struct galaxy_data   galaxy;
-struct star_data *   star;
-struct planet_data * planet;
-struct species_data *species;
-struct nampla_data * nampla_base, *nampla;
-struct ship_data *   ship_base, *ship;
-
-
-extern int end_of_file, truncate_name, log_stdout,
-           ignore_field_distorters, just_opened_file;
-extern char          input_line[256], *input_line_pointer;
-extern FILE *        input_file, *log_file;
-extern unsigned long last_random;
-
-
-PostArrivalMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func PostArrivalMain(argc int, argv []string) {
     int i, n, found, num_species, sp_num[MAX_SPECIES], sp_index,
         command, do_all_species;
 
@@ -4144,43 +3957,8 @@ do_postarrival_orders() {
 
 
 // PreDeparture.c
-#define THIS_IS_MAIN
 
-#include "fh.h"
-
-
-int post_arrival_phase = false;
-
-int x, y, z, pn, nampla_index, ship_index, first_pass, species_number,
-    species_index;
-
-int test_mode, verbose_mode;
-
-extern int star_data_modified, planet_data_modified;
-extern struct star_data *  star_base;
-extern struct planet_data *planet_base;
-
-struct galaxy_data   galaxy;
-struct star_data *   star;
-struct planet_data * planet;
-struct species_data *species;
-struct nampla_data * nampla_base, *nampla;
-struct ship_data *   ship_base, *ship;
-
-
-extern int end_of_file, truncate_name, log_stdout,
-           ignore_field_distorters, just_opened_file;
-extern char          input_line[256], *input_line_pointer;
-extern unsigned long last_random;
-extern FILE *        input_file, *log_file;
-
-
-PreDepartureMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func PreDepartureMain(argc int, argv []string) {
     int i, n, found, num_species, sp_num[MAX_SPECIES], sp_index,
         command, do_all_species;
 
@@ -4527,46 +4305,7 @@ do_predeparture_orders() {
 
 
 // Production.c
-#define THIS_IS_MAIN
-
-#include "fh.h"
-
-
-int nampla_index, ship_index, first_pass, doing_production, species_number,
-    species_index, x, y, z, pn, next_nampla_index;
-
-int test_mode, verbose_mode;
-
-char  production_done[1000];
-short sp_tech_level[6];
-
-
-struct galaxy_data   galaxy;
-struct star_data *   star;
-struct planet_data * planet, *home_planet;
-struct species_data *species;
-struct nampla_data * nampla_base, *nampla, *next_nampla;
-struct ship_data *   ship_base, *ship;
-
-
-extern int star_data_modified, planet_data_modified;
-extern int truncate_name, end_of_file, log_stdout, num_intercepts,
-           ignore_field_distorters, just_opened_file;
-extern long last_random;
-extern char input_line[256], *input_line_pointer;
-
-extern FILE *input_file, *log_file;
-
-extern struct star_data *  star_base;
-extern struct planet_data *planet_base;
-
-
-ProductionMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func ProductionMain(argc int, argv []string) {
     int i, n, found, num_species, sp_num[MAX_SPECIES], sp_index,
         command, do_all_species;
 
@@ -4968,38 +4707,8 @@ do_production_orders() {
  * events of the previous turn, plus status information for the current
  * turn. */
 
-#define THIS_IS_MAIN
 
-#include "fh.h"
-
-
-int x, y, z, printing_alien, species_number, fleet_percent_cost;
-int test_mode, verbose_mode;
-
-char ship_already_listed[5000];
-
-FILE *report_file;
-
-struct galaxy_data   galaxy;
-struct planet_data * planet, *home_planet;
-struct species_data *species;
-struct nampla_data * nampla_base, *nampla1_base, *nampla2_base;
-struct ship_data *   ship_base, *ship1_base, *ship2_base;
-
-extern int num_locs, log_stdout, ignore_field_distorters,
-           truncate_name, num_stars;
-extern FILE *log_file;
-
-extern struct sp_loc_data  loc[MAX_LOCATIONS];
-extern struct star_data *  star_base;
-extern struct planet_data *planet_base;
-
-ReportMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+ReportMain(argc int, argv []string) {
     int i, j, k, ship_index, locations_fd, my_loc_index, its_loc_index,
         industry, turn_number, alien_number, species_fd,
         header_printed, alien_can_hide, do_this_species, sp_index,
@@ -6832,33 +6541,8 @@ struct ship_data *ship;
 
 
 // Stats.c
-#define THIS_IS_MAIN
 
-#include "fh.h"
-
-
-int species_number;
-
-long                    power();
-
-char input_line[128];                           /* Not actually used. */
-
-
-struct galaxy_data   galaxy;
-struct planet_data * planet, *home_planet;
-struct species_data *species;
-struct nampla_data * nampla_base, *nampla;
-struct ship_data *   ship_base, *ship;
-
-extern struct planet_data *planet_base;
-
-
-StatsMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func StatsMain(argc int, argv []string) {
     int i, j, m, n, nampla_index, ship_index, num_ships, avg_tech_level,
         all_tech_level[6], n_species, n_warships, n_starbases,
         n_transports, avg_pop_pl, n_pop_pl, ls_needed, num_yards,
@@ -7203,19 +6887,8 @@ char *argv[];
 
 
 // TurnNumber.c
-#define THIS_IS_MAIN
 
-#include "fh.h"
-
-
-struct galaxy_data galaxy;
-
-TurnNumberMain(argc, argv)
-
-int argc;
-char *argv[];
-
-{
+func TurnNumberMain(argc int, argv []string) {
     /* Check for valid command line. */
     if (argc != 1) {
         fprintf(stderr, "\n\tUsage: TurnNumber\n\n");
