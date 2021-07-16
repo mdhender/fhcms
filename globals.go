@@ -260,6 +260,68 @@ extern struct species_data *c_species[MAX_SPECIES];
 extern struct nampla_data * nampla_base, *c_nampla[MAX_SPECIES];
 extern struct ship_data *   ship_base, *c_ship[MAX_SPECIES];
 
+extern struct planet_data * planet_base;
+extern struct species_data *c_species[MAX_SPECIES];
+extern struct nampla_data * c_nampla[MAX_SPECIES];
+extern struct ship_data *   c_ship[MAX_SPECIES];
+
+
+extern int nampla_index, ship_index, doing_production, tonnage, sub_light,
+           abbr_index, first_pass, species_number, species_index,
+           num_transactions, g_spec_number, abbr_type, shipyard_capacity;
+extern long value, balance, EU_spending_limit;
+extern char input_line[256], original_line[256], original_name[32],
+            upper_name[32], *input_line_pointer, *ship_name();
+extern FILE *log_file;
+
+extern struct species_data *species;
+extern struct nampla_data * nampla, *nampla_base;
+extern struct ship_data *   ship_base, *ship;
+extern struct trans_data    transaction[MAX_TRANSACTIONS];
+
+extern int  first_pass;
+extern char input_line[256], original_line[256],
+            *input_line_pointer;
+extern FILE *            log_file;
+extern struct ship_data *ship;
+
+extern int   first_pass, correct_spelling_required;
+extern char  input_line[256];
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct ship_data *   ship;
+
+extern int   doing_production;
+extern long  value, balance, EU_spending_limit;
+extern char  input_line[256], original_line[256], *input_line_pointer;
+extern FILE *log_file;
+
+extern struct planet_data * planet_base;
+extern struct species_data *species;
+extern struct nampla_data * nampla, *nampla_base;
+extern struct ship_data *   ship;
+
+extern char  input_line[256];
+extern FILE *log_file;
+extern struct nampla_data *nampla;
+
+
+extern int   abbr_type, g_spec_number;
+extern char  input_line[256], g_spec_name[32];
+extern FILE *log_file;
+extern struct species_data *species;
+
+extern int   first_pass, doing_production, g_spec_number;
+extern char  input_line[256], g_spec_name[32];
+extern FILE *log_file;
+extern struct species_data *species;
+extern struct nampla_data * nampla_base;
+extern struct ship_data *   ship_base;
+
+
+
+
+
 
 
 

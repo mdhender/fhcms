@@ -1203,12 +1203,7 @@ do_combat:
 
 
 
-do_ambush(ambushing_species_index, bat)
-
-int ambushing_species_index;
-struct battle_data *bat;
-
-{
+func do_ambush(ambushing_species_index int, bat *battle_dat) {
     int i, j, n, num_sp, ambushed_species_index, num_ships,
         age_increment, species_number, old_truncate_name;
 
@@ -1382,11 +1377,7 @@ struct battle_data *bat;
  * both a traitor and betrayed species. It will then set a flag to indicate
  * that their allegiance should be changed from ALLY to ENEMY. */
 
-auto_enemy(traitor_species_number, betrayed_species_number)
-
-int traitor_species_number, betrayed_species_number;
-
-{
+func auto_enemy(traitor_species_number, betrayed_species_number int) {
     int traitor_array_index, betrayed_array_index, bit_number,
         species_index;
 
@@ -1427,21 +1418,7 @@ int traitor_species_number, betrayed_species_number;
 // do_bomb.c
 
 
-long    power();
-
-
-extern struct planet_data * planet_base;
-extern struct species_data *c_species[MAX_SPECIES];
-extern struct nampla_data * c_nampla[MAX_SPECIES];
-extern struct ship_data *   c_ship[MAX_SPECIES];
-
-
-do_bombardment(unit_index, act)
-
-int unit_index;
-struct action_data *act;
-
-{
+func do_bombardment(unit_index int, act *action_data) {
     int i, new_mi, new_ma, defending_species;
 
     long n, total_bomb_damage, CS_bomb_damage, new_pop,
@@ -1628,26 +1605,7 @@ struct action_data *act;
 //*************************************************************************
 // do_build.c
 
-
-extern int nampla_index, ship_index, doing_production, tonnage, sub_light,
-           abbr_index, first_pass, species_number, species_index,
-           num_transactions, g_spec_number, abbr_type, shipyard_capacity;
-extern long value, balance, EU_spending_limit;
-extern char input_line[256], original_line[256], original_name[32],
-            upper_name[32], *input_line_pointer, *ship_name();
-extern FILE *log_file;
-
-extern struct species_data *species;
-extern struct nampla_data * nampla, *nampla_base;
-extern struct ship_data *   ship_base, *ship;
-extern struct trans_data    transaction[MAX_TRANSACTIONS];
-
-
-do_BUILD_command(continuing_construction, interspecies_construction)
-
-int continuing_construction, interspecies_construction;
-
-{
+func do_BUILD_command(continuing_construction, interspecies_construction int) {
     int i, n, class, critical_tech, found, name_length,
         siege_effectiveness, cost_given, new_ship, max_tonnage,
         tonnage_increase, alien_number, cargo_on_board,
@@ -2695,15 +2653,7 @@ check_ship:
 //*************************************************************************
 // do_deep.c
 
-
-extern int  first_pass;
-extern char input_line[256], original_line[256],
-            *input_line_pointer;
-extern FILE *            log_file;
-extern struct ship_data *ship;
-
-
-do_DEEP_command() {
+func do_DEEP_command() {
     int i, found;
 
     char *original_line_pointer;
@@ -2768,15 +2718,7 @@ do_DEEP_command() {
 //*************************************************************************
 // do_des.c
 
-
-extern int   first_pass, correct_spelling_required;
-extern char  input_line[256];
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct ship_data *   ship;
-
-
-do_DESTROY_command() {
+func do_DESTROY_command() {
     int found;
 
 
@@ -2807,19 +2749,7 @@ do_DESTROY_command() {
 //*************************************************************************
 // do_dev.c
 
-
-extern int   doing_production;
-extern long  value, balance, EU_spending_limit;
-extern char  input_line[256], original_line[256], *input_line_pointer;
-extern FILE *log_file;
-
-extern struct planet_data * planet_base;
-extern struct species_data *species;
-extern struct nampla_data * nampla, *nampla_base;
-extern struct ship_data *   ship;
-
-
-do_DEVELOP_command() {
+func do_DEVELOP_command() {
     int i, num_CUs, num_AUs, num_IUs, more_args, load_transport,
         capacity, resort_colony, mining_colony, production_penalty,
         CUs_only;
@@ -3262,12 +3192,7 @@ do_DEVELOP_command() {
     log_string(".\n");
 }
 
-
-start_dev_log(num_CUs, num_IUs, num_AUs)
-
-int num_CUs, num_IUs, num_AUs;
-
-{
+func start_dev_log(num_CUs, num_IUs, num_AUs int) {
     log_string("    ");
     log_int(num_CUs);  log_string(" Colonist Unit");
     if (num_CUs != 1) {
@@ -3313,12 +3238,7 @@ done:
 // do_disband.c
 
 
-extern char  input_line[256];
-extern FILE *log_file;
-extern struct nampla_data *nampla;
-
-
-do_DISBAND_command() {
+func do_DISBAND_command() {
     int found;
 
 
@@ -3367,13 +3287,7 @@ do_DISBAND_command() {
 // do_enemy.c
 
 
-extern int   abbr_type, g_spec_number;
-extern char  input_line[256], g_spec_name[32];
-extern FILE *log_file;
-extern struct species_data *species;
-
-
-do_ENEMY_command() {
+func do_ENEMY_command() {
     int i, array_index, bit_number;
 
     long bit_mask;
@@ -3420,15 +3334,7 @@ do_ENEMY_command() {
 // do_est.c
 
 
-extern int   first_pass, doing_production, g_spec_number;
-extern char  input_line[256], g_spec_name[32];
-extern FILE *log_file;
-extern struct species_data *species;
-extern struct nampla_data * nampla_base;
-extern struct ship_data *   ship_base;
-
-
-do_ESTIMATE_command() {
+func do_ESTIMATE_command() {
     int i, max_error, estimate[6], contact_word_number,
         contact_bit_number;
 
