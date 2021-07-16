@@ -38,6 +38,9 @@ const NUM_EXTRA_NAMPLAS = 50
 const NUM_EXTRA_SHIPS = 100
 
 const MAX_LOCATIONS = 10000
+const MAX_INTERCEPTS = 1000
+const MAX_ENEMY_SHIPS = 400
+const MAX_OBS_LOCS = 5000
 
 /* Assume at least 32 bits per long word. */
 const NUM_CONTACT_WORDS = ((MAX_SPECIES - 1) / 32) + 1
@@ -280,3 +283,9 @@ const SIEGE = 7
 
 /* Special types. */
 const NON_COMBATANT = 1
+
+/* In case gamemaster creates new star systems with Edit program. */
+const NUM_EXTRA_PLANETS = 100
+
+/* In case gamemaster creates new star systems with Edit program. */
+const NUM_EXTRA_STARS = 20

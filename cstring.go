@@ -19,7 +19,7 @@
 package main
 
 type cstring struct {
-	pos int
+	pos    int
 	buffer []byte
 }
 
@@ -38,4 +38,3 @@ func (c *cstring) incr() {
 func (c *cstring) set(b byte) {
 	c.buffer[c.pos] = b
 }
-

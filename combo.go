@@ -18,112 +18,59 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
+//*************************************************************************
 // combat_utils.c
-#include <stdio.h>
 
-
-/* Look-up table for ship defensive/offensive power uses ship.tonnage
- * as an index. Each value is equal to 100 * (ship.tonnage)^1.2. The
- * 'power' subroutine uses recursion to calculate values for tonnages
- * over 100. */
-short ship_power[101] = { 0,     /* Zeroth element not used. */
-                          100,     230,   374,   528,   690,   859,  1033,  1213,  1397,  1585,
-                          1777,   1973,  2171,  2373,  2578,  2786,  2996,  3209,  3424,  3641,
-                          3861,   4082,  4306,  4532,  4759,  4988,  5220,  5452,  5687,  5923,
-                          6161,   6400,  6641,  6883,  7127,  7372,  7618,  7866,  8115,  8365,
-                          8617,   8870,  9124,  9379,  9635,  9893, 10151, 10411, 10672, 10934,
-                          11197, 11461, 11725, 11991, 12258, 12526, 12795, 13065, 13336, 13608,
-                          13880, 14154, 14428, 14703, 14979, 15256, 15534, 15813, 16092, 16373,
-                          16654, 16936, 17218, 17502, 17786, 18071, 18356, 18643, 18930, 19218,
-                          19507, 19796, 20086, 20377, 20668, 20960, 21253, 21547, 21841, 22136,
-                          22431, 22727, 23024, 23321, 23619, 23918, 24217, 24517, 24818, 25119 };
-
-long power(tonnage)
-
-short tonnage;
-
-{
-    long  result;
-    short t1, t2;
-
+func power(tonnage int) int {
     if (tonnage > 4068) {
-        fprintf(stderr,
-                "\n\n\tLong integer overflow will occur in call to 'power(tonnage)'!\n");
+        fprintf(stderr,                "\n\n\tLong integer overflow will occur in call to 'power(tonnage)'!\n");
         fprintf(stderr, "\t\tActual call is power(%d).\n\n", tonnage);
         exit(-1);
     }
 
     if (tonnage <= 100) {
-        result = ship_power[tonnage];
-    }else{
-        /* Tonnage is not in table. Break it up into two halves and get
-         * approximate result = 1.149 * (x1 + x2), using recursion if
-         * necessary. */
-        t1     = tonnage / 2; t2 = tonnage - t1;
-        result = 1149L * (power(t1) + power(t2)) / 1000L;
+        return ship_power[tonnage];
     }
-
-    return(result);
+    // Tonnage is not in table.
+    // Break it up into two halves and get approximate result = 1.149 * (x1 + x2), using recursion if necessary.
+    t1 := tonnage / 2
+    t2 := tonnage - t1;
+    return 1149 * (power(t1) + power(t2)) / 1000;
 }
 
 
-extern char input_line[];
-
-extern FILE *log_file;
-
-battle_error(species_number)
-
-int species_number;
-
-{
+func battle_error(species_number int) {
     fprintf(log_file, "!!! Order ignored:\n");
     fprintf(log_file, "!!! %s", input_line);
     fprintf(log_file, "!!! Missing BATTLE command!\n");
     return;
 }
 
-
-bad_species() {
+func bad_species() {
     fprintf(log_file, "!!! Order ignored:\n");
     fprintf(log_file, "!!! %s", input_line);
     fprintf(log_file, "!!! Invalid species name!\n");
     return;
 }
 
-
-
-bad_argument() {
+func bad_argument() {
     fprintf(log_file, "!!! Order ignored:\n");
     fprintf(log_file, "!!! %s", input_line);
     fprintf(log_file, "!!! Invalid argument in command.\n");
     return;
 }
 
-
-
-bad_coordinates() {
+func bad_coordinates() {
     fprintf(log_file, "!!! Order ignored:\n");
     fprintf(log_file, "!!! %s", input_line);
     fprintf(log_file, "!!! Invalid coordinates in command.\n");
     return;
 }
+
+//*************************************************************************
 // cons_op.c
-#include "fh.h"
-#include "combat.h"
 
-
-int  num_combat_options;
-char combat_option[1000], combat_location[1000];
-
-
-consolidate_option(option, location)
-
-char option, location;
-
-{
-    int i;
-
-
+func consolidate_option(option, location int) {
     /* Only attack options go in list. */
     if (option < DEEP_SPACE_FIGHT) {
         return;
@@ -136,7 +83,7 @@ char option, location;
     }
 
     /* Check if option and location are already in list. */
-    for (i = 0; i < num_combat_options; i++) {
+    for i := 0; i < num_combat_options; i++ {
         if (option == combat_option[i] && location == combat_location[i]) {
             return;
         }
@@ -145,29 +92,19 @@ char option, location;
     /* Add new option to list. */
     combat_option[num_combat_options]   = option;
     combat_location[num_combat_options] = location;
-    ++num_combat_options;
+    num_combat_options++
 }
+
+//*************************************************************************
 // dis_ship.c
-#include "fh.h"
 
-
-extern struct species_data *species;
-extern struct nampla_data * nampla_base;
-
-
-
-int disbanded_ship(ship)
-
-struct ship_data *ship;
-
-{
-    int nampla_index;
-
-    struct nampla_data *nampla;
+func disbanded_ship(ship *ship_data_) bool {
+    var nampla_index int
+    var nampla *nampla_data
 
     nampla = nampla_base - 1;
-    for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
-        ++nampla;
+    for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
+        nampla++
 
         if (nampla.x != ship.x) {
             continue;
@@ -188,28 +125,19 @@ struct ship_data *ship;
             continue;
         }
 
-        /* This ship is either on the surface of a disbanded colony or is
-         *      a starbase orbiting a disbanded colony. */
-        return(true);
+        /* This ship is either on the surface of a disbanded colony or is a starbase orbiting a disbanded colony. */
+        return true;
     }
 
-    return(false);
+    return false;
 }
+
+//*************************************************************************
 // do_ally.c
-#include "fh.h"
 
-
-extern int   abbr_ttype, g_spec_number;
-extern char  input_line[256], g_spec_name[32];
-extern FILE *log_file;
-extern struct species_data *species;
-
-
-do_ALLY_command() {
-    int i, array_index, bit_number;
-
-    long bit_mask;
-
+func do_ALLY_command() {
+    var i, array_index, bit_number int
+    var bit_mask int
 
     /* Get name of species that is being declared an ally. */
     if (!get_species_name()) {
@@ -225,7 +153,7 @@ do_ALLY_command() {
     bit_mask    = 1 << bit_number;
 
     /* Check if we've met this species and make sure it is not an enemy. */
-    if ((species.contact[array_index] & bit_mask) == 0) {
+    if !species.contact[array_index] {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You can't declare alliance with a species you haven't met.\n");
@@ -233,8 +161,8 @@ do_ALLY_command() {
     }
 
     /* Set/clear the appropriate bit. */
-    species.ally[array_index]  |= bit_mask;    /* Set ally bit. */
-    species.enemy[array_index] &= ~bit_mask;   /* Clear enemy bit. */
+    species.ally[array_index]  true    /* Set ally bit. */
+    species.enemy[array_index] false   /* Clear enemy bit. */
 
     /* Log the result. */
     log_string("    Alliance was declared with ");
@@ -246,22 +174,13 @@ do_ALLY_command() {
     }
     log_string(".\n");
 }
+
+//*************************************************************************
 // do_amb.c
-#include "fh.h"
 
-
-extern int   doing_production, first_pass, abbr_index;
-extern long  value, balance;
-extern char  input_line[256];
-extern FILE *log_file;
-extern struct nampla_data *nampla;
-
-
-do_AMBUSH_command() {
-    int n, status;
-
-    long cost;
-
+func do_AMBUSH_command() {
+    var n, status int
+    var cost int
 
     /* Check if this order was preceded by a PRODUCTION order. */
     if (!doing_production) {
@@ -311,24 +230,12 @@ do_AMBUSH_command() {
     log_long(cost);
     log_string(" in preparation for an ambush.\n");
 }
+
+//*************************************************************************
 // do_base.c
-#include "fh.h"
 
 
-extern int abbr_ttype, abbr_index, species_number,
-           species_index, ship_index, num_stars;
-extern long value;
-extern char input_line[256], original_line[256], original_name[32],
-            upper_name[32], *input_line_pointer;
-
-extern FILE *               log_file;
-extern struct star_data *   star_base, *star;
-extern struct species_data *species;
-extern struct nampla_data * nampla;
-extern struct ship_data *   ship, *ship_base;
-
-
-do_BASE_command() {
+func do_BASE_command() {
     int i, n, found, su_count, original_count, item_class, name_length,
         unused_ship_available, new_tonnage, max_tonnage, new_starbase,
         source_is_a_planet, age_new;
@@ -369,7 +276,7 @@ do_BASE_command() {
     }
 
     /* Make sure everything makes sense. */
-    if (abbr_ttype == SHIP_CLASS) {
+    if (abbr_type == SHIP_CLASS) {
         source_is_a_planet = false;
         source_ship        = ship;
 
@@ -592,38 +499,12 @@ do_BASE_command() {
         source_ship.item_quantity[SU] -= su_count;
     }
 }
+
+//*************************************************************************
 // do_bat.c
-#include "fh.h"
-#include "combat.h"
 
 
-int first_battle = true;
-int attacking_ML, defending_ML, deep_space_defense,
-    ambush_took_place;
-char field_distorted[MAX_SPECIES], append_log[MAX_SPECIES],
-     make_enemy[MAX_SPECIES][MAX_SPECIES];
-
-
-extern int attacker_here, defender_here, logging_disabled,
-           strike_phase, prompt_gm;
-extern int   log_summary, num_combat_options;
-extern int   truncate_name, num_transactions;
-extern int   ignore_field_distorters;
-extern char  combat_option[1000], combat_location[1000];
-extern char  x_attacked_y[MAX_SPECIES][MAX_SPECIES];
-extern FILE *log_file, *summary_file;
-extern struct galaxy_data   galaxy;
-extern struct species_data *c_species[MAX_SPECIES];
-extern struct nampla_data * nampla_base, *c_nampla[MAX_SPECIES];
-extern struct ship_data *   ship_base, *c_ship[MAX_SPECIES];
-
-
-
-do_battle(bat)
-
-struct battle_data *bat;
-
-{
+func do_battle(bat *battle_data) {
     int i, j, k, species_index, species_number, num_sp, save,
         max_rounds, round_number, battle_here, fight_here,
         unit_index, option_index, current_species, temp_status,
@@ -1541,9 +1422,9 @@ int traitor_species_number, betrayed_species_number;
         make_enemy[species_index][traitor_species_number - 1] = betrayed_species_number;
     }
 }
+
+//*************************************************************************
 // do_bomb.c
-#include "fh.h"
-#include "combat.h"
 
 
 long    power();
@@ -1741,14 +1622,16 @@ struct action_data *act;
 
     check_population(attacked_nampla);
 }
-// do_build.c
-#include "fh.h"
 
+
+
+//*************************************************************************
+// do_build.c
 
 
 extern int nampla_index, ship_index, doing_production, tonnage, sub_light,
            abbr_index, first_pass, species_number, species_index,
-           num_transactions, g_spec_number, abbr_ttype, shipyard_capacity;
+           num_transactions, g_spec_number, abbr_type, shipyard_capacity;
 extern long value, balance, EU_spending_limit;
 extern char input_line[256], original_line[256], original_name[32],
             upper_name[32], *input_line_pointer, *ship_name();
@@ -2078,7 +1961,7 @@ do_cost:
             goto done_transfer;
         }
 
-        if (abbr_ttype == SHIP_CLASS) {  /* Destination is 'ship'. */
+        if (abbr_type == SHIP_CLASS) {  /* Destination is 'ship'. */
             if (ship.x != nampla.x ||
                 ship.y != nampla.y ||
                 ship.z != nampla.z ||
@@ -2808,8 +2691,9 @@ check_ship:
     strcpy(transaction[n].name1, species.name);
     strcpy(transaction[n].name2, ship_name(recipient_ship));
 }
+
+//*************************************************************************
 // do_deep.c
-#include "fh.h"
 
 
 extern int  first_pass;
@@ -2879,8 +2763,10 @@ do_DEEP_command() {
     log_string(ship_name(ship));
     log_string(" moved into deep space.\n");
 }
+
+
+//*************************************************************************
 // do_des.c
-#include "fh.h"
 
 
 extern int   first_pass, correct_spelling_required;
@@ -2917,8 +2803,9 @@ do_DESTROY_command() {
 
     delete_ship(ship);
 }
+
+//*************************************************************************
 // do_dev.c
-#include "fh.h"
 
 
 extern int   doing_production;
@@ -3421,8 +3308,9 @@ done:
 
     log_string(" were built");
 }
+
+//*************************************************************************
 // do_disband.c
-#include "fh.h"
 
 
 extern char  input_line[256];
@@ -3473,11 +3361,13 @@ do_DISBAND_command() {
     log_string(nampla.name);
     log_string(" was ordered to disband.\n");
 }
+
+
+//*************************************************************************
 // do_enemy.c
-#include "fh.h"
 
 
-extern int   abbr_ttype, g_spec_number;
+extern int   abbr_type, g_spec_number;
 extern char  input_line[256], g_spec_name[32];
 extern FILE *log_file;
 extern struct species_data *species;
@@ -3525,8 +3415,9 @@ do_ENEMY_command() {
     }
     log_string(".\n");
 }
+
+//*************************************************************************
 // do_est.c
-#include "fh.h"
 
 
 extern int   first_pass, doing_production, g_spec_number;
@@ -3623,9 +3514,9 @@ do_ESTIMATE_command() {
     log_string(", BI = ");   log_int(estimate[BI]);
     log_string(".\n");
 }
+
+//*************************************************************************
 // do_germ.c
-#include "fh.h"
-#include "combat.h"
 
 
 extern int   num_transactions;
@@ -3780,8 +3671,9 @@ struct action_data *act;
         delete_ship(sh);
     }
 }
+
+//*************************************************************************
 // do_hide.c
-#include "fh.h"
 
 
 extern int   doing_production, first_pass, abbr_index;
@@ -3853,8 +3745,9 @@ do_HIDE_command() {
     log_string("    Spent ");  log_long(cost);
     log_string(" hiding this colony.\n");
 }
+
+//*************************************************************************
 // do_inst.c
-#include "fh.h"
 
 
 extern int   abbr_index, species_number;
@@ -4054,10 +3947,9 @@ check_items:
 
     check_population(nampla);
 }
-// do_int.c
-#include "fh.h"
 
-const MAX_INTERCEPTS    1000
+//*************************************************************************
+// do_int.c
 
 int num_intercepts;
 
@@ -4164,8 +4056,6 @@ do_INTERCEPT_command() {
 }
 
 
-
-const MAX_ENEMY_SHIPS    400
 
 
 handle_intercept(intercept_index)
@@ -4347,8 +4237,9 @@ int intercept_index;
         --num_ships_left;
     }
 }
+
+//*************************************************************************
 // do_land.c
-#include "fh.h"
 
 
 extern int  first_pass, num_transactions, species_number;
@@ -4711,11 +4602,9 @@ finish_up:
 
     log_string(".\n");
 }
+
+//*************************************************************************
 // do_locs.c
-/* This routine will create the "loc" array based on current species' data. */
-
-
-#include "fh.h"
 
 
 extern int species_number, species_index, num_locs;
@@ -4727,6 +4616,7 @@ extern struct ship_data *   ship_base, *ship;
 extern struct sp_loc_data   loc[MAX_LOCATIONS];
 
 
+/* This routine will create the "loc" array based on current species' data. */
 do_locations() {
     int i;
 
@@ -4812,11 +4702,12 @@ char x, y, z;
     fprintf(stderr, "\n\n\tInternal error. Overflow of 'loc' arrays!\n\n");
     exit(-1);
 }
+
+//*************************************************************************
 // do_mes.c
-#include "fh.h"
 
 
-extern int abbr_ttype, first_pass, species_number,
+extern int abbr_type, first_pass, species_number,
            g_spec_number, num_transactions, end_of_file;
 extern char input_line[256], g_spec_name[32],
             *input_line_pointer;
@@ -4936,8 +4827,10 @@ do_MESSAGE_command() {
     transaction[i].number2 = g_spec_number;
     strcpy(transaction[i].name2, g_spec_name);
 }
+
+
+//*************************************************************************
 // do_name.c
-#include "fh.h"
 
 
 
@@ -5071,11 +4964,12 @@ do_NAME_command() {
     log_string(", planet #");  log_int(nampla.pn);
     log_string(".\n");
 }
+
+//*************************************************************************
 // do_neutral.c
-#include "fh.h"
 
 
-extern int   abbr_ttype, g_spec_number;
+extern int   abbr_type, g_spec_number;
 extern char  input_line[256], g_spec_name[32];
 extern FILE *log_file;
 extern struct species_data *species;
@@ -5123,9 +5017,9 @@ do_NEUTRAL_command() {
     }
     log_string(".\n");
 }
-// do_orbit.c
-#include "fh.h"
 
+//*************************************************************************
+// do_orbit.c
 
 extern int  first_pass, num_stars;
 extern long value;
@@ -5305,8 +5199,9 @@ finish_up:
 
     log_string(".\n");
 }
+
+//*************************************************************************
 // do_prod.c
-#include "fh.h"
 
 
 int last_planet_produced = false;
@@ -5332,7 +5227,7 @@ do_PRODUCTION_command(missing_production_order)
 int missing_production_order;
 
 {
-    int i, j, abbr_ttype, name_length, found, alien_number, under_siege,
+    int i, j, abbr_type, name_length, found, alien_number, under_siege,
         siege_percent_effectiveness, new_alien, num_siege_ships,
         mining_colony, resort_colony, special_colony, ship_index,
         enemy_on_same_planet, trans_index, production_penalty,
@@ -5377,9 +5272,9 @@ int missing_production_order;
     }
 
     /* Get PL abbreviation. */
-    abbr_ttype = get_class_abbr();
+    abbr_type = get_class_abbr();
 
-    if (abbr_ttype != PLANET_ID) {
+    if (abbr_type != PLANET_ID) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid planet name in PRODUCTION command.\n");
@@ -6002,8 +5897,10 @@ got_nampla:
         nampla.item_quantity[i] = 0;
     }
 }
+
+
+//*************************************************************************
 // do_recy.c
-#include "fh.h"
 
 
 extern int ship_index, doing_production, correct_spelling_required,
@@ -6182,8 +6079,9 @@ recycle_ship:
     /* Remove ship from inventory. */
     delete_ship(ship);
 }
+
+//*************************************************************************
 // do_rep.c
-#include "fh.h"
 
 
 extern long  value;
@@ -6452,8 +6350,11 @@ pool_repair:
         }
     }
 }
+
+
+
+//*************************************************************************
 // do_res.c
-#include "fh.h"
 
 
 extern int   doing_production, first_pass, abbr_index;
@@ -6583,10 +6484,11 @@ do_cost:
     log_string(" on ");  log_string(tech_name[tech]);
     log_string(" research.\n");
 }
-// do_round.c
-#include "fh.h"
-#include "combat.h"
 
+
+
+//*************************************************************************
+// do_round.c
 
 long    power();
 
@@ -7255,8 +7157,11 @@ fire:
 
     return(combat_occurred);
 }
+
+
+
+//*************************************************************************
 // do_scan.c
-#include "fh.h"
 
 
 extern int               first_pass, test_mode;
@@ -7311,11 +7216,14 @@ do_SCAN_command() {
 
     fprintf(log_file, "\n");
 }
+
+
+
+//*************************************************************************
 // do_send.c
-#include "fh.h"
 
 
-extern int abbr_ttype, abbr_index, species_number,
+extern int abbr_type, abbr_index, species_number,
            g_spec_number, first_pass, num_transactions;
 extern long value;
 extern char input_line[256], g_spec_name[32],
@@ -7428,8 +7336,11 @@ do_SEND_command() {
     spec_data[g_spec_number - 1].econ_units += item_count;
     data_modified[g_spec_number - 1]         = true;
 }
+
+
+
+//*************************************************************************
 // do_shipyard.c
-#include "fh.h"
 
 
 extern int doing_production, first_pass, abbr_index,
@@ -7486,9 +7397,11 @@ do_SHIPYARD_command() {
     log_string("    Spent ");  log_long(cost);
     log_string(" to increase shipyard capacity by 1.\n");
 }
+
+
+
+//*************************************************************************
 // do_siege.c
-#include "fh.h"
-#include "combat.h"
 
 
 
@@ -7564,8 +7477,11 @@ struct action_data *act;
 
     log_string("      Only those ships that actually remain in the system will take part in the siege.\n");
 }
+
+
+
+//*************************************************************************
 // do_teach.c
-#include "fh.h"
 
 
 extern int abbr_index, species_number, g_spec_number,
@@ -7666,8 +7582,12 @@ do_TEACH_command() {
     strcpy(transaction[i].name1, species.name);
     transaction[i].number3 = max_tech_level;
 }
+
+
+
+
+//*************************************************************************
 // do_tech.c
-#include "fh.h"
 
 
 extern int abbr_index, first_pass, species_number,
@@ -7798,11 +7718,14 @@ do_TECH_command() {
         transaction[i].number3 = species.tech_level[tech];
     }
 }
+
+
+
+//*************************************************************************
 // do_tel.c
-#include "fh.h"
 
 
-const MAX_OBS_LOCS    5000
+
 
 
 extern int first_pass, species_number, truncate_name,
@@ -8194,8 +8117,11 @@ do_TELESCOPE_command() {
         log_string("    No alien ships or planets were detected.\n\n");
     }
 }
+
+
+
+//*************************************************************************
 // do_terr.c
-#include "fh.h"
 
 
 extern int   planet_data_modified, first_pass;
@@ -8463,11 +8389,14 @@ add_neutral_gas:
         break;
     }
 }
+
+
+
+//*************************************************************************
 // do_tran.c
-#include "fh.h"
 
 
-extern int abbr_ttype, abbr_index, species_number,
+extern int abbr_type, abbr_index, species_number,
            first_pass, num_transactions,
            post_arrival_phase;
 extern long value;
@@ -8561,7 +8490,7 @@ do_TRANSFER_command() {
     need_destination = true;
 
     /* Make sure everything makes sense. */
-    if (abbr_ttype == SHIP_CLASS) {
+    if (abbr_type == SHIP_CLASS) {
         ship1 = ship;
 
         if (ship1.status == UNDER_CONSTRUCTION) {
@@ -8645,7 +8574,7 @@ next_ship_try:
 
                 ship          = ship1;      /* Destination. */
                 transfer_ttype = 1;          /* Source = planet. */
-                abbr_ttype     = SHIP_CLASS; /* Destination ttype. */
+                abbr_type     = SHIP_CLASS; /* Destination ttype. */
 
                 need_destination = false;
 
@@ -8724,7 +8653,7 @@ check_planet_items:
                 nampla        = nampla1;     /* Destination. */
                 nampla1       = temp_nampla; /* Source. */
                 transfer_ttype = 1;           /* Source = planet. */
-                abbr_ttype     = PLANET_ID;   /* Destination ttype. */
+                abbr_type     = PLANET_ID;   /* Destination ttype. */
 
                 need_destination = false;
 
@@ -8754,7 +8683,7 @@ get_destination:
     }
 
     /* Make sure everything makes sense. */
-    if (abbr_ttype == SHIP_CLASS) {
+    if (abbr_type == SHIP_CLASS) {
         ship2 = ship;
 
         if (ship2.status == UNDER_CONSTRUCTION) {
@@ -9005,8 +8934,11 @@ do_capacity:
         check_population(nampla2);
     }
 }
+
+
+
+//*************************************************************************
 // do_unl.c
-#include "fh.h"
 
 
 extern int   species_number;
@@ -9208,8 +9140,11 @@ do_UNLOAD_command() {
 
     check_population(nampla);
 }
+
+
+
+//*************************************************************************
 // do_upg.c
-#include "fh.h"
 
 
 extern int   doing_production;
@@ -9358,20 +9293,11 @@ try_again:
     log_string(" at a cost of ");    log_long(amount_to_spend);
     log_string(".\n");
 }
+
+
+
+//*************************************************************************
 // fight_par.c
-/* The following routine will fill "act" with ship and nampla data necessary
- * for an action; i.e., number of shots per round, damage done per shot,
- * total shield power, etc. Note that this routine always restores shields
- * completely. It is assumed that a sufficient number of rounds passes
- * between actions of a battle to completely regenerate shields.
- *
- * The routine will return true if the action can take place, otherwise
- * false.
- */
-
-
-#include "fh.h"
-#include "combat.h"
 
 extern int deep_space_defense, attacking_ML, defending_ML;
 
@@ -9381,6 +9307,17 @@ extern struct ship_data *   c_ship[MAX_SPECIES];
 
 long    power();
 
+
+
+/* The following routine will fill "act" with ship and nampla data necessary
+ * for an action; i.e., number of shots per round, damage done per shot,
+ * total shield power, etc. Note that this routine always restores shields
+ * completely. It is assumed that a sufficient number of rounds passes
+ * between actions of a battle to completely regenerate shields.
+ *
+ * The routine will return true if the action can take place, otherwise
+ * false.
+ */
 
 int fighting_params(option, location, bat, act)
 
@@ -9871,9 +9808,11 @@ struct ship_data *sh;
 
     return(false);
 }
+
+
+
+//*************************************************************************
 // for_jum.c
-#include "fh.h"
-#include "combat.h"
 
 
 extern int   log_summary, ignore_field_distorters;
@@ -10027,8 +9966,12 @@ struct action_data *act;
 
     return(true);
 }
+
+
+
+
+//*************************************************************************
 // gam_abo.c
-#include <stdio.h>
 
 
 gamemaster_abort_option() {
@@ -10042,8 +9985,11 @@ gamemaster_abort_option() {
         exit(0);
     }
 }
+
+
+
+//*************************************************************************
 // get_gal.c
-#include "fh.h"
 
 
 extern struct galaxy_data galaxy;
@@ -10072,6 +10018,10 @@ get_galaxy_data() {
 
     close(galaxy_fd);
 }
+
+
+
+//*************************************************************************
 // get_loc.c
 /* This routine will assign values to global variables x, y, z, pn, star
  * and nampla. If the location is not a named planet, then nampla will be
@@ -10080,10 +10030,8 @@ get_galaxy_data() {
  * returned. */
 
 
-#include "fh.h"
 
-
-extern int  x, y, z, pn, num_stars, abbr_ttype;
+extern int  x, y, z, pn, num_stars, abbr_type;
 extern long value;
 extern char upper_name[32], *input_line_pointer;
 extern struct species_data *species;
@@ -10171,7 +10119,7 @@ again:
 
     input_line_pointer = temp2_ptr;
 
-    if (abbr_ttype != PLANET_ID && !first_try) {
+    if (abbr_type != PLANET_ID && !first_try) {
         /* Assume abbreviation was accidentally omitted. */
         input_line_pointer = temp1_ptr;
     }
@@ -10214,7 +10162,7 @@ yet_again:
 
     input_line_pointer = temp2_ptr;
 
-    if (abbr_ttype != PLANET_ID && !first_try) {
+    if (abbr_type != PLANET_ID && !first_try) {
         /* Assume abbreviation was accidentally omitted. */
         input_line_pointer = temp1_ptr;
     }
@@ -10264,7 +10212,7 @@ yet_again:
 
 done:
 
-    abbr_ttype = PLANET_ID;
+    abbr_type = PLANET_ID;
 
     x      = temp_nampla.x;
     y      = temp_nampla.y;
@@ -10274,12 +10222,14 @@ done:
 
     return(true);
 }
+
+
+
+
+//*************************************************************************
 // get_plan.c
-#include "fh.h"
 
 
-/* In case gamemaster creates new star systems with Edit program. */
-const NUM_EXTRA_PLANETS    100
 
 
 int num_planets, planet_data_modified;
@@ -10328,20 +10278,23 @@ get_planet_data() {
 
     planet_data_modified = false;
 }
+
+
+
+//*************************************************************************
 // get_ship.c
+
 /* The following routine will return true and set global variables "ship" and
  * "ship_index" if a valid ship designation is found. Otherwise, it will return
  * false. The algorithm employed allows minor spelling errors, as well as
  * accidental deletion of a ship abbreviation. */
 
 
-#include "fh.h"
-
 
 int correct_spelling_required = false;
 
 
-extern int  ship_index, abbr_ttype, abbr_index;
+extern int  ship_index, abbr_type, abbr_index;
 extern char upper_name[32], *input_line_pointer;
 extern struct species_data *species;
 extern struct ship_data *   ship_base, *ship;
@@ -10373,7 +10326,7 @@ again:
 
     input_line_pointer = temp2_ptr;
 
-    if (abbr_ttype != SHIP_CLASS && !first_try) {
+    if (abbr_type != SHIP_CLASS && !first_try) {
         /* Assume abbreviation was accidentally omitted. */
         input_line_pointer = temp1_ptr;
     }
@@ -10397,7 +10350,7 @@ again:
 
         /* Compare names. */
         if (strcmp(upper_ship_name, upper_name) == 0) {
-            abbr_ttype  = SHIP_CLASS;
+            abbr_type  = SHIP_CLASS;
             abbr_index = ship.class;
             correct_spelling_required = false;
             return(true);
@@ -10424,7 +10377,7 @@ yet_again:
 
     input_line_pointer = temp2_ptr;
 
-    if (abbr_ttype != SHIP_CLASS && !first_try) {
+    if (abbr_type != SHIP_CLASS && !first_try) {
         /* Assume abbreviation was accidentally omitted. */
         input_line_pointer = temp1_ptr;
     }
@@ -10478,25 +10431,28 @@ yet_again:
 
     ship       = best_ship;
     ship_index = best_ship_index;
-    abbr_ttype  = SHIP_CLASS;
+    abbr_type  = SHIP_CLASS;
     abbr_index = ship.class;
     correct_spelling_required = false;
     return(true);
 }
+
+
+
+//*************************************************************************
 // get_spnam.c
+
 /* This routine will get a species name and return true if found and if
  * it is valid.  It will also set global values "g_species_number" and
  * "g_species_name". The algorithm employed allows minor spelling errors,
  * as well as accidental deletion of the SP abbreviation. */
 
 
-#include "fh.h"
-
 
 int  g_spec_number;
 char g_spec_name[32];
 
-extern int  abbr_ttype;
+extern int  abbr_type;
 extern char upper_name[32], *input_line_pointer;
 extern struct galaxy_data galaxy;
 
@@ -10525,7 +10481,7 @@ again:
 
     input_line_pointer = temp2_ptr;
 
-    if (abbr_ttype != SPECIES_ID && !first_try) {
+    if (abbr_type != SPECIES_ID && !first_try) {
         /* Assume abbreviation was accidentally omitted. */
         input_line_pointer = temp1_ptr;
     }
@@ -10548,7 +10504,7 @@ again:
 
         if (strcmp(sp_name, upper_name) == 0) {
             g_spec_number = species_index + 1;
-            abbr_ttype     = SPECIES_ID;
+            abbr_type     = SPECIES_ID;
             return(true);
         }
     }
@@ -10567,7 +10523,7 @@ yet_again:
 
     input_line_pointer = temp2_ptr;
 
-    if (abbr_ttype != SPECIES_ID && !first_try) {
+    if (abbr_type != SPECIES_ID && !first_try) {
         /* Assume abbreviation was accidentally omitted. */
         input_line_pointer = temp1_ptr;
     }
@@ -10620,15 +10576,18 @@ yet_again:
         g_spec_name[i] = sp.name[i];
     }
     g_spec_number = best_species_index + 1;
-    abbr_ttype     = SPECIES_ID;
+    abbr_type     = SPECIES_ID;
     return(true);
 }
+
+
+
+
+//*************************************************************************
 // get_star.c
-#include "fh.h"
 
 
-/* In case gamemaster creates new star systems with Edit program. */
-const NUM_EXTRA_STARS    20
+
 
 
 int num_stars, star_data_modified;
@@ -10676,8 +10635,11 @@ get_star_data() {
 
     star_data_modified = false;
 }
+
+
+
+//*************************************************************************
 // get_transact.c
-#include "fh.h"
 
 
 int num_transactions;
@@ -10717,8 +10679,11 @@ get_transaction_data() {
 
     close(trans_fd);
 }
+
+
+
+//*************************************************************************
 // get_transfer.c
-#include "fh.h"
 
 
 extern int   correct_spelling_required;
@@ -10752,8 +10717,12 @@ int get_transfer_point() {
 
     return(false);
 }
+
+
+
+
+//*************************************************************************
 // money.c
-#include "fh.h"
 
 
 long balance, raw_material_units, production_capacity, EU_spending_limit;
@@ -10842,12 +10811,16 @@ transfer_balance() {
 
     balance = 0;
 }
+
+
+
+
+//*************************************************************************
 // parse.c
-#include "fh.h"
 
 
 int   end_of_file = false;
-int   abbr_ttype, abbr_index, sub_light, tonnage, just_opened_file;
+int   abbr_type, abbr_index, sub_light, tonnage, just_opened_file;
 char  input_abbr[256], input_line[256], original_line[256], *input_line_pointer;
 char  original_name[32], upper_name[32];
 long  value;
@@ -10987,7 +10960,7 @@ find_cmd:
 
 /* Get a class abbreviation and return TECH_ID, ITEM_CLASS, SHIP_CLASS,
  * PLANET_ID, SPECIES_ID or ALLIANCE_ID as appropriate, or UNKNOWN if it
- * cannot be identified. Also, set "abbr_ttype" to this value. If it is
+ * cannot be identified. Also, set "abbr_type" to this value. If it is
  * TECH_ID, ITEM_CLASS or SHIP_CLASS, "abbr_index" will contain the
  * abbreviation index. If it is a ship, "tonnage" will contain tonnage/10,000,
  * and "sub_light" will be true or false. (Tonnage value returned is based
@@ -11001,7 +10974,7 @@ int get_class_abbr() {
 
     skip_whitespace();
 
-    abbr_ttype = UNKNOWN;
+    abbr_type = UNKNOWN;
 
     if (!isalnum(*input_line_pointer)) {
         return(UNKNOWN);
@@ -11029,8 +11002,8 @@ int get_class_abbr() {
     for (i = 0; i < 6; i++) {
         if (strcmp(input_abbr, tech_abbr[i]) == 0) {
             abbr_index = i;
-            abbr_ttype  = TECH_ID;
-            return(abbr_ttype);
+            abbr_type  = TECH_ID;
+            return(abbr_type);
         }
     }
 
@@ -11038,8 +11011,8 @@ int get_class_abbr() {
     for (i = 0; i < MAX_ITEMS; i++) {
         if (strcmp(input_abbr, item_abbr[i]) == 0) {
             abbr_index = i;
-            abbr_ttype  = ITEM_CLASS;
-            return(abbr_ttype);
+            abbr_type  = ITEM_CLASS;
+            return(abbr_type);
         }
     }
 
@@ -11067,25 +11040,25 @@ int get_class_abbr() {
             if (isalnum(*input_line_pointer)) {
                 break;                                  /* Garbage. */
             }
-            abbr_ttype = SHIP_CLASS;
-            return(abbr_ttype);
+            abbr_type = SHIP_CLASS;
+            return(abbr_type);
         }
     }
 
     /* Check for planet name. */
     if (strcmp(input_abbr, "PL") == 0) {
-        abbr_ttype = PLANET_ID;
-        return(abbr_ttype);
+        abbr_type = PLANET_ID;
+        return(abbr_type);
     }
 
     /* Check for species name. */
     if (strcmp(input_abbr, "SP") == 0) {
-        abbr_ttype = SPECIES_ID;
-        return(abbr_ttype);
+        abbr_type = SPECIES_ID;
+        return(abbr_type);
     }
 
-    abbr_ttype = UNKNOWN;
-    return(abbr_ttype);
+    abbr_type = UNKNOWN;
+    return(abbr_type);
 }
 
 /* Get a name and copy original version to "original_name" and upper
@@ -11263,9 +11236,12 @@ fix_separator() {
         *temp_ptr = ',';
     }
 }
+
+
+
+
+//*************************************************************************
 // regen_sh.c
-#include "fh.h"
-#include "combat.h"
 
 
 extern struct species_data *c_species[MAX_SPECIES];
@@ -11297,8 +11273,12 @@ struct action_data *act;
         }
     }
 }
+
+
+
+
+//*************************************************************************
 // sav_plan.c
-#include "fh.h"
 
 
 extern int num_planets;
@@ -11336,8 +11316,12 @@ save_planet_data() {
 
     close(planet_fd);
 }
+
+
+
+
+//*************************************************************************
 // sav_star.c
-#include "fh.h"
 
 
 extern int num_stars;
@@ -11375,8 +11359,12 @@ save_star_data() {
 
     close(star_fd);
 }
+
+
+
+
+//*************************************************************************
 // sav_transact.c
-#include "fh.h"
 
 
 extern int num_transactions;
@@ -11409,8 +11397,12 @@ save_transaction_data() {
 
     close(trans_fd);
 }
+
+
+
+
+//*************************************************************************
 // scan.c
-#include "fh.h"
 
 
 int print_LSN = true;
@@ -11534,8 +11526,12 @@ char x, y, z;
 
     return;
 }
+
+
+
+
+//*************************************************************************
 // utils.c
-#include "fh.h"
 
 /* This routine will return a random int between 1 and max, inclusive.
  * It uses the so-called "Algorithm M" method, which is a combination
@@ -12509,9 +12505,11 @@ int x, y, z;
 
     return(found);
 }
+
+
+
+//*************************************************************************
 // with_check.c
-#include "fh.h"
-#include "combat.h"
 
 
 extern int   truncate_name, ignore_field_distorters;
