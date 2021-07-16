@@ -23,8 +23,8 @@ import "io"
 /* Global data used in most or all programs. */
 
 var (
-	append_log   [MAX_SPECIES]byte
-	battle_base  *battle_data
+	append_log   [MAX_SPECIES]bool
+	battle_base  []*battle_data // warning: code expects *battle_data
 	c_nampla     [MAX_SPECIES]*nampla_data
 	color_char   = []byte(" OBAFGKM")
 	command_abbr = []string{ // warning: code assumes [NUM_COMMANDS][4]byte
@@ -48,11 +48,11 @@ var (
 	}
 	c_ship             [MAX_SPECIES]*ship_data_
 	c_species          [MAX_SPECIES]*species_data
-	data_in_memory     [MAX_SPECIES]int
-	data_modified      [MAX_SPECIES]int
+	data_in_memory     [MAX_SPECIES]bool
+	data_modified      [MAX_SPECIES]bool
 	doing_production   int
-	end_of_file        int
-	first_pass         int
+	end_of_file        bool
+	first_pass         bool
 	fleet_percent_cost int
 	galaxy             galaxy_data
 	gas_string         = []string{ // warning: code assumes [14][4]byte
@@ -63,7 +63,7 @@ var (
 	ignore_field_distorters int
 	input_file              io.Reader
 	input_line              [256]byte
-	input_line_pointer      *[]byte
+	input_line_pointer      *cstring
 	item_abbr               = []string{ // warning: code assumes [MAX_ITEMS][4]byte
 		"RM", "PD", "SU", "DR", "CU", "IU", "AU", "FS",
 		"JP", "FM", "FJ", "GT", "FD", "TP", "GW", "SG1",
@@ -143,7 +143,14 @@ var (
 	last_random          int
 	loc                  [MAX_LOCATIONS]sp_loc_data
 	log_file             io.Writer
-	log_stdout           int
+	log_indentation      int
+	log_line             [1028]byte
+	log_position         int
+	log_start_of_line    bool
+	log_stdout           bool
+	log_summary          bool
+	log_to_file          bool
+	logging_disabled     bool
 	make_enemy           [MAX_SPECIES][MAX_SPECIES]byte
 	namp_data            [MAX_SPECIES]*nampla_data
 	nampla1_base         *nampla_data
@@ -169,7 +176,7 @@ var (
 	post_arrival_phase   bool // warning: must be initialized to true for PostArrivalMain
 	printing_alien       int
 	production_done      [1000]byte
-	prompt_gm            int
+	prompt_gm            bool
 	report_file          io.Writer
 	ship1_base           *ship_data_
 	ship2_base           *ship_data_
@@ -179,13 +186,13 @@ var (
 		"BW", "BR", "BA", "TR",
 	}
 	ship_already_listed [5000]byte
-	ship_base           *ship_data_
-	ship_cost           = []int{ // warning: code assumes [NUM_SHIP_CLASSES]int
+	ship_base           []*ship_data_ // warning: code expects *ship_data_
+	ship_cost           = []int{      // warning: code assumes [NUM_SHIP_CLASSES]int
 		100, 200, 500, 1000, 1500, 2000, 2500,
 		3000, 3500, 4000, 4500, 5000, 5500, 6000,
 		6500, 7000, 100, 100,
 	}
-	ship_data    [MAX_SPECIES]*ship_data_
+	ship_data    [MAX_SPECIES][]*ship_data_ // warning: code expects [MAX_SPECIES]*ship_data_
 	ship_index   int
 	ship         *ship_data_
 	ship_tonnage = []int{ // warning: code assumes [NUM_SHIP_CLASSES]int
@@ -206,6 +213,7 @@ var (
 	star_data_modified int
 	star               *star_data
 	strike_phase       bool
+	summary_file       io.Writer
 	tech_abbr          = []string{ // warning: code assumes [6][4]byte
 		"MI", "MA", "ML", "GV", "LS", "BI",
 	}

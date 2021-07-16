@@ -34,23 +34,26 @@ type action_data struct {
 }
 
 type battle_data struct {
-	x, y, z, num_species_here int
-	spec_num                  [MAX_SPECIES]int
-	summary_only              [MAX_SPECIES]int
-	transport_withdraw_age    [MAX_SPECIES]int
-	warship_withdraw_age      [MAX_SPECIES]int
+	ambush_amount             [MAX_SPECIES]int
+	can_be_surprised          [MAX_SPECIES]bool
+	enemy_mine                [MAX_SPECIES][MAX_SPECIES]int
+	engage_option             [MAX_SPECIES][MAX_ENGAGE_OPTIONS]int
+	engage_planet             [MAX_SPECIES][MAX_ENGAGE_OPTIONS]int
 	fleet_withdraw_percentage [MAX_SPECIES]int
 	haven_x                   [MAX_SPECIES]int
 	haven_y                   [MAX_SPECIES]int
 	haven_z                   [MAX_SPECIES]int
-	special_target            [MAX_SPECIES]int
-	hijacker                  [MAX_SPECIES]int
-	can_be_surprised          [MAX_SPECIES]int
-	enemy_mine                [MAX_SPECIES][MAX_SPECIES]int
+	hijacker                  [MAX_SPECIES]bool
 	num_engage_options        [MAX_SPECIES]int
-	engage_option             [MAX_SPECIES][MAX_ENGAGE_OPTIONS]int
-	engage_planet             [MAX_SPECIES][MAX_ENGAGE_OPTIONS]int
-	ambush_amount             [MAX_SPECIES]int
+	num_species_here          int
+	spec_num                  [MAX_SPECIES]int
+	special_target            [MAX_SPECIES]int
+	summary_only              [MAX_SPECIES]bool
+	transport_withdraw_age    [MAX_SPECIES]int
+	warship_withdraw_age      [MAX_SPECIES]int
+	x                         int
+	y                         int
+	z                         int
 }
 
 type galaxy_data struct {
@@ -122,30 +125,30 @@ type sp_loc_data struct {
 }
 
 type species_data struct {
-	name               [32]byte               /* Name of species. */
-	govt_name          [32]byte               /* Name of government. */
-	govt_ttype         [32]byte               /* Type of government. */
-	x, y, z, pn        int                    /* Coordinates of home planet. */
-	required_gas       int                    /* Gas required by species. */
-	required_gas_min   int                    /* Minimum needed percentage. */
-	required_gas_max   int                    /* Maximum allowed percentage. */
-	reserved5          int                    /* Zero for now. */
-	neutral_gas        [6]int                 /* Gases neutral to species. */
-	poison_gas         [6]int                 /* Gases poisonous to species. */
-	auto_orders        bool                   /* AUTO command was issued. */
-	tech_level         [6]int                 /* Actual tech levels. */
-	init_tech_level    [6]int                 /* Tech levels at start of turn. */
-	tech_knowledge     [6]int                 /* Unapplied tech level knowledge. */
-	num_namplas        int                    /* Number of named planets, including home planet and colonies. */
-	num_ships          int                    /* Number of ships. */
-	tech_eps           [6]int                 /* Experience points for tech levels. */
-	hp_original_base   int                    /* If non-zero, home planet was bombed either by bombardment or germ warfare and has not yet fully recovered. Value is total economic base before bombing. */
-	econ_units         int                    /* Number of economic units. */
-	fleet_cost         int                    /* Total fleet maintenance cost. */
-	fleet_percent_cost int                    /* Fleet maintenance cost as a percentage times one hundred. */
-	contact            [NUM_CONTACT_WORDS]int /* A bit is set if corresponding species has been met. */
-	ally               [NUM_CONTACT_WORDS]int /* A bit is set if corresponding species is considered an ally. */
-	enemy              [NUM_CONTACT_WORDS]int /* A bit is set if corresponding species is considered an enemy. */
+	x, y, z, pn        int      /* Coordinates of home planet. */
+	auto_orders        bool     /* AUTO command was issued. */
+	econ_units         int      /* Number of economic units. */
+	fleet_cost         int      /* Total fleet maintenance cost. */
+	fleet_percent_cost int      /* Fleet maintenance cost as a percentage times one hundred. */
+	govt_name          [32]byte /* Name of government. */
+	govt_ttype         [32]byte /* Type of government. */
+	init_tech_level    [6]int   /* Tech levels at start of turn. */
+	name               [32]byte /* Name of species. */
+	neutral_gas        [6]int   /* Gases neutral to species. */
+	num_namplas        int      /* Number of named planets, including home planet and colonies. */
+	num_ships          int      /* Number of ships. */
+	poison_gas         [6]int   /* Gases poisonous to species. */
+	required_gas       int      /* Gas required by species. */
+	required_gas_max   int      /* Maximum allowed percentage. */
+	required_gas_min   int      /* Minimum needed percentage. */
+	tech_eps           [6]int   /* Experience points for tech levels. */
+	tech_knowledge     [6]int   /* Unapplied tech level knowledge. */
+	tech_level         [6]int   /* Actual tech levels. */
+	hp_original_base   int      /* If non-zero, home planet was bombed either by bombardment or germ warfare and has not yet fully recovered. Value is total economic base before bombing. */
+	// warning: code expects [NUM_CONTACT_WORDS]int for ally, contact, and enemy
+	ally    [MAX_SPECIES]bool /* A bit is set if corresponding species is considered an ally. */
+	contact [MAX_SPECIES]bool /* A bit is set if corresponding species has been met. */
+	enemy   [MAX_SPECIES]bool /* A bit is set if corresponding species is considered an enemy. */
 }
 
 type star_data struct {
