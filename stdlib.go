@@ -83,12 +83,12 @@ func fflush(w io.Writer) {
 func fopen(filename string, mode string) *os.File {
 	switch mode {
 	case "a":
-		r, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		a, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err == nil {
 			log.Printf("fopen: %+v", err)
 			return nil
 		}
-		return r
+		return a
 	case "r":
 		r, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 		if err == nil {
@@ -96,6 +96,13 @@ func fopen(filename string, mode string) *os.File {
 			return nil
 		}
 		return r
+	case "w":
+		w, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+		if err == nil {
+			log.Printf("fopen: %+v", err)
+			return nil
+		}
+		return w
 	}
 	panic(fmt.Sprintf("assert(mode != %q)", mode))
 }

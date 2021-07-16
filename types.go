@@ -19,18 +19,18 @@
 package main
 
 type action_data struct {
-	num_units_fighting     int
+	bomb_damage            [MAX_SHIPS]int
 	fighting_species_index [MAX_SHIPS]int
+	fighting_unit          [MAX_SHIPS]*int // warning: code mixes pointer types here
+	original_age_or_PDs    [MAX_SHIPS]int
 	num_shots              [MAX_SHIPS]int
-	shots_left             [MAX_SHIPS]int
-	weapon_damage          [MAX_SHIPS]int
+	num_units_fighting     int
 	shield_strength        [MAX_SHIPS]int
 	shield_strength_left   [MAX_SHIPS]int
-	original_age_or_PDs    [MAX_SHIPS]int
-	bomb_damage            [MAX_SHIPS]int
+	shots_left             [MAX_SHIPS]int
 	surprised              [MAX_SHIPS]int
 	unit_type              [MAX_SHIPS]int
-	fighting_unit          [MAX_SHIPS]*int
+	weapon_damage          [MAX_SHIPS]int
 }
 
 type battle_data struct {

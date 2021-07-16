@@ -23,16 +23,16 @@ import "io"
 /* Global data used in most or all programs. */
 
 var (
-	abbr_index   int
-	abbr_type    int
-	ambush_took_place int
-	append_log   [MAX_SPECIES]bool
-	attacking_ML int
-	balance      int
-	battle_base  []*battle_data // warning: code expects *battle_data
-	c_nampla     [MAX_SPECIES]*nampla_data
-	color_char   = []byte(" OBAFGKM")
-	command_abbr = []string{ // warning: code assumes [NUM_COMMANDS][4]byte
+	abbr_index        int
+	abbr_type         int
+	ambush_took_place bool
+	append_log        [MAX_SPECIES]bool
+	attacking_ML      int
+	balance           int
+	battle_base       []*battle_data // warning: code expects *battle_data
+	c_nampla          [MAX_SPECIES]*nampla_data
+	color_char        = []byte(" OBAFGKM")
+	command_abbr      = []string{ // warning: code assumes [NUM_COMMANDS][4]byte
 		"   ", "ALL", "AMB", "ATT", "AUT", "BAS", "BAT", "BUI", "CON",
 		"DEE", "DES", "DEV", "DIS", "END", "ENE", "ENG", "EST", "HAV",
 		"HID", "HIJ", "IBU", "ICO", "INS", "INT", "JUM", "LAN", "MES",
@@ -58,18 +58,18 @@ var (
 	data_in_memory     [MAX_SPECIES]bool
 	data_modified      [MAX_SPECIES]bool
 	deep_space_defense int
-	defending_ML int
-	doing_production   int
+	defending_ML       int
+	doing_production   bool
 	end_of_file        bool
-	field_distorted [MAX_SPECIES]bool
-	first_battle bool = true
+	field_distorted    [MAX_SPECIES]bool
+	first_battle       bool = true
 	first_pass         bool
 	fleet_percent_cost int
 	galaxy             galaxy_data
 	gas_string         = []string{ // warning: code assumes [14][4]byte
 		"   ", "H2", "CH4", "He", "NH3", "N2", "CO2", "O2", "HCl", "Cl2", "F2", "H2O", "SO2", "H2S",
 	}
-	g_spec_name             [32]byte
+	g_spec_name             string // warning: code assumes [32]byte
 	g_spec_number           int
 	header_printed          int
 	home_planet             *planet_data
@@ -125,7 +125,7 @@ var (
 		90, 999, 999, 999, 999, 999,
 	}
 	just_opened_file     int
-	last_random          uint32 = 1924085713;        /* Random seed. */
+	last_random          uint32 = 1924085713 /* Random seed. */
 	loc                  [MAX_LOCATIONS]sp_loc_data
 	log_file             io.Writer
 	log_indentation      int
@@ -137,10 +137,10 @@ var (
 	log_to_file          bool
 	logging_disabled     bool
 	make_enemy           [MAX_SPECIES][MAX_SPECIES]bool
-	namp_data            [MAX_SPECIES]*nampla_data
-	nampla1_base         *nampla_data
-	nampla2_base         *nampla_data
-	nampla_base          *nampla_data
+	namp_data            [MAX_SPECIES]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
+	nampla1_base         *nampla_data              // warning: code assumes *nampla_data
+	nampla2_base         *nampla_data              // warning: code assumes *nampla_data
+	nampla_base          []*nampla_data            // warning: code assumes *nampla_data
 	nampla_index         int
 	nampla               *nampla_data
 	next_nampla_index    int
@@ -211,7 +211,7 @@ var (
 	species            *species_data
 	species_index      int
 	species_number     int
-	star_base          *star_data
+	star_base          []*star_data // warning: code assumes *star_data
 	star_data_modified int
 	star               *star_data
 	strike_phase       bool

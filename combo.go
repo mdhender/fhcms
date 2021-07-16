@@ -18,6 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
+import (
+    "fmt"
+    "io"
+    "log"
+)
+
 //*************************************************************************
 // combat_utils.c
 
@@ -98,12 +104,8 @@ func consolidate_option(option, location int) {
 // dis_ship.c
 
 func disbanded_ship(ship *ship_data_) bool {
-    var nampla_index int
-    var nampla *nampla_data
-
-    nampla = nampla_base - 1;
-    for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
-        nampla++
+    for nampla_index := 0; nampla_index < species.num_namplas; nampla_index++ {
+        nampla := nampla_base[nampla_index]
 
         if (nampla.x != ship.x) {
             continue;
@@ -135,11 +137,8 @@ func disbanded_ship(ship *ship_data_) bool {
 // do_ally.c
 
 func do_ALLY_command() {
-    var i, array_index, bit_number int
-    var bit_mask int
-
     /* Get name of species that is being declared an ally. */
-    if (!get_species_name()) {
+    if !get_species_name() {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid or missing argument in ALLY command.\n");
@@ -147,12 +146,11 @@ func do_ALLY_command() {
     }
 
     /* Get array index and bit mask. */
-    array_index = (g_spec_number - 1) / 32;
-    bit_number  = (g_spec_number - 1) % 32;
-    bit_mask    = 1 << bit_number;
+    log.Printf("do_ALLY_command: bit_mask is not derived correctly\n")
+    bit_mask := 0
 
     /* Check if we've met this species and make sure it is not an enemy. */
-    if !species.contact[array_index] {
+    if !species.contact[g_spec_number] {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You can't declare alliance with a species you haven't met.\n");
@@ -160,8 +158,8 @@ func do_ALLY_command() {
     }
 
     /* Set/clear the appropriate bit. */
-    species.ally[array_index]  true    /* Set ally bit. */
-    species.enemy[array_index] false   /* Clear enemy bit. */
+    species.ally[g_spec_number] = true    /* Set ally bit. */
+    species.enemy[g_spec_number] =false   /* Clear enemy bit. */
 
     /* Log the result. */
     log_string("    Alliance was declared with ");
@@ -178,11 +176,11 @@ func do_ALLY_command() {
 // do_amb.c
 
 func do_AMBUSH_command() {
-    var n, status int
+    var n int
     var cost int
 
     /* Check if this order was preceded by a PRODUCTION order. */
-    if (!doing_production) {
+    if !doing_production {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Missing PRODUCTION order!\n");
@@ -190,8 +188,8 @@ func do_AMBUSH_command() {
     }
 
     /* Get amount to spend. */
-    status = get_value();
-    if (status == 0 || value < 0) {
+    status := get_value();
+    if !status || value < 0 {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid or missing amount.\n");
@@ -206,7 +204,7 @@ func do_AMBUSH_command() {
     cost = value;
 
     /* Check if planet is under siege. */
-    if (nampla.siege_eff != 0) {
+    if nampla.siege_eff != 0 {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Besieged planet cannot ambush!\n");
@@ -214,7 +212,7 @@ func do_AMBUSH_command() {
     }
 
     /* Check if sufficient funds are available. */
-    if (check_bounced(cost)) {
+    if check_bounced(cost) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Insufficient funds to execute order.\n");
@@ -234,38 +232,42 @@ func do_AMBUSH_command() {
 // do_base.c
 
 func do_BASE_command() {
-    int i, n, found, su_count, original_count, item_class, name_length,
-        unused_ship_available, new_tonnage, max_tonnage, new_starbase,
-        source_is_a_planet, age_new;
+    var (
+        n int
+        found bool
+        su_count, original_count, item_class, name_length int
+        unused_ship_available bool
+        new_tonnage, max_tonnage int
+        new_starbase bool
+        source_is_a_planet bool
+        age_new int
 
-    char x, y, z, pn, upper_ship_name[32], *original_line_pointer;
+        x, y, z, pn int
+        upper_ship_name [32]byte
+        original_line_pointer *cstring
 
-    struct nampla_data *source_nampla;
-    struct ship_data *  source_ship, *starbase, *unused_ship;
-
+        source_nampla *nampla_data
+        source_ship, starbase, unused_ship *ship_data_
+    )
 
     /* Get number of starbase units to use. */
-    i = get_value();
-    if (i == 0) {
+    if i := get_value(); !i {
         value = 0;
-    }else{
-        /* Make sure value is meaningful. */
-        if (value < 0) {
-            fprintf(log_file, "!!! Order ignored:\n");
-            fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! Invalid SU count in BASE command.\n");
-            return;
-        }
+    }else if (value < 0) {            /* Make sure value is meaningful. */
+        fprintf(log_file, "!!! Order ignored:\n");
+        fprintf(log_file, "!!! %s", original_line);
+        fprintf(log_file, "!!! Invalid SU count in BASE command.\n");
+        return;
     }
     su_count       = value;
     original_count = su_count;
 
     /* Get source of starbase units. */
     original_line_pointer = input_line_pointer;
-    if (!get_transfer_point()) {
+    if !get_transfer_point() {
         input_line_pointer = original_line_pointer;
         fix_separator();        /* Check for missing comma or tab. */
-        if (!get_transfer_point()) {
+        if !get_transfer_point() {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
             fprintf(log_file, "!!! Invalid source location in BASE command.\n");
@@ -281,8 +283,7 @@ func do_BASE_command() {
         if (source_ship.status == UNDER_CONSTRUCTION) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! %s is still under construction!\n",
-                    ship_name(source_ship));
+            fprintf(log_file, "!!! %s is still under construction!\n", ship_name(source_ship));
             return;
         }
 
@@ -303,8 +304,7 @@ func do_BASE_command() {
         if (source_ship.item_quantity[SU] < su_count) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! %s does not enough starbase units!\n",
-                    ship_name(source_ship));
+            fprintf(log_file, "!!! %s does not enough starbase units!\n", ship_name(source_ship));
             return;
         }
 
@@ -323,17 +323,15 @@ func do_BASE_command() {
         if (source_nampla.item_quantity[SU] < su_count) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! PL %s does not have enough starbase units!\n",
-                    source_nampla.name);
+            fprintf(log_file, "!!! PL %s does not have enough starbase units!\n", source_nampla.name);
             return;
         }
 
-        x  = source_nampla.x;   y = source_nampla.y;   z = source_nampla.z;
-        pn = source_nampla.pn;
+        x, y, z, pn  = source_nampla.x, source_nampla.y, source_nampla.z, source_nampla.pn;
     }
 
     /* Get starbase name. */
-    if (get_class_abbr() != SHIP_CLASS || abbr_index != BA) {
+    if get_class_abbr() != SHIP_CLASS || abbr_index != BA {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", original_line);
         fprintf(log_file, "!!! Invalid starbase name.\n");
@@ -343,10 +341,9 @@ func do_BASE_command() {
 
     /* Search all ships for name. */
     found = false;
-    ship  = ship_base - 1;
     unused_ship_available = false;
-    for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-        ++ship;
+    for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+        ship = ship_base[ship_index]
 
         if (ship.pn == 99) {
             unused_ship_available = true;
@@ -355,18 +352,18 @@ func do_BASE_command() {
         }
 
         /* Make upper case copy of ship name. */
-        for (i = 0; i < 32; i++) {
+        for i := 0; i < 32; i++ {
             upper_ship_name[i] = toupper(ship.name[i]);
         }
 
         /* Compare names. */
-        if (strcmp(upper_ship_name, upper_name) == 0) {
+        if strcmp(upper_ship_name, upper_name) == 0 {
             found = true;
             break;
         }
     }
 
-    if (found) {
+    if found {
         if (ship.ttype != STARBASE) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
@@ -391,9 +388,9 @@ func do_BASE_command() {
                 fprintf(stderr, "\n\n\tInsufficient memory for new starbase!\n\n");
                 exit(-1);
             }
-            ++num_new_ships[species_index];
-            starbase = ship_base + (int)species.num_ships;
-            ++species.num_ships;
+            num_new_ships[species_index]++;
+            starbase = ship_base[species.num_ships];
+            species.num_ships++;
             delete_ship(starbase);              /* Initialize everything to zero. */
         }
 
@@ -422,9 +419,8 @@ func do_BASE_command() {
     /* Make sure that starbase is not being built in the deep space section
      *  of a star system .*/
     if (starbase.pn == 0) {
-        star = star_base - 1;
-        for (i = 0; i < num_stars; i++) {
-            ++star;
+        for i := 0; i < num_stars; i++ {
+            star = star_base[i]
 
             if (star.x != x) {
                 continue;
@@ -453,7 +449,7 @@ func do_BASE_command() {
     /* Make sure species can build a starbase of this size. */
     max_tonnage = species.tech_level[MA] / 2;
     new_tonnage = starbase.tonnage + su_count;
-    if (new_tonnage > max_tonnage && original_count == 0) {
+    if new_tonnage > max_tonnage && original_count == 0 {
         su_count = max_tonnage - starbase.tonnage;
         if (su_count < 1) {
             if (new_starbase) {
@@ -480,12 +476,10 @@ func do_BASE_command() {
         log_string(ship_name(starbase));
         log_string(" was constructed.\n");
     }else {
-        starbase.age =         /* Weighted average. */
-                        ((starbase.age * starbase.tonnage) - su_count)
-                        / new_tonnage;
+        starbase.age = ((starbase.age * starbase.tonnage) - su_count) / new_tonnage; /* Weighted average. */
         log_string("Size of ");  log_string(ship_name(starbase));
         log_string(" was increased to ");
-        log_string(commas(10000L * (long)new_tonnage));
+        log_string(commas(10000 * new_tonnage));
         log_string(" tons.\n");
     }
 
@@ -502,40 +496,46 @@ func do_BASE_command() {
 // do_bat.c
 
 func do_battle(bat *battle_data) {
-    int i, j, k, species_index, species_number, num_sp, save,
-        max_rounds, round_number, battle_here, fight_here,
-        unit_index, option_index, current_species, temp_status,
-        temp_pn, num_namplas, array_index, bit_number, first_action,
-        traitor_number, betrayed_number, betrayal, need_comma,
-        true_value, do_withdraw_check_first;
+    var (
+        i, j, k, species_index, species_number, num_sp, save int
+        max_rounds, round_number, battle_here, fight_here int
+        unit_index, option_index, current_species, temp_status int
+        temp_pn, num_namplas, array_index, bit_number, first_action int
+        traitor_number, betrayed_number int
+        betrayal, need_comma bool
+        true_value, do_withdraw_check_first int
 
-    short identifiable_units[MAX_SPECIES],
-          unidentifiable_units[MAX_SPECIES];
+        identifiable_units[MAX_SPECIES] int
+              unidentifiable_units[MAX_SPECIES] int
 
-    long n, bit_mask;
+        n, bit_mask int
 
-    char x, y, z, where, option, filename[32], enemy,
-         enemy_num[MAX_SPECIES], log_line[256];
+        x, y, z int
+        where, option int
+        filename[32]byte
+        enemy int
+        enemy_num[MAX_SPECIES]int
+        log_line[256] int
 
-    FILE *combat_log, *species_log;
+        combat_log, species_log io.Writer
 
-    struct action_data  act;
-    struct nampla_data *namp, *attacked_nampla;
-    struct ship_data *  sh;
-
+        act *action_data
+        namp, attacked_nampla *nampla_data
+        sh *ship_data_
+    )
 
     ambush_took_place = false;
 
     /* Open log file for writing. */
     log_file = fopen("combat.log", "w");
-    if (log_file == NULL) {
+    if log_file == nil {
         fprintf(stderr, "\n\tCannot open 'combat.log' for writing!\n\n");
         exit(-1);
     }
 
     /* Open summary file for writing. */
     summary_file = fopen("summary.log", "w");
-    if (summary_file == NULL) {
+    if summary_file == nil {
         fprintf(stderr, "\n\tCannot open 'summary.log' for writing!\n\n");
         exit(-1);
     }
@@ -543,9 +543,9 @@ func do_battle(bat *battle_data) {
 
     /* Get data for all species present at this battle. */
     num_sp = bat.num_species_here;
-    for (species_index = 0; species_index < num_sp; ++species_index) {
+    for species_index = 0; species_index < num_sp; species_index++ {
         species_number           = bat.spec_num[species_index];
-        c_species[species_index] = &spec_data[species_number - 1];
+        c_species[species_index] = spec_data[species_number - 1];
         c_nampla[species_index]  = namp_data[species_number - 1];
         c_ship[species_index]    = ship_data[species_number - 1];
         if (data_in_memory[species_number - 1]) {
@@ -561,8 +561,8 @@ func do_battle(bat *battle_data) {
         unidentifiable_units[species_index] = 0;
 
         namp = c_nampla[species_index] - 1;
-        for (i = 0; i < c_species[species_index].num_namplas; i++) {
-            ++namp;
+        for i := 0; i < c_species[species_index].num_namplas; i++ {
+            namp = c_nampla[species_index][i]
 
             if (namp.x != bat.x) {
                 continue;
@@ -575,13 +575,13 @@ func do_battle(bat *battle_data) {
             }
 
             if (namp.status & POPULATED) {
-                ++identifiable_units[species_index];
+                identifiable_units[species_index]++
             }
         }
 
         sh = c_ship[species_index] - 1;
-        for (i = 0; i < c_species[species_index].num_ships; i++) {
-            ++sh;
+        for i := 0; i < c_species[species_index].num_ships; i++ {
+            sh = c_ship[species_index][i];
 
             if (sh.x != bat.x) {
                 continue;
@@ -606,14 +606,13 @@ func do_battle(bat *battle_data) {
             sh.dest_y = 100;   /* Shields at 100%. */
 
             if (sh.item_quantity[FD] == sh.tonnage) {
-                ++unidentifiable_units[species_index];
+                unidentifiable_units[species_index]++
             }else{
-                ++identifiable_units[species_index];
+                identifiable_units[species_index]++
             }
         }
 
-        if (identifiable_units[species_index] > 0 ||
-            unidentifiable_units[species_index] == 0) {
+        if (identifiable_units[species_index] > 0 || unidentifiable_units[species_index] == 0) {
             field_distorted[species_index] = false;
         }else{
             field_distorted[species_index] = true;
@@ -641,19 +640,18 @@ func do_battle(bat *battle_data) {
      *  or HIJACK command.  The actual true value will be 1 for ATTACK or
      *  2 for HIJACK. */
 
-    for (species_index = 0; species_index < num_sp; ++species_index) {
+    for species_index = 0; species_index < num_sp; species_index++ {
         /* Make copy of list of enemies. */
-        for (i = 0; i < MAX_SPECIES; i++) {
+        for i = 0; i < MAX_SPECIES; i++ {
             enemy_num[i] = bat.enemy_mine[species_index][i];
-            bat.enemy_mine[species_index][i] = false;
+            bat.enemy_mine[species_index][i] = 0;
         }
 
-        for (i = 0; i < MAX_SPECIES; i++) {
+        for i := 0; i < MAX_SPECIES; i++ {
             enemy = enemy_num[i];
-            if (enemy == 0) {
+            if enemy == 0 {
                 break;                  /* No more enemies in list. */
-            }
-            if (enemy < 0) {
+            } else if enemy < 0 {
                 enemy      = -enemy;
                 true_value = 2;         /* This is a hijacking. */
             }else {
@@ -662,7 +660,7 @@ func do_battle(bat *battle_data) {
 
             /* Convert absolute species numbers to species indices that
              *  have been assigned in the current battle. */
-            for (j = 0; j < num_sp; j++) {
+            for j := 0; j < num_sp; j++ {
                 if (enemy == bat.spec_num[j]) {
                     bat.enemy_mine[species_index][j] = true_value;
                 }
@@ -674,18 +672,18 @@ func do_battle(bat *battle_data) {
      *  if it can be surprised. A species can only be surprised if it has
      *  not given a BATTLE order and if it is being attacked ONLY by one
      *  or more ALLIES. */
-    for (species_index = 0; species_index < num_sp; ++species_index) {
+    for species_index = 0; species_index < num_sp; species_index++ {
         j           = bat.spec_num[species_index] - 1;
         array_index = j / 32;
         bit_number  = j % 32;
         bit_mask    = 1 << bit_number;
 
-        for (i = 0; i < num_sp; i++) {
+        for i := 0; i < num_sp; i++ {
             if (i == species_index) {
                 continue;
             }
 
-            if (!bat.enemy_mine[species_index][i]) {
+            if !bat.enemy_mine[species_index][i] {
                 continue;
             }
 
@@ -695,13 +693,13 @@ func do_battle(bat *battle_data) {
                 continue;
             }
 
-            if ((c_species[i].ally[array_index] & bit_mask)) {
+            if (c_species[i].ally[array_index] & bit_mask) != 0 {
                 betrayal = true;
             }else{
                 betrayal = false;
             }
 
-            if (betrayal) {
+            if betrayal {
                 /* Someone is being attacked by an ALLY. */
                 traitor_number  = bat.spec_num[species_index];
                 betrayed_number = bat.spec_num[i];
@@ -722,13 +720,13 @@ func do_battle(bat *battle_data) {
     /* For each species that has been mentioned in an attack order, see if
      *  there are other species present that have declared it as an ALLY.
      *  If so, have the attacker attack the other species and vice-versa. */
-    for (species_index = 0; species_index < num_sp; ++species_index) {
-        for (i = 0; i < num_sp; i++) {
+    for species_index = 0; species_index < num_sp; species_index++ {
+        for i := 0; i < num_sp; i++ {
             if (i == species_index) {
                 continue;
             }
 
-            if (!bat.enemy_mine[species_index][i]) {
+            if !bat.enemy_mine[species_index][i] {
                 continue;
             }
 
@@ -737,7 +735,7 @@ func do_battle(bat *battle_data) {
             bit_number  = j % 32;
             bit_mask    = 1 << bit_number;
 
-            for (k = 0; k < num_sp; k++) {
+            for k := 0; k < num_sp; k++ {
                 if (k == species_index) {
                     continue;
                 }
@@ -745,7 +743,7 @@ func do_battle(bat *battle_data) {
                     continue;
                 }
 
-                if (c_species[k].ally[array_index] & bit_mask) {
+                if (c_species[k].ally[array_index] & bit_mask) != 0 {
                     /* Make sure it's not already set (it may already be set
                      *  for HIJACK and we don't want to accidentally change
                      *  it to ATTACK). */
@@ -762,14 +760,14 @@ func do_battle(bat *battle_data) {
 
     /* If a species did not give a battle order and is not the target of an
      *  attack, set can_be_surprised flag to a special value. */
-    for (species_index = 0; species_index < num_sp; ++species_index) {
+    for species_index = 0; species_index < num_sp; species_index++ {
         if (!bat.can_be_surprised[species_index]) {
             continue;
         }
 
         bat.can_be_surprised[species_index] = 55;
 
-        for (i = 0; i < num_sp; i++) {
+        for i := 0; i < num_sp; i++ {
             if (i == species_index) {
                 continue;
             }
@@ -785,7 +783,7 @@ func do_battle(bat *battle_data) {
     }
 
     /* List combatants. */
-    for (species_index = 0; species_index < num_sp; ++species_index) {
+    for species_index = 0; species_index < num_sp; species_index++ {
         species_number = bat.spec_num[species_index];
 
         log_string("    SP ");
@@ -802,7 +800,7 @@ func do_battle(bat *battle_data) {
     }
 
     /* Check if a declared enemy is being ambushed. */
-    for (i = 0; i < num_sp; i++) {
+    for i := 0; i < num_sp; i++ {
         namp                  = c_nampla[i] - 1;
         num_namplas           = c_species[i].num_namplas;
         bat.ambush_amount[i] = 0;
@@ -826,7 +824,7 @@ func do_battle(bat *battle_data) {
             continue;
         }
 
-        for (j = 0; j < num_sp; j++) {
+        for j := 0; j < num_sp; j++ {
             if (bat.enemy_mine[i][j]) {
                 do_ambush(i, bat);
             }
@@ -834,8 +832,8 @@ func do_battle(bat *battle_data) {
     }
 
     /* For all species that specified enemies, make the feeling mutual. */
-    for (i = 0; i < num_sp; i++) {
-        for (j = 0; j < num_sp; j++) {
+    for i := 0; i < num_sp; i++ {
+        for j := 0; j < num_sp; j++ {
             if (bat.enemy_mine[i][j]) {
                 /* Make sure it's not already set (it may already be set for
                  *  HIJACK and we don't want to accidentally change it to
@@ -851,8 +849,8 @@ func do_battle(bat *battle_data) {
      *  deep space defense has been ordered. If so, then make sure that
      *  first option is DEEP_SPACE_FIGHT. */
     num_combat_options = 0;
-    for (species_index = 0; species_index < num_sp; ++species_index) {
-        for (i = 0; i < bat.num_engage_options[species_index]; i++) {
+    for species_index = 0; species_index < num_sp; species_index++ {
+        for i := 0; i < bat.num_engage_options[species_index]; i++ {
             option = bat.engage_option[species_index][i];
             if (option == DEEP_SPACE_DEFENSE) {
                 consolidate_option(DEEP_SPACE_FIGHT, 0);
@@ -862,8 +860,8 @@ func do_battle(bat *battle_data) {
     }
 
 consolidate:
-    for (species_index = 0; species_index < num_sp; ++species_index) {
-        for (i = 0; i < bat.num_engage_options[species_index]; i++) {
+    for species_index = 0; species_index < num_sp; species_index++ {
+        for i := 0; i < bat.num_engage_options[species_index]; i++ {
             option = bat.engage_option[species_index][i];
             where  = bat.engage_planet[species_index][i];
             consolidate_option(option, where);
@@ -923,9 +921,7 @@ consolidate:
 
         /* Determine maximum number of rounds. */
         max_rounds = 10000;     /* Something ridiculously large. */
-        if (option == DEEP_SPACE_FIGHT && attacking_ML > 0 &&
-            defending_ML > 0 &&
-            deep_space_defense) {
+        if (option == DEEP_SPACE_FIGHT && attacking_ML > 0 && defending_ML > 0 && deep_space_defense) {
             /* This is the initial deep space fight and the defender wants the
              *  fight to remain in deep space for as long as possible. */
             if (defending_ML > attacking_ML) {
@@ -991,8 +987,8 @@ consolidate:
                 need_comma      = false;
             }
 
-            if (act.unit_ttype[unit_index] == SHIP) {
-                sh          = (struct ship_data *)act.fighting_unit[unit_index];
+            if (act.unit_type[unit_index] == SHIP) {
+                sh          = act.fighting_unit[unit_index]; // cast to *ship_data_
                 temp_status = sh.status;
                 temp_pn     = sh.pn;
                 if (option == DEEP_SPACE_FIGHT) {
@@ -1014,7 +1010,7 @@ consolidate:
                 sh.status = temp_status;
                 sh.pn     = temp_pn;
             }else {
-                namp = (struct nampla_data *)act.fighting_unit[unit_index];
+                namp = act.fighting_unit[unit_index]; // cast to *nampla_data
                 if (need_comma) {
                     log_string(", ");
                 }
@@ -1042,7 +1038,7 @@ do_combat:
             option == SIEGE) {
             logging_disabled = true; /* Disable logging during simulation. */
         }
-        for (;round_number <= max_rounds;) {
+        for round_number <= max_rounds {
             if (do_withdraw_check_first) {
                 withdrawal_check(bat, &act);
             }
@@ -1059,7 +1055,7 @@ do_combat:
 
             regenerate_shields(&act);
 
-            ++round_number;
+            round_number++
         }
 
         log_summary      = true;
@@ -1071,12 +1067,11 @@ do_combat:
         }
 
         if (option == PLANET_BOMBARDMENT || option == GERM_WARFARE) {
-            for (unit_index = 0; unit_index < act.num_units_fighting; unit_index++) {
-                if (act.unit_ttype[unit_index] == GENOCIDE_NAMPLA) {
-                    attacked_nampla = (struct nampla_data *)
-                                      act.fighting_unit[unit_index];
+            for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
+                if (act.unit_type[unit_index] == GENOCIDE_NAMPLA) {
+                    attacked_nampla = act.fighting_unit[unit_index]; // cast to *nampla_data
                     j = act.fighting_species_index[unit_index];
-                    for (i = 0; i < num_sp; i++) {
+                    for i := 0; i < num_sp; i++ {
                         if (x_attacked_y[i][j]) {
                             species_number = bat.spec_num[i];
                             log_string("      SP ");
@@ -1133,7 +1128,7 @@ do_combat:
     fclose(log_file);
     fclose(summary_file);
 
-    for (species_index = 0; species_index < num_sp; ++species_index) {
+    for species_index = 0; species_index < num_sp; species_index++ {
         species_number = bat.spec_num[species_index];
 
         /* Open combat log file for reading. */
@@ -1143,21 +1138,21 @@ do_combat:
             combat_log = fopen("combat.log", "r");
         }
 
-        if (combat_log == NULL) {
+        if (combat_log == nil) {
             fprintf(stderr, "\n\tCannot open combat log for reading!\n\n");
             exit(-1);
         }
 
         /* Open a temporary species log file for appending. */
-        sprintf(filename, "sp%02d.temp.log\0", species_number);
+        filename = fmt.Sprintf("sp%02d.temp.log\0", species_number);
         species_log = fopen(filename, "a");
-        if (species_log == NULL) {
+        if (species_log == nil) {
             fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
             exit(-1);
         }
 
         /* Copy combat log to temporary species log. */
-        for (;fgets(log_line, 256, combat_log) != NULL;) {
+        for fgets(log_line, 256, combat_log) != nil {
             fputs(log_line, species_log);
         }
 
@@ -1170,9 +1165,8 @@ do_combat:
         if (!data_modified[species_number - 1]) {
             continue;
         }
-        sh = c_ship[species_index] - 1;
-        for (i = 0; i < c_species[species_index].num_ships; i++) {
-            ++sh;
+        for i := 0; i < c_species[species_index].num_ships; i++ {
+            sh = c_ship[species_index][i]
 
             if (sh.age < 50) {
                 continue;
@@ -1205,8 +1199,6 @@ func do_ambush(ambushing_species_index int, bat *battle_dat) {
     long friendly_tonnage, enemy_tonnage;
 
     struct ship_data *sh;
-
-
 
     /* Get total ambushing tonnage. */
     friendly_tonnage = 0;
@@ -6239,7 +6231,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
             if (total_shots == 0) {
                 /* Convert all non-combatants, if any, to combatants. */
                 for (i = start_unit; i < unit_index; i++) {
-                    if (act.unit_ttype[i] == SHIP) {
+                    if (act.unit_type[i] == SHIP) {
                         sh          = (struct ship_data *)act.fighting_unit[i];
                         sh.special = 0;
                     }
@@ -6253,7 +6245,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
         if (act.surprised[unit_index]) {
             n = 0;
         }
-        if (act.unit_ttype[unit_index] == SHIP) {
+        if (act.unit_type[unit_index] == SHIP) {
             sh = (struct ship_data *)act.fighting_unit[unit_index];
             if (sh.special == NON_COMBATANT) {
                 n = 0;
@@ -6269,7 +6261,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
         if (act.surprised[unit_index]) {
             n = 0;
         }
-        if (act.unit_ttype[unit_index] == SHIP) {
+        if (act.unit_type[unit_index] == SHIP) {
             sh = (struct ship_data *)act.fighting_unit[unit_index];
             if (sh.special == NON_COMBATANT) {
                 n = 0;
@@ -6299,7 +6291,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
         }
         /* Determine who fires next. */
         attacker_index = rnd(act.num_units_fighting) - 1;
-        if (act.unit_ttype[attacker_index] == SHIP) {
+        if (act.unit_type[attacker_index] == SHIP) {
             attacking_ship = (struct ship_data *)act.fighting_unit[attacker_index];
             i = act.fighting_species_index[attacker_index];
             ignore_field_distorters = !field_distorted[i];
@@ -6347,7 +6339,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
                 continue;
             }
 
-            if (act.unit_ttype[defender_index] == SHIP) {
+            if (act.unit_type[defender_index] == SHIP) {
                 defending_ship =
                     (struct ship_data *)act.fighting_unit[defender_index];
 
@@ -6401,7 +6393,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
         j           = act.fighting_species_index[defender_index];
         defender_ml = c_species[j].tech_level[ML];
 
-        if (act.unit_ttype[defender_index] == SHIP) {
+        if (act.unit_type[defender_index] == SHIP) {
             defending_ship =
                 (struct ship_data *)act.fighting_unit[defender_index];
             ignore_field_distorters = !field_distorted[j];
@@ -6430,8 +6422,8 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
          *      emphasizes gravitics technology over military technology. */
         fj_chance = 50 * attacker_gv / attackerGvMl;
         if (rnd(100) < fj_chance &&
-            act.unit_ttype[attacker_index] == SHIP &&
-            act.unit_ttype[defender_index] == SHIP) {
+            act.unit_type[attacker_index] == SHIP &&
+            act.unit_type[defender_index] == SHIP) {
             if (forced_jump_units_used(attacker_index, defender_index,
                                        &total_shots, bat, act)) {
                 combat_occurred = true;
@@ -6448,7 +6440,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
          * explicitly targetted. */
         i = act.fighting_species_index[attacker_index];
         j = act.fighting_species_index[defender_index];
-        if (act.unit_ttype[defender_index] == SHIP &&
+        if (act.unit_type[defender_index] == SHIP &&
             defending_ship.class == TR &&
             bat.special_target[i] != TARGET_TRANSPORTS &&
             rnd(10) != 5) {
@@ -6459,14 +6451,14 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
          * chance that it will be attacked if it is available. */
         if (bat.special_target[i] && rnd(100) < 76) {
             if (bat.special_target[i] == TARGET_PDS) {
-                if (act.unit_ttype[defender_index] != SHIP) {
+                if (act.unit_type[defender_index] != SHIP) {
                     goto fire;
                 }else{
                     continue;
                 }
             }
 
-            if (act.unit_ttype[defender_index] != SHIP) {
+            if (act.unit_type[defender_index] != SHIP) {
                 continue;
             }
 
@@ -6495,7 +6487,7 @@ fire:
 
         /* Since transports generally avoid combat, there is only a 10%
          * chance that they will attack. */
-        if (act.unit_ttype[attacker_index] == SHIP &&
+        if (act.unit_type[attacker_index] == SHIP &&
             attacking_ship.class == TR &&
             option != GERM_WARFARE &&
             rnd(10) != 5) {
@@ -6506,7 +6498,7 @@ fire:
         combat_occurred = true;
         log_string("        ");  log_string(attacker_name);
         log_string(" fires on ");  log_string(defender_name);
-        if (act.unit_ttype[defender_index] == NAMPLA) {
+        if (act.unit_type[defender_index] == NAMPLA) {
             log_string(" defenses");
         }
 
@@ -6529,7 +6521,7 @@ fire:
         /* If defending ship is field-distorted, chance-to-hit is
          *      reduced by 25%. */
         j = act.fighting_species_index[defender_index];
-        if (act.unit_ttype[defender_index] == SHIP &&
+        if (act.unit_type[defender_index] == SHIP &&
             field_distorted[j] &&
             defending_ship.item_quantity[FD] == defending_ship.tonnage) {
             chance_to_hit = (3 * chance_to_hit) / 4;
@@ -6543,7 +6535,7 @@ fire:
         }
 
         /* Adjust for age. */
-        if (act.unit_ttype[attacker_index] == SHIP) {
+        if (act.unit_type[attacker_index] == SHIP) {
             chance_to_hit -=
                 (2 * attacking_ship.age * chance_to_hit) / 100;
         }
@@ -6557,9 +6549,9 @@ fire:
             option == SIEGE) {
             /* Indicate the action that was attempted against this nampla. */
             if (option == SIEGE) {
-                act.unit_ttype[defender_index] = BESIEGED_NAMPLA;
+                act.unit_type[defender_index] = BESIEGED_NAMPLA;
             }else{
-                act.unit_ttype[defender_index] = GENOCIDE_NAMPLA;
+                act.unit_type[defender_index] = GENOCIDE_NAMPLA;
             }
 
             /* Indicate who attacked who. */
@@ -6571,7 +6563,7 @@ fire:
             if (option == PLANET_BOMBARDMENT) {
                 act.bomb_damage[defender_index] += damage_done;
             }else if (option == GERM_WARFARE) {
-                if (act.unit_ttype[attacker_index] == SHIP) {
+                if (act.unit_type[attacker_index] == SHIP) {
                     germ_bombs_used[i][j]            += attacking_ship.item_quantity[GW];
                     attacking_ship.item_quantity[GW] = 0;
                 }else {
@@ -6594,7 +6586,7 @@ fire:
         /* Subtract damage from defender's shields, if they're up. */
         damage_to_ship = 0;
         if (shields_up) {
-            if (act.unit_ttype[defender_index] == SHIP) {
+            if (act.unit_type[defender_index] == SHIP) {
                 damage_to_shields =
                     ((long)defending_ship.dest_y * damage_done) / 100;
                 damage_to_ship = damage_done - damage_to_shields;
@@ -6625,7 +6617,7 @@ fire:
             damage_to_ship > 0) {
             /* Get net damage to ship or PDs. */
             if (shields_up) {
-                if (act.unit_ttype[defender_index] == SHIP) {
+                if (act.unit_type[defender_index] == SHIP) {
                     /* Total damage to ship is direct damage plus damage
                      *  that shields could not absorb. */
                     damage_done = damage_to_ship;
@@ -6650,7 +6642,7 @@ fire:
                 percent_decrease = 100;
             }
 
-            if (act.unit_ttype[defender_index] == SHIP) {
+            if (act.unit_type[defender_index] == SHIP) {
                 defending_ship.age += percent_decrease / 2;
                 units_destroyed      = (defending_ship.age > 49);
             }else {
@@ -6686,7 +6678,7 @@ fire:
         /* Report if anything was destroyed. */
         FDs_were_destroyed = false;
         if (units_destroyed) {
-            if (act.unit_ttype[defender_index] == SHIP) {
+            if (act.unit_type[defender_index] == SHIP) {
                 log_summary = true;
                 log_string("        ");
                 log_string(defender_name);
@@ -6800,7 +6792,7 @@ fire:
                 log_summary = false;
             }
         }else if (percent_decrease > 0 && !this_is_a_hijacking &&
-                  act.unit_ttype[defender_index] == SHIP) {
+                  act.unit_type[defender_index] == SHIP) {
             /* See if anything carried by the ship was also destroyed. */
             for (i = 0; i < MAX_ITEMS; i++) {
                 j = defending_ship.item_quantity[i];
@@ -7073,7 +7065,7 @@ func do_siege(bat *battle_data, act *action_data) {
 
     for (defender_index = 0; defender_index < act.num_units_fighting;
          defender_index++) {
-        if (act.unit_ttype[defender_index] == BESIEGED_NAMPLA) {
+        if (act.unit_type[defender_index] == BESIEGED_NAMPLA) {
             defending_nampla =
                 (struct nampla_data *)act.fighting_unit[defender_index];
 
@@ -7085,7 +7077,7 @@ func do_siege(bat *battle_data, act *action_data) {
 
             for (attacker_index = 0; attacker_index < act.num_units_fighting;
                  attacker_index++) {
-                if (act.unit_ttype[attacker_index] == SHIP) {
+                if (act.unit_type[attacker_index] == SHIP) {
                     attacking_ship =
                         (struct ship_data *)act.fighting_unit[attacker_index];
 
@@ -9070,7 +9062,7 @@ add_ship:
             if (use_this_ship) {
                 /* Add data for this ship to action array. */
                 act.fighting_species_index[num_fighting_units] = species_index;
-                act.unit_ttype[num_fighting_units]           = SHIP;
+                act.unit_type[num_fighting_units]           = SHIP;
                 act.fighting_unit[num_fighting_units]       = (char *)sh;
                 act.original_age_or_PDs[num_fighting_units] = sh.age;
                 ++num_fighting_units;
@@ -9146,7 +9138,7 @@ add_ship:
 
             /* Add data for this nampla to action array. */
             act.fighting_species_index[num_fighting_units] = species_index;
-            act.unit_ttype[num_fighting_units]           = NAMPLA;
+            act.unit_type[num_fighting_units]           = NAMPLA;
             act.fighting_unit[num_fighting_units]       = (char *)nam;
             act.original_age_or_PDs[num_fighting_units] = nam.item_quantity[PD];
             ++num_fighting_units;
@@ -9202,7 +9194,7 @@ next_step:
     /* Determine number of shots, shield power and weapons power for
      *  all combatants. */
     for (unit_index = 0; unit_index < act.num_units_fighting; unit_index++) {
-        ttype = act.unit_ttype[unit_index];
+        ttype = act.unit_type[unit_index];
         if (ttype == SHIP) {
             sh   = (struct ship_data *)act.fighting_unit[unit_index];
             tons = sh.tonnage;
@@ -9922,8 +9914,6 @@ yet_again:
     return(true);
 }
 
-
-
 //*************************************************************************
 // get_spnam.c
 
@@ -10178,7 +10168,7 @@ func get_transfer_point() bool {
 //*************************************************************************
 // money.c
 
-func check_bounced(amount_needed int) int {
+func check_bounced(amount_needed int) bool {
     long take_from_EUs, limiting_balance;
 
 
@@ -11618,7 +11608,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 
     /* Compile statistics and handle individual ships that must leave. */
     for (ship_index = 0; ship_index < act.num_units_fighting; ship_index++) {
-        if (act.unit_ttype[ship_index] != SHIP) {
+        if (act.unit_type[ship_index] != SHIP) {
             continue;
         }
 
@@ -11680,7 +11670,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 
     /* Now check if a fleet has reached its limit. */
     for (ship_index = 0; ship_index < act.num_units_fighting; ship_index++) {
-        if (act.unit_ttype[ship_index] != SHIP) {
+        if (act.unit_type[ship_index] != SHIP) {
             continue;
         }
 
