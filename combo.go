@@ -1192,20 +1192,20 @@ do_combat:
     }
 }
 
-func do_ambush(ambushing_species_index int, bat *battle_dat) {
-    int i, j, n, num_sp, ambushed_species_index, num_ships,
-        age_increment, species_number, old_truncate_name;
+func do_ambush(ambushing_species_index int, bat *battle_data) {
+    var(
+        i, j, n, num_sp, ambushed_species_index, num_ships int
+        age_increment, species_number, old_truncate_name int
+        friendly_tonnage, enemy_tonnage int
 
-    long friendly_tonnage, enemy_tonnage;
-
-    struct ship_data *sh;
+        sh *ship_data_
+    )
 
     /* Get total ambushing tonnage. */
     friendly_tonnage = 0;
     num_ships        = c_species[ambushing_species_index].num_ships;
-    sh = c_ship[ambushing_species_index] - 1;
-    for (i = 0; i < num_ships; i++) {
-        ++sh;
+    for i := 0; i < num_ships; i++ {
+        sh = c_ship[ambushing_species_index][i];
 
         if (sh.pn == 99) {
             continue;
@@ -1228,16 +1228,15 @@ func do_ambush(ambushing_species_index int, bat *battle_dat) {
      *  tonnage. */
     num_sp        = bat.num_species_here;
     enemy_tonnage = 0;
-    for (ambushed_species_index = 0; ambushed_species_index < num_sp; ++ambushed_species_index) {
-        if (!bat.enemy_mine[ambushing_species_index][ambushed_species_index]) {
+    for ambushed_species_index = 0; ambushed_species_index < num_sp; ambushed_species_index++ {
+        if !bat.enemy_mine[ambushing_species_index][ambushed_species_index] {
             continue;
         }
 
         /* This species is being ambushed.  Get total effective tonnage. */
         num_ships = c_species[ambushed_species_index].num_ships;
-        sh        = c_ship[ambushed_species_index] - 1;
-        for (i = 0; i < num_ships; i++) {
-            ++sh;
+        for i = 0; i < num_ships; i++ {
+            sh        = c_ship[ambushed_species_index][i]
 
             if (sh.pn == 99) {
                 continue;
@@ -1264,8 +1263,7 @@ func do_ambush(ambushing_species_index int, bat *battle_dat) {
     if (enemy_tonnage == 0) {
         return;
     }
-    age_increment = (10L * bat.ambush_amount[ambushing_species_index])
-                    / enemy_tonnage;
+    age_increment = (10 * bat.ambush_amount[ambushing_species_index]) / enemy_tonnage;
     age_increment = (friendly_tonnage * age_increment) / enemy_tonnage;
 
     ambush_took_place = true;
@@ -1278,7 +1276,7 @@ func do_ambush(ambushing_species_index int, bat *battle_dat) {
     }
 
     /* Age each ambushed ship. */
-    for (ambushed_species_index = 0; ambushed_species_index < num_sp; ++ambushed_species_index) {
+    for ambushed_species_index = 0; ambushed_species_index < num_sp; ambushed_species_index++ {
         if (!bat.enemy_mine[ambushing_species_index][ambushed_species_index]) {
             continue;
         }
@@ -1296,9 +1294,8 @@ func do_ambush(ambushing_species_index int, bat *battle_dat) {
         log_string("!\n");
 
         num_ships = c_species[ambushed_species_index].num_ships;
-        sh        = c_ship[ambushed_species_index] - 1;
-        for (i = 0; i < num_ships; i++) {
-            ++sh;
+        for i := 0; i < num_ships; i++ {
+            sh        = c_ship[ambushed_species_index][i]
 
             if (sh.pn == 99) {
                 continue;
@@ -1334,14 +1331,15 @@ func do_ambush(ambushing_species_index int, bat *battle_dat) {
                     sh.item_quantity[FD] = n;
                 }
                 n = 0;
-                for (j = 0; j < MAX_ITEMS; j++) {
+                for j := 0; j < MAX_ITEMS; j++ {
                     if (sh.item_quantity[j] > 0) {
-                        if (n++ == 0) {
+                        n++
+                        if (n == 1) {
                             log_string(" (cargo: ");
                         }else{
                             log_char(',');
                         }
-                        log_int((int)sh.item_quantity[j]);
+                        log_int(sh.item_quantity[j]);
                         log_char(' ');
                         log_string(item_abbr[j]);
                     }
@@ -1363,35 +1361,17 @@ func do_ambush(ambushing_species_index int, bat *battle_dat) {
  * that their allegiance should be changed from ALLY to ENEMY. */
 
 func auto_enemy(traitor_species_number, betrayed_species_number int) {
-    int traitor_array_index, betrayed_array_index, bit_number,
-        species_index;
-
-    long traitor_bit_mask, betrayed_bit_mask;
-
-
-    traitor_array_index = (traitor_species_number - 1) / 32;
-    bit_number          = (traitor_species_number - 1) % 32;
-    traitor_bit_mask    = 1 << bit_number;
-
-    betrayed_array_index = (betrayed_species_number - 1) / 32;
-    bit_number           = (betrayed_species_number - 1) % 32;
-    betrayed_bit_mask    = 1 << bit_number;
-
-    for (species_index = 0; species_index < galaxy.num_species; species_index++) {
-        if ((spec_data[species_index].ally[traitor_array_index]
-             & traitor_bit_mask) == 0) {
+    for species_index := 0; species_index < galaxy.num_species; species_index++ {
+        if !spec_data[species_index].ally[traitor_species_number] {
             continue;
         }
-        if ((spec_data[species_index].ally[betrayed_array_index]
-             & betrayed_bit_mask) == 0) {
+        if !spec_data[species_index].ally[betrayed_species_number] {
             continue;
         }
-        if ((spec_data[species_index].contact[traitor_array_index]
-             & traitor_bit_mask) == 0) {
+        if !spec_data[species_index].contact[traitor_species_number] {
             continue;
         }
-        if ((spec_data[species_index].contact[betrayed_array_index]
-             & betrayed_bit_mask) == 0) {
+        if !spec_data[species_index].contact[betrayed_species_number] {
             continue;
         }
 
@@ -1403,18 +1383,17 @@ func auto_enemy(traitor_species_number, betrayed_species_number int) {
 // do_bomb.c
 
 func do_bombardment(unit_index int, act *action_data) {
-    int i, new_mi, new_ma, defending_species;
+    var (
+        i, new_mi, new_ma, defending_species int
+        n, total_bomb_damage, CS_bomb_damage, new_pop, initial_base, total_pop, percent_damage int
 
-    long n, total_bomb_damage, CS_bomb_damage, new_pop,
-         initial_base, total_pop, percent_damage;
+        planet *planet_data
+        attacked_nampla *nampla_data
+        sh *ship_data_
+    )
 
-    struct planet_data *planet;
-    struct nampla_data *attacked_nampla;
-    struct ship_data *  sh;
-
-
-    attacked_nampla = (struct nampla_data *)act.fighting_unit[unit_index];
-    planet          = planet_base + (long)attacked_nampla.planet_index;
+    attacked_nampla = act.fighting_unit[unit_index]; // cast to *nampla_data
+    planet          = planet_base[attacked_nampla.planet_index]
 
     initial_base = attacked_nampla.mi_base + attacked_nampla.ma_base;
     total_pop    = initial_base;
@@ -1432,13 +1411,12 @@ func do_bombardment(unit_index int, act *action_data) {
      *  is 100 x 4 x the power value for a single ship. To eliminate the
      *  chance of overflow, the algorithm has been carefully chosen. */
 
-    CS_bomb_damage = 400 * power(ship_tonnage[CS]);
-    /* Should be 400 * 4759 = 1,903,600. */
+    CS_bomb_damage = 400 * power(ship_tonnage[CS]); /* Should be 400 * 4759 = 1,903,600. */
 
     total_bomb_damage = act.bomb_damage[unit_index];
 
     /* Keep about 2 significant digits. */
-    for (;total_bomb_damage > 1000;) {
+    for total_bomb_damage > 1000 {
         total_bomb_damage /= 10;
         CS_bomb_damage    /= 10;
     }
@@ -1446,32 +1424,24 @@ func do_bombardment(unit_index int, act *action_data) {
     if (CS_bomb_damage == 0) {
         percent_damage = 101;
     }else{
-        percent_damage =
-            ((total_bomb_damage * 250000L) / CS_bomb_damage) / total_pop;
+        percent_damage = ((total_bomb_damage * 250000) / CS_bomb_damage) / total_pop;
     }
 
     if (percent_damage > 100) {
         percent_damage = 101;
     }
 
-    new_mi = attacked_nampla.mi_base
-             - (percent_damage * attacked_nampla.mi_base) / 100;
+    new_mi = attacked_nampla.mi_base - (percent_damage * attacked_nampla.mi_base) / 100;
+    new_ma = attacked_nampla.ma_base - (percent_damage * attacked_nampla.ma_base) / 100;
+    new_pop = attacked_nampla.pop_units - (percent_damage * attacked_nampla.pop_units) / 100;
 
-    new_ma = attacked_nampla.ma_base
-             - (percent_damage * attacked_nampla.ma_base) / 100;
-
-    new_pop = attacked_nampla.pop_units
-              - (percent_damage * attacked_nampla.pop_units) / 100;
-
-    if (new_mi == attacked_nampla.mi_base &&
-        new_ma == attacked_nampla.ma_base &&
-        new_pop == attacked_nampla.pop_units) {
+    if (new_mi == attacked_nampla.mi_base && new_ma == attacked_nampla.ma_base && new_pop == attacked_nampla.pop_units) {
         log_string("        Damage due to bombardment was insignificant.\n");
         return;
     }
 
     defending_species = act.fighting_species_index[unit_index];
-    if (attacked_nampla.status & HOME_PLANET) {
+    if (attacked_nampla.status & HOME_PLANET) != 0 {
         n = attacked_nampla.mi_base + attacked_nampla.ma_base;
         if (c_species[defending_species].hp_original_base < n) {
             c_species[defending_species].hp_original_base = n;
@@ -1491,20 +1461,19 @@ func do_bombardment(unit_index int, act *action_data) {
         attacked_nampla.use_on_ambush = 0;
 
         /* Reset status. */
-        if (attacked_nampla.status & HOME_PLANET) {
+        if (attacked_nampla.status & HOME_PLANET) != 0 {
             attacked_nampla.status = HOME_PLANET;
         }else{
             attacked_nampla.status = COLONY;
         }
 
-        for (i = 0; i < MAX_ITEMS; i++) {
+        for i := 0; i < MAX_ITEMS; i++ {
             attacked_nampla.item_quantity[i] = 0;
         }
 
         /* Delete any ships that were under construction on the planet. */
-        sh = c_ship[defending_species] - 1;
-        for (i = 0; i < c_species[defending_species].num_ships; i++) {
-            ++sh;
+        for i := 0; i < c_species[defending_species].num_ships; i++ {
+            sh = c_ship[defending_species][i]
 
             if (sh.x != attacked_nampla.x) {
                 continue;
@@ -1553,7 +1522,7 @@ func do_bombardment(unit_index int, act *action_data) {
 
     attacked_nampla.pop_units = new_pop;
 
-    for (i = 0; i < MAX_ITEMS; i++) {
+    for i := 0; i < MAX_ITEMS; i++ {
         n = (percent_damage * attacked_nampla.item_quantity[i]) / 100;
         if (n > 0) {
             attacked_nampla.item_quantity[i] -= n;
@@ -1568,7 +1537,7 @@ func do_bombardment(unit_index int, act *action_data) {
         }
     }
 
-    n = (percent_damage * (long)attacked_nampla.shipyards) / 100;
+    n = (percent_damage * attacked_nampla.shipyards) / 100;
     if (n > 0) {
         attacked_nampla.shipyards -= n;
         log_string("        ");    log_long(n);
@@ -1584,30 +1553,30 @@ func do_bombardment(unit_index int, act *action_data) {
     check_population(attacked_nampla);
 }
 
-
-
 //*************************************************************************
 // do_build.c
 
-func do_BUILD_command(continuing_construction, interspecies_construction int) {
-    int i, n, class, critical_tech, found, name_length,
-        siege_effectiveness, cost_given, new_ship, max_tonnage,
-        tonnage_increase, alien_number, cargo_on_board,
-        unused_nampla_available, unused_ship_available, capacity,
-        pop_check_needed, contact_word_number, contact_bit_number,
-        already_notified[MAX_SPECIES];
-
-    char upper_ship_name[32], *commas(), *src, *dest,
-         *original_line_pointer;
-
-    long cost, cost_argument, unit_cost, num_items, pop_reduction,
-         premium, total_cost, original_num_items, contact_mask,
-         max_funds_available;
-
-    struct species_data *recipient_species;
-    struct nampla_data * recipient_nampla, *unused_nampla,
-                       *destination_nampla, *temp_nampla;
-    struct ship_data *recipient_ship, *unused_ship;
+func do_BUILD_command(continuing_construction, interspecies_construction bool) {
+    var (
+        i, n, class, critical_tech, found, name_length int
+        siege_effectiveness, cost_given, new_ship, max_tonnage int
+        tonnage_increase, alien_number, cargo_on_board int
+        unused_nampla_available, unused_ship_available, capacity int
+        pop_check_needed, contact_word_number, contact_bit_number int
+        already_notified[MAX_SPECIES] int
+    
+        upper_ship_name[32]byte
+        src, dest *byte
+        original_line_pointer *cstring
+    
+        cost, cost_argument, unit_cost, num_items, pop_reduction int
+        premium, total_cost, original_num_items, contact_mask int
+        max_funds_available int
+    
+        recipient_species *species_data
+        recipient_nampla, unused_nampla, destination_nampla, temp_nampla *nampla_data
+        recipient_ship, unused_ship *ship_data_
+    )
 
 
     /* Check if this order was preceded by a PRODUCTION order. */
@@ -1627,7 +1596,7 @@ func do_BUILD_command(continuing_construction, interspecies_construction int) {
 
     /* Get species name and make appropriate tests if this is an interspecies
      *  construction order. */
-    if (interspecies_construction) {
+    if interspecies_construction {
         original_line_pointer = input_line_pointer;
         if (!get_species_name()) {
             /* Check for missing comma or tab after species name. */
@@ -1640,7 +1609,7 @@ func do_BUILD_command(continuing_construction, interspecies_construction int) {
                 return;
             }
         }
-        recipient_species = &spec_data[g_spec_number - 1];
+        recipient_species = spec_data[g_spec_number - 1];
 
         if (species.tech_level[MA] < 25) {
             fprintf(log_file, "!!! Order ignored:\n");
@@ -1653,13 +1622,13 @@ func do_BUILD_command(continuing_construction, interspecies_construction int) {
         contact_word_number = (g_spec_number - 1) / 32;
         contact_bit_number  = (g_spec_number - 1) % 32;
         contact_mask        = 1 << contact_bit_number;
-        if ((species.contact[contact_word_number] & contact_mask) == 0) {
+        if (species.contact[contact_word_number] & contact_mask) == 0 {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
             fprintf(log_file, "!!! You can't do interspecies construction for a species you haven't met.\n");
             return;
         }
-        if (species.enemy[contact_word_number] & contact_mask) {
+        if (species.enemy[contact_word_number] & contact_mask) != 0 {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
             fprintf(log_file, "!!! You can't do interspecies construction for an ENEMY.\n");
@@ -1668,9 +1637,7 @@ func do_BUILD_command(continuing_construction, interspecies_construction int) {
     }
 
     /* Get number of items to build. */
-    i = get_value();
-
-    if (i == 0) {
+    if i = get_value(); i == 0 {
         goto build_ship;        /* Not an item. */
     }
     num_items          = value;
@@ -1775,7 +1742,7 @@ do_cost:
 
     if (check_bounced(cost)) {
         if (interspecies_construction && original_num_items == 0) {
-            --num_items;
+            num_items--
             if (num_items < 1) {
                 return;
             }
@@ -1843,11 +1810,11 @@ do_cost:
         nampla.item_quantity[PD] = 0;
 
         /* Make sure we don't notify the same species more than once. */
-        for (i = 0; i < MAX_SPECIES; i++) {
+        for i := 0; i < MAX_SPECIES; i++ {
             already_notified[i] = false;
         }
 
-        for (i = 0; i < num_transactions; i++) {
+        for i := 0; i < num_transactions; i++ {
             /* Find out who is besieging this planet. */
             if (transaction[i].ttype != BESIEGE_PLANET) {
                 continue;
@@ -1880,7 +1847,8 @@ do_cost:
                 exit(-1);
             }
 
-            n = num_transactions++;
+            n = num_transactions;
+            num_transactions++
             transaction[n].ttype  = DETECTION_DURING_SIEGE;
             transaction[n].value = 3;   /* Construction of PDs. */
             strcpy(transaction[n].name1, nampla.name);
@@ -1904,22 +1872,19 @@ do_cost:
         }
 
         if (abbr_type == SHIP_CLASS) {  /* Destination is 'ship'. */
-            if (ship.x != nampla.x ||
-                ship.y != nampla.y ||
-                ship.z != nampla.z ||
-                ship.status == UNDER_CONSTRUCTION) {
+            if (ship.x != nampla.x || ship.y != nampla.y || ship.z != nampla.z || ship.status == UNDER_CONSTRUCTION) {
                 goto done_transfer;
             }
 
             if (ship.class == TR) {
-                capacity = (10 + ((int)ship.tonnage / 2)) * (int)ship.tonnage;
+                capacity = (10 + (ship.tonnage / 2)) * ship.tonnage;
             }else if (ship.class == BA) {
                 capacity = 10 * ship.tonnage;
             }else{
                 capacity = ship.tonnage;
             }
 
-            for (i = 0; i < MAX_ITEMS; i++) {
+            for i := 0; i < MAX_ITEMS; i++ {
                 capacity -= ship.item_quantity[i] * item_carry_capacity[i];
             }
 
@@ -1951,9 +1916,7 @@ do_cost:
                 }
             }
         }else {  /* Destination is 'destination_nampla'. */
-            if (destination_nampla.x != nampla.x ||
-                destination_nampla.y != nampla.y ||
-                destination_nampla.z != nampla.z) {
+            if (destination_nampla.x != nampla.x || destination_nampla.y != nampla.y || destination_nampla.z != nampla.z) {
                 goto done_transfer;
             }
 
@@ -1987,9 +1950,8 @@ done_transfer:
     /* Check if recipient species has a nampla at this location. */
     found = false;
     unused_nampla_available = false;
-    recipient_nampla        = namp_data[g_spec_number - 1] - 1;
-    for (i = 0; i < recipient_species.num_namplas; i++) {
-        ++recipient_nampla;
+    for i := 0; i < recipient_species.num_namplas; i++ {
+        recipient_nampla        = namp_data[g_spec_number - 1][i]
 
         if (recipient_nampla.pn == 99) {
             unused_nampla           = recipient_nampla;
@@ -2018,13 +1980,12 @@ done_transfer:
         if (unused_nampla_available) {
             recipient_nampla = unused_nampla;
         }else{
-            ++num_new_namplas[species_index];
+            num_new_namplas[species_index]++
             if (num_new_namplas[species_index] > NUM_EXTRA_NAMPLAS) {
                 fprintf(stderr, "\n\n\tInsufficient memory for new planet name in do_build.c!\n");
                 exit(-1);
             }
-            recipient_nampla = namp_data[g_spec_number - 1]
-                               + recipient_species.num_namplas;
+            recipient_nampla = namp_data[g_spec_number - 1] + recipient_species.num_namplas;
             recipient_species.num_namplas += 1;
             delete_nampla(recipient_nampla);    /* Set everything to zero. */
         }
@@ -2107,10 +2068,9 @@ build_ship:
 
     /* Search all ships for name. */
     found = false;
-    ship  = ship_base - 1;
     unused_ship_available = false;
-    for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-        ++ship;
+    for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+        ship  = ship_base[ship_index]
 
         if (ship.pn == 99) {
             unused_ship_available = true;
@@ -2177,7 +2137,7 @@ check_ship:
                 return;
             }
             new_ship = true;
-            ship     = ship_base + (int)species.num_ships;
+            ship     = ship_base + species.num_ships;
             delete_ship(ship);          /* Initialize everything to zero. */
         }
 
@@ -2206,7 +2166,7 @@ check_ship:
             ship.remaining_cost = ship_cost[TR] * tonnage;
         }
         if (ship.ttype == SUB_LIGHT) {
-            ship.remaining_cost = (3L * (long)ship.remaining_cost) / 4L;
+            ship.remaining_cost = (3 * ship.remaining_cost) / 4;
         }
         ship.just_jumped = false;
 
@@ -2280,7 +2240,7 @@ check_ship:
     /* Make sure species can build a ship of this size. */
     max_tonnage = species.tech_level[MA] / 2;
     if (ship.ttype == STARBASE) {
-        tonnage_increase = cost / (long)ship_cost[BA];
+        tonnage_increase = cost / ship_cost[BA];
         tonnage          = ship.tonnage + tonnage_increase;
         if (tonnage > max_tonnage && cost_argument == 0) {
             tonnage_increase = max_tonnage - ship.tonnage;
@@ -2288,7 +2248,7 @@ check_ship:
                 return;
             }
             tonnage = ship.tonnage + tonnage_increase;
-            cost    = tonnage_increase * (int)ship_cost[BA];
+            cost    = tonnage_increase * ship_cost[BA];
         }
     }
 
@@ -2358,7 +2318,7 @@ check_ship:
         return;
     }
 
-    --shipyard_capacity;
+    shipyard_capacity--
 
     /* Test if this is a starbase and if planet is under siege. */
     if (ship.ttype == STARBASE && siege_effectiveness > 0) {
@@ -2367,11 +2327,11 @@ check_ship:
         log_string(" was detected by the besiegers and the starbase was destroyed!!!\n");
 
         /* Make sure we don't notify the same species more than once. */
-        for (i = 0; i < MAX_SPECIES; i++) {
+        for i := 0; i < MAX_SPECIES; i++ {
             already_notified[i] = false;
         }
 
-        for (i = 0; i < num_transactions; i++) {
+        for i := 0; i < num_transactions; i++ {
             /* Find out who is besieging this planet. */
             if (transaction[i].ttype != BESIEGE_PLANET) {
                 continue;
@@ -2427,12 +2387,10 @@ check_ship:
             log_string(ship_name(ship));
             log_string(" was constructed");
         }else {
-            ship.age =         /* Weighted average. */
-                        ((ship.age * ship.tonnage) - tonnage_increase)
-                        / tonnage;
+            ship.age = ((ship.age * ship.tonnage) - tonnage_increase) / tonnage /* Weighted average. */
             log_string("Size of ");  log_string(ship_name(ship));
             log_string(" was increased to ");
-            log_string(commas(10000L * (long)tonnage));
+            log_string(commas(10000 * tonnage));
             log_string(" tons");
         }
 
@@ -2496,8 +2454,8 @@ check_ship:
     log_char('.');
 
     if (new_ship && (!unused_ship_available)) {
-        ++num_new_ships[species_index];
-        ++species.num_ships;
+        num_new_ships[species_index]++
+        species.num_ships++
     }
 
     /* Check if planet is under siege and if construction was detected. */
@@ -2505,11 +2463,11 @@ check_ship:
         log_string(" However, the work was detected by the besiegers and the ship was destroyed!!!");
 
         /* Make sure we don't notify the same species more than once. */
-        for (i = 0; i < MAX_SPECIES; i++) {
+        for i := 0; i < MAX_SPECIES; i++ {
             already_notified[i] = false;
         }
 
-        for (i = 0; i < num_transactions; i++) {
+        for i := 0; i < num_transactions; i++ {
             /* Find out who is besieging this planet. */
             if (transaction[i].ttype != BESIEGE_PLANET) {
                 continue;
@@ -2542,7 +2500,8 @@ check_ship:
                 exit(-1);
             }
 
-            n = num_transactions++;
+            n = num_transactions
+            num_transactions++
             transaction[n].ttype  = DETECTION_DURING_SIEGE;
             transaction[n].value = 2;   /* Construction of ship/starbase. */
             strcpy(transaction[n].name1, nampla.name);
@@ -2565,7 +2524,7 @@ check_ship:
 
     /* Transfer any cargo on the ship to the planet. */
     cargo_on_board = false;
-    for (i = 0; i < MAX_ITEMS; i++) {
+    for i := 0; i < MAX_ITEMS; i++ {
         if (ship.item_quantity[i] > 0) {
             nampla.item_quantity[i] += ship.item_quantity[i];
             ship.item_quantity[i]    = 0;
@@ -2579,13 +2538,13 @@ check_ship:
     /* Transfer the ship to the recipient species. */
     unused_ship_available = false;
     recipient_ship        = ship_data[g_spec_number - 1];
-    for (i = 0; i < recipient_species.num_ships; i++) {
+    for i := 0; i < recipient_species.num_ships; i++ {
         if (recipient_ship.pn == 99) {
             unused_ship_available = true;
             break;
         }
 
-        ++recipient_ship;
+        recipient_ship++
     }
 
     if (!unused_ship_available) {
@@ -2594,17 +2553,17 @@ check_ship:
             fprintf(stderr, "\n\n\tInsufficient memory for new recipient ship!\n\n");
             exit(-1);
         }
-        recipient_ship = ship_data[g_spec_number - 1]
-                         + (int)recipient_species.num_ships;
-        ++recipient_species.num_ships;
-        ++num_new_ships[g_spec_number - 1];
+        recipient_ship = ship_data[g_spec_number - 1] + recipient_species.num_ships;
+        recipient_species.num_ships++
+        num_new_ships[g_spec_number - 1]++
     }
 
     /* Copy donor ship to recipient ship. */
-    src  = (char *)ship;
-    dest = (char *)recipient_ship;
-    for (i = 0; i < sizeof(struct ship_data); i++) {
-        *dest++ = *src++;
+    src  = ship; // cast to char *
+    dest = recipient_ship; // cast to char *
+    for i := 0; i < sizeof("struct ship_data"); i++ {
+        *dest = *src
+        dest, src = dest+1, src+1
     }
 
     recipient_ship.status = IN_ORBIT;
@@ -2624,7 +2583,8 @@ check_ship:
         exit(-1);
     }
 
-    n = num_transactions++;
+    n = num_transactions
+    num_transactions++
     transaction[n].ttype      = INTERSPECIES_CONSTRUCTION;
     transaction[n].donor     = species_number;
     transaction[n].recipient = g_spec_number;
@@ -2638,14 +2598,9 @@ check_ship:
 // do_deep.c
 
 func do_DEEP_command() {
-    int i, found;
-
-    char *original_line_pointer;
-
-
     /* Get the ship. */
-    original_line_pointer = input_line_pointer;
-    found = get_ship();
+    original_line_pointer := input_line_pointer;
+    found := get_ship();
     if (!found) {
         /* Check for missing comma or tab after ship name. */
         input_line_pointer = original_line_pointer;
@@ -2703,12 +2658,9 @@ func do_DEEP_command() {
 // do_des.c
 
 func do_DESTROY_command() {
-    int found;
-
-
     /* Get the ship. */
     correct_spelling_required = true;
-    found = get_ship();
+    found := get_ship();
     if (!found) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
@@ -2734,19 +2686,21 @@ func do_DESTROY_command() {
 // do_dev.c
 
 func do_DEVELOP_command() {
-    int i, num_CUs, num_AUs, num_IUs, more_args, load_transport,
-        capacity, resort_colony, mining_colony, production_penalty,
-        CUs_only;
+    var (
+        i, num_CUs, num_AUs, num_IUs, more_args, load_transport int
+        capacity, resort_colony, mining_colony, production_penalty int
+        CUs_only int
 
-    char c, *original_line_pointer, *tp;
+        c byte
+        original_line_pointer, tp *byte
 
-    long n, ni, na, amount_to_spend, original_cost, max_funds_available,
-         ls_needed, raw_material_units, production_capacity,
-         colony_production, ib, ab, md, denom, reb, specified_max;
+        n, ni, na, amount_to_spend, original_cost, max_funds_available int
+        ls_needed, raw_material_units, production_capacity int
+        colony_production, ib, ab, md, denom, reb, specified_max int
 
-    struct planet_data *colony_planet, *home_planet;
-    struct nampla_data *temp_nampla, *colony_nampla;
-
+        colony_planet, home_planet *planet_data
+        temp_nampla, colony_nampla *nampla_data
+    )
 
     /* Check if this order was preceded by a PRODUCTION order. */
     if (!doing_production) {
@@ -2792,7 +2746,12 @@ func do_DEVELOP_command() {
     /* See if there are any more arguments. */
     tp        = input_line_pointer;
     more_args = false;
-    for (;c = *tp++;) {
+    for {
+        c = *tp
+        tp++
+        if c == 0 {
+            break
+        }
         if (c == ';' || c == '\n') {
             break;
         }
@@ -2805,7 +2764,7 @@ func do_DEVELOP_command() {
 
     if (!more_args) {
         /* Make sure planet is not a healthy home planet. */
-        if (nampla.status & HOME_PLANET) {
+        if (nampla.status & HOME_PLANET) != 0 {
             reb = species.hp_original_base - (nampla.mi_base + nampla.ma_base);
             if (reb > 0) {
                 /* Home planet is recovering from bombing. */
@@ -2829,14 +2788,13 @@ func do_DEVELOP_command() {
             return;
         }
 
-        colony_planet = planet_base + (long)nampla.planet_index;
+        colony_planet = planet_base + nampla.planet_index;
         ib            = nampla.mi_base + nampla.IUs_to_install;
         ab            = nampla.ma_base + nampla.AUs_to_install;
         md            = colony_planet.mining_difficulty;
 
         denom   = 100 + md;
-        num_AUs =
-            (100 * (num_CUs + ib) - (md * ab) + denom / 2) / denom;
+        num_AUs = (100 * (num_CUs + ib) - (md * ab) + denom / 2) / denom;
         num_IUs = num_CUs - num_AUs;
 
         if (num_IUs < 0) {
@@ -2877,7 +2835,7 @@ func do_DEVELOP_command() {
     temp_nampla           = nampla;
     original_line_pointer = input_line_pointer;
     i = get_location();
-    if (!i || nampla == NULL) {
+    if (!i || nampla == nil) {
         /* Check for missing comma or tab after source name. */
         input_line_pointer = original_line_pointer;
         fix_separator();
@@ -2885,7 +2843,7 @@ func do_DEVELOP_command() {
     }
     colony_nampla = nampla;
     nampla        = temp_nampla;
-    if (!i || colony_nampla == NULL) {
+    if (!i || colony_nampla == nil) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid planet name in DEVELOP command.\n");
@@ -2912,8 +2870,8 @@ func do_DEVELOP_command() {
     *  build its own IUs and AUs. Note that we cannot use nampla.status
     *  because it is not correctly set until the Finish program is run. */
 
-    home_planet   = planet_base + (long)nampla_base.planet_index;
-    colony_planet = planet_base + (long)colony_nampla.planet_index;
+    home_planet   = planet_base + nampla_base.planet_index;
+    colony_planet = planet_base + colony_nampla.planet_index;
     ls_needed     = life_support_needed(species, home_planet, colony_planet);
 
     ni = colony_nampla.mi_base + colony_nampla.IUs_to_install;
@@ -2932,9 +2890,8 @@ func do_DEVELOP_command() {
         mining_colony = false;
         resort_colony = false;
 
-        raw_material_units = (10L * (long)species.tech_level[MI] * ni)
-                             / (long)colony_planet.mining_difficulty;
-        production_capacity = ((long)species.tech_level[MA] * na) / 10L;
+        raw_material_units = (10 * species.tech_level[MI] * ni) / colony_planet.mining_difficulty;
+        production_capacity = (species.tech_level[MA] * na) / 10;
 
         if (ls_needed == 0) {
             production_penalty = 0;
@@ -2945,20 +2902,25 @@ func do_DEVELOP_command() {
         raw_material_units  -= (production_penalty * raw_material_units) / 100;
         production_capacity -= (production_penalty * production_capacity) / 100;
 
-        colony_production = (production_capacity > raw_material_units)
-                            ? raw_material_units : production_capacity;
+        if production_capacity > raw_material_units {
+            colony_production = raw_material_units
+        } else {
+            colony_production = production_capacity
+        }
 
-        colony_production -= colony_nampla.IUs_needed
-                             + colony_nampla.AUs_needed;
-
-        /* In case there is more than one DEVELOP order for
-         *      this colony. */
+        /* In case there is more than one DEVELOP order for this colony. */
+        colony_production -= colony_nampla.IUs_needed + colony_nampla.AUs_needed;
     }
 
     /* See if there are more arguments. */
     tp        = input_line_pointer;
     more_args = false;
-    for (;c = *tp++;) {
+    for {
+        c = *tp
+        tp++
+        if c == 0 {
+            break
+        }
         if (c == ';' || c == '\n') {
             break;
         }
@@ -2981,22 +2943,21 @@ func do_DEVELOP_command() {
         }
 
         if (ship.class == TR) {
-            capacity = (10 + ((int)ship.tonnage / 2)) * (int)ship.tonnage;
+            capacity = (10 + (ship.tonnage / 2)) * ship.tonnage;
         }else if (ship.class == BA) {
             capacity = 10 * ship.tonnage;
         }else{
             capacity = ship.tonnage;
         }
 
-        for (i = 0; i < MAX_ITEMS; i++) {
+        for i := 0; i < MAX_ITEMS; i++ {
             capacity -= ship.item_quantity[i] * item_carry_capacity[i];
         }
 
         if (capacity <= 0) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! %s was already full and could take no more cargo!\n",
-                    ship_name(ship));
+            fprintf(log_file, "!!! %s was already full and could take no more cargo!\n", ship_name(ship));
             return;
         }
 
@@ -3004,10 +2965,8 @@ func do_DEVELOP_command() {
             capacity = max_funds_available;
             if (max_funds_available != specified_max) {
                 fprintf(log_file, "! WARNING: %s", input_line);
-                fprintf(log_file, "! Insufficient funds to completely fill %s!\n",
-                        ship_name(ship));
-                fprintf(log_file, "! Will use all remaining funds (= %d).\n",
-                        capacity);
+                fprintf(log_file, "! Insufficient funds to completely fill %s!\n", ship_name(ship));
+                fprintf(log_file, "! Will use all remaining funds (= %d).\n", capacity);
             }
         }
     }else {
@@ -3015,8 +2974,7 @@ func do_DEVELOP_command() {
 
         /* No more arguments. Order is for a colony in the same sector as the
          *  producing planet. */
-        if (nampla.x != colony_nampla.x || nampla.y != colony_nampla.y ||
-            nampla.z != colony_nampla.z) {
+        if (nampla.x != colony_nampla.x || nampla.y != colony_nampla.y || nampla.z != colony_nampla.z) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
             fprintf(log_file, "!!! Colony and producing planet are not in the same sector.\n");
@@ -3035,12 +2993,9 @@ func do_DEVELOP_command() {
             num_CUs = capacity / 2;
             if (num_CUs > nampla.pop_units) {
                 fprintf(log_file, "! WARNING: %s", input_line);
-                fprintf(log_file,
-                        "! Insufficient available population! %d CUs are needed",
-                        num_CUs);
+                fprintf(log_file, "! Insufficient available population! %d CUs are needed", num_CUs);
                 num_CUs = nampla.pop_units;
-                fprintf(log_file, " to fill ship but only %d can be built.\n",
-                        num_CUs);
+                fprintf(log_file, " to fill ship but only %d can be built.\n", num_CUs);
             }
         }
 
@@ -3051,12 +3006,9 @@ func do_DEVELOP_command() {
             num_CUs = capacity / 2;
             if (num_CUs > nampla.pop_units) {
                 fprintf(log_file, "! WARNING: %s", input_line);
-                fprintf(log_file,
-                        "! Insufficient available population! %d CUs are needed",
-                        num_CUs);
+                fprintf(log_file, "! Insufficient available population! %d CUs are needed", num_CUs);
                 num_CUs = nampla.pop_units;
-                fprintf(log_file, " to fill ship but only %d can be built.\n",
-                        num_CUs);
+                fprintf(log_file, " to fill ship but only %d can be built.\n", num_CUs);
             }
         }
 
@@ -3084,9 +3036,9 @@ func do_DEVELOP_command() {
             }
         }
 
-        colony_planet = planet_base + (long)colony_nampla.planet_index;
+        colony_planet = planet_base + colony_nampla.planet_index;
 
-        i       = 100 + (int)colony_planet.mining_difficulty;
+        i       = 100 + colony_planet.mining_difficulty;
         num_AUs = ((100 * num_CUs) + (i + 1) / 2) / i;
         num_IUs = num_CUs - num_AUs;
     }
@@ -3222,12 +3174,9 @@ done:
 // do_disband.c
 
 func do_DISBAND_command() {
-    int found;
-
-
     /* Get the planet. */
-    found = get_location();
-    if (!found || nampla == NULL) {
+    found := get_location();
+    if (!found || nampla == nil) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid planet name in DISBAND command.\n");
@@ -3235,7 +3184,7 @@ func do_DISBAND_command() {
     }
 
     /* Make sure planet is not the home planet. */
-    if (nampla.status & HOME_PLANET) {
+    if (nampla.status & HOME_PLANET) != 0 {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You cannot disband your home planet!\n");
@@ -3270,17 +3219,11 @@ func do_DISBAND_command() {
 // do_enemy.c
 
 func do_ENEMY_command() {
-    int i, array_index, bit_number;
-
-    long bit_mask;
-
-
     /* See if declaration is for all species. */
     if (get_value()) {
-        bit_mask = 0;
-        for (i = 0; i < NUM_CONTACT_WORDS; i++) {
-            species.enemy[i] = ~bit_mask;      /* Set all enemy bits. */
-            species.ally[i]  = bit_mask;       /* Clear all ally bits. */
+        for i := 0; i < NUM_CONTACT_WORDS; i++ {
+            species.enemy[i] = true;      /* Set all enemy bits. */
+            species.ally[i]  = false;       /* Clear all ally bits. */
         }
     }else {
         /* Get name of species that is being declared an enemy. */
@@ -3297,8 +3240,8 @@ func do_ENEMY_command() {
         bit_mask    = 1 << bit_number;
 
         /* Set/clear the appropriate bit. */
-        species.enemy[array_index] |= bit_mask;        /* Set enemy bit. */
-        species.ally[array_index]  &= ~bit_mask;       /* Clear ally bit. */
+        species.enemy[g_spec_number] = true       /* Set enemy bit. */
+        species.ally[g_spec_number]  = false       /* Clear ally bit. */
     }
 
     /* Log the result. */
@@ -3373,11 +3316,11 @@ func do_ESTIMATE_command() {
     /* Make the estimates. */
     alien = &spec_data[g_spec_number - 1];
     for (i = 0; i < 6; i++) {
-        max_error = (int)alien.tech_level[i] - (int)species.tech_level[i];
+        max_error = alien.tech_level[i] - species.tech_level[i];
         if (max_error < 1) {
             max_error = 1;
         }
-        estimate[i] = (int)alien.tech_level[i] + rnd((2 * max_error) + 1)
+        estimate[i] = alien.tech_level[i] + rnd((2 * max_error) + 1)
                       - (max_error + 1);
         if (alien.tech_level[i] == 0) {
             estimate[i] = 0;
@@ -3419,7 +3362,7 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
     attacker_BI     = c_species[attacking_species].tech_level[BI];
     defender_BI     = c_species[defending_species].tech_level[BI];
     attacked_nampla = (struct nampla_data *)act.fighting_unit[defender_index];
-    planet          = planet_base + (long)attacked_nampla.planet_index;
+    planet          = planet_base + attacked_nampla.planet_index;
 
     success_chance = 50 + (2 * (attacker_BI - defender_BI));
     success        = false;
@@ -3469,7 +3412,7 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
 
     /* Take care of looting. */
     econ_units_from_looting =
-        (long)attacked_nampla.mi_base + (long)attacked_nampla.ma_base;
+        attacked_nampla.mi_base + attacked_nampla.ma_base;
 
     if (attacked_nampla.status & HOME_PLANET) {
         if (c_species[defending_species].hp_original_base < econ_units_from_looting) {
@@ -3987,7 +3930,7 @@ func handle_intercept(intercept_index int) {
         enemy_sh  = enemy_ship[enemy_index];
 
         /* Are there enough funds to destroy this ship? */
-        cost_to_destroy = 100L * (long)enemy_sh.tonnage;
+        cost_to_destroy = 100L * enemy_sh.tonnage;
         if (enemy_sh.class == TR) {
             cost_to_destroy /= 10;
         }
@@ -4025,7 +3968,7 @@ func handle_intercept(intercept_index int) {
                 }else{
                     log_char(',');
                 }
-                log_int((int)enemy_sh.item_quantity[j]);
+                log_int(enemy_sh.item_quantity[j]);
                 log_char(' ');
                 log_string(item_abbr[j]);
             }
@@ -4722,7 +4665,7 @@ func do_NAME_command() {
     nampla.pn           = pn;
     nampla.status       = COLONY;
     nampla.planet_index = star.planet_index + pn - 1;
-    planet          = planet_base + (long)nampla.planet_index;
+    planet          = planet_base + nampla.planet_index;
     nampla.message = planet.message;
 
     /* Everything else was set to zero in above call to 'delete_nampla'. */
@@ -5080,7 +5023,7 @@ got_nampla:
     }
 
     /* Get planet data for this nampla. */
-    planet = planet_base + (long)nampla.planet_index;
+    planet = planet_base + nampla.planet_index;
 
     /* Check if fleet maintenance cost is so high that riots ensued. */
     i = 0;
@@ -5120,12 +5063,12 @@ got_nampla:
     }
 
     RMs_produced =
-        (10L * (long)species.tech_level[MI] * (long)nampla.mi_base)
-        / (long)planet.mining_difficulty;
+        (10L * species.tech_level[MI] * nampla.mi_base)
+        / planet.mining_difficulty;
     RMs_produced
         -= (production_penalty * RMs_produced) / 100;
     RMs_produced
-        = (((long)planet.econ_efficiency * RMs_produced) + 50) / 100;
+        = ((planet.econ_efficiency * RMs_produced) + 50) / 100;
 
     if (special_colony) {
         /* RMs just 'sitting' on the planet cannot be converted to EUs on a
@@ -5137,11 +5080,11 @@ got_nampla:
     }
 
     production_capacity =
-        ((long)species.tech_level[MA] * (long)nampla.ma_base) / 10L;
+        (species.tech_level[MA] * nampla.ma_base) / 10L;
     production_capacity
         -= (production_penalty * production_capacity) / 100;
     production_capacity
-        = (((long)planet.econ_efficiency * production_capacity) + 50) / 100;
+        = ((planet.econ_efficiency * production_capacity) + 50) / 100;
 
     balance = (raw_material_units > production_capacity)
               ? production_capacity : raw_material_units;
@@ -5359,8 +5302,8 @@ got_nampla:
                 log_string(", ");
 
                 n = (4 * alien_nampla.item_quantity[PD]) / 5;
-                n = (n * (long)alien.tech_level[ML])
-                    / ((long)species.tech_level[ML] + 1);
+                n = (n * alien.tech_level[ML])
+                    / (species.tech_level[ML] + 1);
                 total_siege_effectiveness         += n;
                 siege_effectiveness[alien_number] += n;
             }
@@ -5387,11 +5330,11 @@ got_nampla:
         if (alien_ship.ttype == STARBASE) {
             i = alien_ship.tonnage;    /* One quarter of normal ships. */
         }else {
-            i = 4 * (int)alien_ship.tonnage;
+            i = 4 * alien_ship.tonnage;
         }
 
-        i = (i * (int)alien.tech_level[ML])
-            / ((int)species.tech_level[ML] + 1);
+        i = (i * alien.tech_level[ML])
+            / (species.tech_level[ML] + 1);
 
         i /= n;
 
@@ -5413,8 +5356,8 @@ got_nampla:
                                                  *  installed yet. */
     }else {
         siege_percent_effectiveness = total_effective_tonnage
-                                      / ((((long)species.tech_level[MI] * (long)nampla.mi_base)
-                                          + ((long)species.tech_level[MA] * (long)nampla.ma_base))
+                                      / (((species.tech_level[MI] * nampla.mi_base)
+                                          + (species.tech_level[MA] * nampla.ma_base))
                                          / 10L);
     }
 
@@ -5690,7 +5633,7 @@ func do_RECYCLE_command() {
     /* Determine recycle value. */
     if (class == TP) {
         recycle_value = (value * item_cost[class])
-                        / (2L * (long)species.tech_level[BI]);
+                        / (2L * species.tech_level[BI]);
     }else if (class == RM) {
         recycle_value = value / 5L;
     }else{
@@ -5762,9 +5705,9 @@ recycle_ship:
     }
 
     if (ship.status == UNDER_CONSTRUCTION) {
-        recycle_value = (original_cost - (long)ship.remaining_cost) / 2;
+        recycle_value = (original_cost - ship.remaining_cost) / 2;
     }else{
-        recycle_value = (3 * original_cost * (60 - (long)ship.age)) / 200;
+        recycle_value = (3 * original_cost * (60 - ship.age)) / 200;
     }
 
     species.econ_units += recycle_value;
@@ -5910,13 +5853,13 @@ func do_REPAIR_command() {
         log_char('s');
     }
     log_string(". Age went from ");
-    log_int((int)ship.age);    log_string(" to ");
+    log_int(ship.age);    log_string(" to ");
     ship.age -= age_reduction;
     if (ship.age < 0) {
         ship.age = 0;
     }
     ship.item_quantity[DR] -= num_dr_units;
-    log_int((int)ship.age);
+    log_int(ship.age);
     log_string(".\n");
 
     return;
@@ -6009,12 +5952,12 @@ pool_repair:
             log_char('s');
         }
         log_string(". Age went from ");
-        log_int((int)damaged_ship.age);    log_string(" to ");
+        log_int(damaged_ship.age);    log_string(" to ");
         damaged_ship.age -= age_reduction;
         if (damaged_ship.age < 0) {
             damaged_ship.age = 0;
         }
-        log_int((int)damaged_ship.age);
+        log_int(damaged_ship.age);
         log_string(".\n");
 
         total_dr_units -= num_dr_units;
@@ -6377,13 +6320,13 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
 
         /* Randomly choose a target. Choose the toughest of four. */
         defender_index = target_index[rnd(num_targets) - 1];
-        op1            = (long)act.num_shots[defender_index]
+        op1            = act.num_shots[defender_index]
                          * act.weapon_damage[defender_index];
         di[0] = target_index[rnd(num_targets) - 1];
         di[1] = target_index[rnd(num_targets) - 1];
         di[2] = target_index[rnd(num_targets) - 1];
         for (i = 0; i < 3; i++) {
-            op2 = (long)act.num_shots[di[i]] * act.weapon_damage[di[i]];
+            op2 = act.num_shots[di[i]] * act.weapon_damage[di[i]];
             if (op2 > op1) {
                 defender_index = di[i];
                 op1            = op2;
@@ -6588,7 +6531,7 @@ fire:
         if (shields_up) {
             if (act.unit_type[defender_index] == SHIP) {
                 damage_to_shields =
-                    ((long)defending_ship.dest_y * damage_done) / 100;
+                    (defending_ship.dest_y * damage_done) / 100;
                 damage_to_ship = damage_done - damage_to_shields;
                 act.shield_strength_left[defender_index] -= damage_to_shields;
 
@@ -6697,7 +6640,7 @@ fire:
 
                     if (defending_ship.status == UNDER_CONSTRUCTION) {
                         recycle_value =
-                            (original_cost - (long)defending_ship.remaining_cost) / 2;
+                            (original_cost - defending_ship.remaining_cost) / 2;
                     }else{
                         recycle_value =
                             (3 * original_cost * (60 - act.original_age_or_PDs[defender_index])) / 200;
@@ -6711,7 +6654,7 @@ fire:
                             if (i == TP) {
                                 long int techLevel_2x =
                                     2L
-                                    * (long)defending_species.tech_level[BI];
+                                    * defending_species.tech_level[BI];
                                 if (techLevel_2x <= 0) {
                                     techLevel_2x = 1;
                                 }
@@ -7398,7 +7341,7 @@ func do_TELESCOPE_command() {
     }
 
     /* Define range parameters. */
-    max_range = (int)species.tech_level[GV] / 10;
+    max_range = species.tech_level[GV] / 10;
     if (range_in_parsecs > max_range) {
         range_in_parsecs = max_range;
     }
@@ -7690,7 +7633,7 @@ func do_TELESCOPE_command() {
                 fprintf(log_file, "\n");
 
                 detection_chance += 2 *
-                                    ((int)alien.tech_level[GV] - (int)species.tech_level[GV]);
+                                    (alien.tech_level[GV] - species.tech_level[GV]);
 
                 if (rnd(100) > detection_chance) {
                     continue;
@@ -7756,8 +7699,8 @@ func do_TERRAFORM_command() {
     }
 
     /* Find out how many terraforming plants are needed. */
-    colony_planet = planet_base + (long)nampla.planet_index;
-    home_planet   = planet_base + (long)nampla_base.planet_index;
+    colony_planet = planet_base + nampla.planet_index;
+    home_planet   = planet_base + nampla_base.planet_index;
 
     ls_needed = life_support_needed(species, home_planet, colony_planet);
 
@@ -8276,7 +8219,7 @@ get_destination:
 
         /* Check if destination ship has sufficient carrying capacity. */
         if (ship2.class == TR) {
-            capacity = (10 + ((int)ship2.tonnage / 2)) * (int)ship2.tonnage;
+            capacity = (10 + (ship2.tonnage / 2)) * ship2.tonnage;
         }else if (ship2.class == BA) {
             capacity = 10 * ship2.tonnage;
         }else{
@@ -8839,9 +8782,9 @@ try_again:
     /* Log what was upgraded. */
     log_string("    ");  log_string(ship_name(ship));
     log_string(" was upgraded from age ");
-    log_int((int)ship.age);    log_string(" to age ");
+    log_int(ship.age);    log_string(" to age ");
     ship.age -= age_reduction;
-    log_int((int)ship.age);
+    log_int(ship.age);
     log_string(" at a cost of ");    log_long(amount_to_spend);
     log_string(".\n");
 }
@@ -9223,7 +9166,7 @@ next_step:
                 for (i = SG1; i <= SG9; i++) {
                     if (sh.item_quantity[i] > 0) {
                         defensive_power +=
-                            (long)sh.item_quantity[i] * power(tons);
+                            sh.item_quantity[i] * power(tons);
                     }
                     tons += 5;
                 }
@@ -9233,15 +9176,15 @@ next_step:
                 for (i = GU1; i <= GU9; i++) {
                     if (sh.item_quantity[i] > 0) {
                         offensive_power +=
-                            (long)sh.item_quantity[i] * power(tons);
+                            sh.item_quantity[i] * power(tons);
                     }
                     tons += 5;
                 }
             }
 
             /* Adjust for ship aging. */
-            offensive_power -= ((long)sh.age * offensive_power) / 50;
-            defensive_power -= ((long)sh.age * defensive_power) / 50;
+            offensive_power -= (sh.age * offensive_power) / 50;
+            defensive_power -= (sh.age * defensive_power) / 50;
         }
 
         /* Adjust values for tech levels. */
@@ -9281,7 +9224,7 @@ next_step:
             /* Adjust for results of previous action, if any. "dest_y"
              *  contains the percentage of shields that remained at end
              *  of last action. */
-            defensive_power = ((long)sh.dest_y * defensive_power) / 100L;
+            defensive_power = (sh.dest_y * defensive_power) / 100L;
         }
         act.shield_strength_left[unit_index] = defensive_power;
 
@@ -9747,9 +9690,9 @@ func get_planet_data() {
 
     /* Allocate enough memory for all planets. */
     mem_size =
-        (long)(num_planets + NUM_EXTRA_PLANETS) * (long)sizeof(struct planet_data);
+        (num_planets + NUM_EXTRA_PLANETS) * sizeof(struct planet_data);
     data_size =
-        (long)num_planets * (long)sizeof(struct planet_data);
+        num_planets * sizeof(struct planet_data);
     planet_base = (struct planet_data *)malloc(mem_size);
     if (planet_base == NULL) {
         fprintf(stderr, "\nCannot allocate enough memory for planet file!\n\n");
@@ -10072,9 +10015,9 @@ func get_star_data() {
 
     /* Allocate enough memory for all stars. */
     mem_size =
-        (long)(num_stars + NUM_EXTRA_STARS) * (long)sizeof(struct star_data);
+        (num_stars + NUM_EXTRA_STARS) * sizeof(struct star_data);
     star_data_size =
-        (long)num_stars * (long)sizeof(struct star_data);
+        num_stars * sizeof(struct star_data);
     star_base = (struct star_data *)malloc(mem_size);
     if (star_base == NULL) {
         fprintf(stderr, "\nCannot allocate enough memory for star file!\n\n");
@@ -10706,7 +10649,7 @@ func save_planet_data() {
     }
 
     /* Write planet data to disk. */
-    byte_size = (long)num_planets * sizeof(struct planet_data);
+    byte_size = num_planets * sizeof(struct planet_data);
     n         = write(planet_fd, planet_base, byte_size);
     if (n != byte_size) {
         fprintf(stderr, "\nCannot write planet data to disk!\n\n");
@@ -10740,7 +10683,7 @@ func save_star_data() {
     }
 
     /* Write star data to disk. */
-    byte_size = (long)num_stars * sizeof(struct star_data);
+    byte_size = num_stars * sizeof(struct star_data);
     n         = write(star_fd, star_base, byte_size);
     if (n != byte_size) {
         fprintf(stderr, "\nCannot write star data to disk!\n\n");
@@ -10835,10 +10778,10 @@ func scan(x, y, z int) {
     }
 
     /* Print data for each planet. */
-    planet = planet_base + (long)star.planet_index;
+    planet = planet_base + star.planet_index;
     if (print_LSN) {
         home_nampla = nampla_base;
-        home_planet = planet_base + (long)home_nampla.planet_index;
+        home_planet = planet_base + home_nampla.planet_index;
     }
 
     for (i = 1; i <= star.num_planets; i++) {
@@ -10918,7 +10861,7 @@ func rnd(max uint32) int {
 
     a = last_random & 0x0000FFFF;
 
-    return((int)((a * (long)max) >> 16) + 1L);
+    return(((a * max) >> 16) + 1L);
 }
 
 /* Routine "get_species_data" will read in data files for all species,
@@ -10970,7 +10913,7 @@ func get_species_data() {
         }
 
         /* Read it all into memory. */
-        num_bytes = (long)sp.num_namplas * sizeof(struct nampla_data);
+        num_bytes = sp.num_namplas * sizeof(struct nampla_data);
         n         = read(species_fd, namp_data[species_index], num_bytes);
         if (n != num_bytes) {
             fprintf(stderr, "\nCannot read nampla data into memory!\n\n");
@@ -10987,7 +10930,7 @@ func get_species_data() {
 
         if (sp.num_ships > 0) {
             /* Read it all into memory. */
-            num_bytes = (long)sp.num_ships * sizeof(struct ship_data);
+            num_bytes = sp.num_ships * sizeof(struct ship_data);
             n         = read(species_fd, ship_data[species_index], num_bytes);
             if (n != num_bytes) {
                 fprintf(stderr, "\nCannot read ship data into memory!\n\n");
@@ -11047,7 +10990,7 @@ func save_species_data() {
 
         if (sp.num_ships > 0) {
             /* Write ship data. */
-            num_bytes = (long)sp.num_ships * sizeof(struct ship_data);
+            num_bytes = sp.num_ships * sizeof(struct ship_data);
             n         = write(species_fd, ship_data[species_index], num_bytes);
             if (n != num_bytes) {
                 fprintf(stderr, "\nCannot write ship data to file!\n\n");
@@ -11253,7 +11196,7 @@ func ship_name(ship *ship_data_) string {
     strcat(full_ship_id, temp);
 
     if (ship.ttype == STARBASE) {
-        sprintf(temp, ",%ld tons\0", 10000L * (long)ship.tonnage);
+        sprintf(temp, ",%ld tons\0", 10000L * ship.tonnage);
         strcat(full_ship_id, temp);
     }
 
@@ -11309,7 +11252,7 @@ func save_location_data() {
     }
 
     /* Write array to disk. */
-    num_bytes = (long)num_locs * (long)sizeof(struct sp_loc_data);
+    num_bytes = num_locs * sizeof(struct sp_loc_data);
 
     n = write(locations_fd, loc, num_bytes);
     if (n != num_bytes) {

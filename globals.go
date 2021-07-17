@@ -155,7 +155,7 @@ var (
 	num_transactions     int
 	orders_file          io.Writer
 	original_line        [256]byte
-	planet_base          *planet_data
+	planet_base          []*planet_data // warning: code assumes *planet_data
 	planet_data_modified int
 	planet               *planet_data
 	pn                   int
