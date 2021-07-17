@@ -71,6 +71,7 @@ var (
 	first_battle              bool = true
 	first_pass                bool
 	fleet_percent_cost        int
+	full_ship_id              string
 	galaxy                    galaxy_data
 	gas_string                = []string{ // warning: code assumes [14][4]byte
 		"   ", "H2", "CH4", "He", "NH3", "N2", "CO2", "O2", "HCl", "Cl2", "F2", "H2O", "SO2", "H2S",
