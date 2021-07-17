@@ -1,5 +1,7 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/mdhender/gmail v0.0.0-20210713042456-73a002fb405d h1:xfCA3U/dyoNqTg3Z09hCzr08/RX2C+qkWkcBwHt0M9s=
+github.com/mdhender/gmail v0.0.0-20210713042456-73a002fb405d/go.mod h1:6kBuuzKtDzzIPFL8QCMpfIdODAM6GBJOfYxBGKHR460=
 github.com/pelletier/go-toml v1.6.0/go.mod h1:5N711Q9dKgbdkxHL+MEfF31hpT7l0S0s/t2kKREewys=
 github.com/peterbourgon/ff/v3 v3.1.0 h1:5JAeDK5j/zhKFjyHEZQXwXBoDijERaos10RE+xamOsY=
 github.com/peterbourgon/ff/v3 v3.1.0/go.mod h1:XNJLY8EIl6MjMVjBS4F0+G0LYoAqs0DTa4rmHHukKDE=

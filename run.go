@@ -22,11 +22,17 @@ import (
 	"fmt"
 	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/orders"
+	"github.com/mdhender/fhcms/store/jsondb"
 	"log"
 	"path/filepath"
 )
 
 func run(cfg *config.Config) (errors []error) {
+	jdb, err := jsondb.Read(filepath.Join(cfg.Data.JDB, "galaxy.json"))
+	if err != nil {
+		return []error{err}
+	}
+
 	for i := 1; i <= numSpecies; i++ {
 		turnData.Species[i] = &SpeciesTurnData{Id: i}
 		td := turnData.Species[i]
