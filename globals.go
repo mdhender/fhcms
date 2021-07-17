@@ -26,14 +26,14 @@ import (
 /* Global data used in most or all programs. */
 
 var (
-	__defaultPRNG *prng.PRNG
+	__defaultPRNG     *prng.PRNG
 	abbr_index        int
 	abbr_type         int
 	ambush_took_place bool
 	append_log        [MAX_SPECIES]bool
 	attacking_ML      int
 	balance           int
-	battle_base       []*battle_data // warning: code expects *battle_data
+	battle_base       []*battle_data              // warning: code expects *battle_data
 	c_nampla          [MAX_SPECIES][]*nampla_data // warning: code expects [MAX_SPECIES]*nampla_data
 	c_ship            [MAX_SPECIES]*ship_data_
 	c_species         [MAX_SPECIES]*species_data
@@ -57,21 +57,22 @@ var (
 		"Teach", "Tech", "Telescope", "Terraform", "Transfer", "Unload",
 		"Upgrade", "Visited", "Withdraw", "Wormhole", "ZZZ",
 	}
-	combat_option      [1000]int
-	combat_location    [1000]int
-	data_in_memory     [MAX_SPECIES]bool
-	data_modified      [MAX_SPECIES]bool
-	deep_space_defense int
-	defending_ML       int
-	doing_production   bool
-	EU_spending_limit  int
-	end_of_file        bool
-	field_distorted    [MAX_SPECIES]bool
-	first_battle       bool = true
-	first_pass         bool
-	fleet_percent_cost int
-	galaxy             galaxy_data
-	gas_string         = []string{ // warning: code assumes [14][4]byte
+	combat_option             [1000]int
+	combat_location           [1000]int
+	correct_spelling_required bool
+	data_in_memory            [MAX_SPECIES]bool
+	data_modified             [MAX_SPECIES]bool
+	deep_space_defense        int
+	defending_ML              int
+	doing_production          bool
+	EU_spending_limit         int
+	end_of_file               bool
+	field_distorted           [MAX_SPECIES]bool
+	first_battle              bool = true
+	first_pass                bool
+	fleet_percent_cost        int
+	galaxy                    galaxy_data
+	gas_string                = []string{ // warning: code assumes [14][4]byte
 		"   ", "H2", "CH4", "He", "NH3", "N2", "CO2", "O2", "HCl", "Cl2", "F2", "H2O", "SO2", "H2S",
 	}
 	g_spec_name             string // warning: code assumes [32]byte
@@ -143,9 +144,9 @@ var (
 	logging_disabled     bool
 	make_enemy           [MAX_SPECIES][MAX_SPECIES]bool
 	namp_data            [MAX_SPECIES][]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
-	nampla1_base         *nampla_data              // warning: code assumes *nampla_data
-	nampla2_base         *nampla_data              // warning: code assumes *nampla_data
-	nampla_base          []*nampla_data            // warning: code assumes *nampla_data
+	nampla1_base         *nampla_data                // warning: code assumes *nampla_data
+	nampla2_base         *nampla_data                // warning: code assumes *nampla_data
+	nampla_base          []*nampla_data              // warning: code assumes *nampla_data
 	nampla_index         int
 	nampla               *nampla_data
 	next_nampla_index    int
@@ -210,8 +211,8 @@ var (
 	ship_type = []string{ // warning: code assumes [3][2]byte
 		"", "S", "S",
 	}
-	shipyard_built bool
-	shipyard_capacity int
+	shipyard_built     bool
+	shipyard_capacity  int
 	size_char          []byte = []byte("0123456789")
 	sp_tech_level      [6]int
 	spec_data          [MAX_SPECIES]*species_data
