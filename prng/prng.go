@@ -18,7 +18,12 @@
 
 package prng
 
-import "time"
+import (
+	"fmt"
+	"math/rand"
+	"os"
+	"time"
+)
 
 type PRNG struct {
 	seed uint64
@@ -56,9 +61,57 @@ func (p *PRNG) Seed(seed uint64) {
 	}
 }
 
+// SeedFromEnv seeds the generator from an environment variable.
+func (p *PRNG) SeedFromEnv(name string) error {
+	var digits int
+	var seed uint64
+	for _, ch := range os.Getenv(name) {
+		switch ch {
+		case '0':
+			digits, seed = digits+1, seed*16+0
+		case '1':
+			digits, seed = digits+1, seed*16+1
+		case '2':
+			digits, seed = digits+1, seed*16+2
+		case '3':
+			digits, seed = digits+1, seed*16+3
+		case '4':
+			digits, seed = digits+1, seed*16+4
+		case '5':
+			digits, seed = digits+1, seed*16+5
+		case '6':
+			digits, seed = digits+1, seed*16+6
+		case '7':
+			digits, seed = digits+1, seed*16+7
+		case '8':
+			digits, seed = digits+1, seed*16+8
+		case '9':
+			digits, seed = digits+1, seed*16+9
+		case 'a', 'A':
+			digits, seed = digits+1, seed*16+10
+		case 'b', 'B':
+			digits, seed = digits+1, seed*16+11
+		case 'c', 'C':
+			digits, seed = digits+1, seed*16+12
+		case 'd', 'D':
+			digits, seed = digits+1, seed*16+13
+		case 'e', 'E':
+			digits, seed = digits+1, seed*16+14
+		case 'f', 'F':
+			digits, seed = digits+1, seed*16+15
+		}
+	}
+	if digits == 0 || seed == 0 {
+		return fmt.Errorf("invalid seed")
+	}
+	p.Seed(seed)
+	return nil
+}
+
 // SeedFromTime seeds the generator from the system clock.
 func (p *PRNG) SeedFromTime() {
-	p.Seed(uint64(time.Now().UnixNano()))
+	rand.Seed(time.Now().UnixNano())
+	p.Seed(rand.Uint64())
 }
 
 // Roll returns a random number in the range 1..n.
