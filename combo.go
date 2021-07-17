@@ -6045,29 +6045,28 @@ do_cost:
  * occurred. Otherwise, it will return false. */
 
 func do_round(option int, round_number bool, bat *battle_data, act *action_data) int {
-    int i, j, n, unit_index, combat_occurred, total_shots,
-        attacker_index, defender_index, found, chance_to_hit,
-        attacker_ml, attacker_gv, defender_ml, target_index[MAX_SHIPS],
-        num_targets, header_printed, num_sp, fj_chance, shields_up,
-        FDs_were_destroyed, di[3], start_unit, current_species,
-        this_is_a_hijacking;
-
-    long aux_shield_power, units_destroyed, tons, percent_decrease,
-         damage_done, damage_to_ship, damage_to_shields, op1, op2,
-         original_cost, recycle_value, economic_units;
-
-    char attacker_name[64], defender_name[64];
-
-    struct species_data *attacking_species, *defending_species;
-    struct ship_data *   sh, *attacking_ship, *defending_ship;
-    struct nampla_data * attacking_nampla, *defending_nampla;
-
+    var i, j, n, unit_index, combat_occurred, total_shots int
+    var attacker_index, defender_index, found, chance_to_hit int
+    var attacker_ml, attacker_gv, defender_ml int
+    var target_index[MAX_SHIPS] int
+    var num_targets, header_printed, num_sp, fj_chance, shields_up int
+    var FDs_were_destroyed int
+    var di[3]int
+    var start_unit, current_species int
+    var this_is_a_hijacking bool
+    var aux_shield_power, units_destroyed, tons, percent_decrease int
+    var damage_done, damage_to_ship, damage_to_shields, op1, op2 int
+    var original_cost, recycle_value, economic_units int
+    var attacker_name, defender_name [64]byte
+    var attacking_species, defending_species *species_data
+    var sh, attacking_ship, defending_ship *ship_data_
+    var attacking_nampla, defending_nampla *nampla_data
 
     /* Clear out x_attacked_y and germ_bombs_used arrays.  They will be used
      *  to log who bombed who, or how many GWs were used. */
     num_sp = bat.num_species_here;
-    for (i = 0; i < num_sp; i++) {
-        for (j = 0; j < num_sp; j++) {
+    for i := 0; i < num_sp; i++ {
+        for j := 0; j < num_sp; j++ {
             x_attacked_y[i][j]    = false;
             germ_bombs_used[i][j] = 0;
         }
@@ -6077,13 +6076,13 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
     start_unit      = 0;
     total_shots     = 0;
     current_species = act.fighting_species_index[0];
-    for (unit_index = 0; unit_index < act.num_units_fighting; unit_index++) {
+    for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
         if (act.fighting_species_index[unit_index] != current_species) {
             if (total_shots == 0) {
                 /* Convert all non-combatants, if any, to combatants. */
-                for (i = start_unit; i < unit_index; i++) {
+                for i := start_unit; i < unit_index; i++ {
                     if (act.unit_type[i] == SHIP) {
-                        sh          = (struct ship_data *)act.fighting_unit[i];
+                        sh          = act.fighting_unit[i] // cast as *ship_data
                         sh.special = 0;
                     }
                 }
@@ -6097,7 +6096,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
             n = 0;
         }
         if (act.unit_type[unit_index] == SHIP) {
-            sh = (struct ship_data *)act.fighting_unit[unit_index];
+            sh = act.fighting_unit[unit_index] // cast as *ship_data
             if (sh.special == NON_COMBATANT) {
                 n = 0;
             }
@@ -6107,13 +6106,13 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
 
     /* Determine total number of shots for all species present. */
     total_shots = 0;
-    for (unit_index = 0; unit_index < act.num_units_fighting; unit_index++) {
+    for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
         n = act.num_shots[unit_index];
         if (act.surprised[unit_index]) {
             n = 0;
         }
         if (act.unit_type[unit_index] == SHIP) {
-            sh = (struct ship_data *)act.fighting_unit[unit_index];
+            sh = act.fighting_unit[unit_index] // cast as *ship_data
             if (sh.special == NON_COMBATANT) {
                 n = 0;
             }
@@ -6125,17 +6124,13 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
     /* Handle all shots. */
     header_printed  = false;
     combat_occurred = false;
-    for (;total_shots > 0;) {
+    for total_shots > 0 {
         /* check to make sure we arent in infinite loop
          * that usually happens when there are shots remaining
          * but the side with the shots has no more ships left*/
-        for (i = 0; i < act.num_units_fighting; ++i) {
-            attacking_ship = (struct ship_data *)act.fighting_unit[i];
-            if (attacking_ship.age > 49 ||
-                attacking_ship.status == FORCED_JUMP ||
-                attacking_ship.status == JUMPED_IN_COMBAT ||
-                (attacking_ship.special == NON_COMBATANT &&
-                 option != GERM_WARFARE)) {
+        for i := 0; i < act.num_units_fighting; ++i {
+            attacking_ship = act.fighting_unit[i] // cast as *ship_data
+            if (attacking_ship.age > 49 || attacking_ship.status == FORCED_JUMP || attacking_ship.status == JUMPED_IN_COMBAT || (attacking_ship.special == NON_COMBATANT && option != GERM_WARFARE)) {
                 total_shots       -= act.shots_left[i];
                 act.shots_left[i] = 0;
             }
@@ -6143,10 +6138,10 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
         /* Determine who fires next. */
         attacker_index = rnd(act.num_units_fighting) - 1;
         if (act.unit_type[attacker_index] == SHIP) {
-            attacking_ship = (struct ship_data *)act.fighting_unit[attacker_index];
+            attacking_ship = act.fighting_unit[attacker_index]; // cast as *ship_data
             i = act.fighting_species_index[attacker_index];
             ignore_field_distorters = !field_distorted[i];
-            sprintf(attacker_name, "%s\0", ship_name(attacking_ship));
+            attacker_name = fmt.Sprintf("%s", ship_name(attacking_ship));
             ignore_field_distorters = false;
 
             /* Check if ship can fight. */
@@ -6159,13 +6154,12 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
             if (attacking_ship.status == JUMPED_IN_COMBAT) {
                 continue;
             }
-            if (attacking_ship.special == NON_COMBATANT &&
-                option != GERM_WARFARE) {
+            if (attacking_ship.special == NON_COMBATANT && option != GERM_WARFARE) {
                 continue;
             }
         }else {
-            attacking_nampla = (struct nampla_data *)act.fighting_unit[attacker_index];
-            sprintf(attacker_name, "PL %s\0", attacking_nampla.name);
+            attacking_nampla = act.fighting_unit[attacker_index]; // cast as *nampla_data
+            attacker_name = fmt.Sprintf("PL %s", attacking_nampla.name);
 
             /* Check if planet still has defenses. */
             if (attacking_nampla.item_quantity[PD] == 0) {
@@ -6173,8 +6167,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
             }
         }
 
-        /* Make sure attacker is not someone who is being taken by surprise
-         *      this round. */
+        /* Make sure attacker is not someone who is being taken by surprise this round. */
         if (act.surprised[attacker_index]) {
             continue;
         }
@@ -6184,15 +6177,14 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
         i           = act.fighting_species_index[attacker_index];
         attacker_ml = c_species[i].tech_level[ML];
         attacker_gv = c_species[i].tech_level[GV];
-        for (defender_index = 0; defender_index < act.num_units_fighting; defender_index++) {
+        for defender_index = 0; defender_index < act.num_units_fighting; defender_index++ {
             j = act.fighting_species_index[defender_index];
             if (!bat.enemy_mine[i][j]) {
                 continue;
             }
 
             if (act.unit_type[defender_index] == SHIP) {
-                defending_ship =
-                    (struct ship_data *)act.fighting_unit[defender_index];
+                defending_ship = act.fighting_unit[defender_index]; // cast as *ship_data
 
                 if (defending_ship.age > 49) {
                     continue;                            /* Already destroyed. */
@@ -6207,17 +6199,15 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
                     continue;
                 }
             }else {
-                defending_nampla =
-                    (struct nampla_data *)act.fighting_unit[defender_index];
+                defending_nampla = act.fighting_unit[defender_index]  // cast as *nampla_data
 
-                if (defending_nampla.item_quantity[PD] == 0 &&
-                    option == PLANET_ATTACK) {
+                if (defending_nampla.item_quantity[PD] == 0 && option == PLANET_ATTACK) {
                     continue;
                 }
             }
 
             target_index[num_targets] = defender_index;
-            ++num_targets;
+            num_targets++
         }
 
         if (num_targets == 0) { /* Attacker has no enemies left. */
@@ -6228,12 +6218,11 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
 
         /* Randomly choose a target. Choose the toughest of four. */
         defender_index = target_index[rnd(num_targets) - 1];
-        op1            = act.num_shots[defender_index]
-                         * act.weapon_damage[defender_index];
+        op1            = act.num_shots[defender_index] * act.weapon_damage[defender_index];
         di[0] = target_index[rnd(num_targets) - 1];
         di[1] = target_index[rnd(num_targets) - 1];
         di[2] = target_index[rnd(num_targets) - 1];
-        for (i = 0; i < 3; i++) {
+        for i := 0; i < 3; i++ {
             op2 = act.num_shots[di[i]] * act.weapon_damage[di[i]];
             if (op2 > op1) {
                 defender_index = di[i];
@@ -6245,15 +6234,13 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
         defender_ml = c_species[j].tech_level[ML];
 
         if (act.unit_type[defender_index] == SHIP) {
-            defending_ship =
-                (struct ship_data *)act.fighting_unit[defender_index];
+            defending_ship = act.fighting_unit[defender_index]; // cast as *ship_data
             ignore_field_distorters = !field_distorted[j];
-            sprintf(defender_name, "%s\0", ship_name(defending_ship));
+            defender_name = fmt.Sprintf("%s", ship_name(defending_ship));
             ignore_field_distorters = false;
         }else {
-            defending_nampla =
-                (struct nampla_data *)act.fighting_unit[defender_index];
-            sprintf(defender_name, "PL %s\0", defending_nampla.name);
+            defending_nampla = act.fighting_unit[defender_index]; // cast as *nampla_data
+            defender_name = fmt.Sprintf("PL %s", defending_nampla.name);
         }
 
         /* Print round number. */
@@ -6263,7 +6250,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
             log_string(":\n");
             header_printed = true;
         }
-        int attackerGvMl = attacker_gv + attacker_ml;
+        attackerGvMl := attacker_gv + attacker_ml;
         if (attackerGvMl <= 0) {
             attackerGvMl = 1;
         }
@@ -6275,8 +6262,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
         if (rnd(100) < fj_chance &&
             act.unit_type[attacker_index] == SHIP &&
             act.unit_type[defender_index] == SHIP) {
-            if (forced_jump_units_used(attacker_index, defender_index,
-                                       &total_shots, bat, act)) {
+            if (forced_jump_units_used(attacker_index, defender_index, &total_shots, bat, act)) {
                 combat_occurred = true;
                 continue;
             }
@@ -6291,9 +6277,7 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
          * explicitly targetted. */
         i = act.fighting_species_index[attacker_index];
         j = act.fighting_species_index[defender_index];
-        if (act.unit_type[defender_index] == SHIP &&
-            defending_ship.class == TR &&
-            bat.special_target[i] != TARGET_TRANSPORTS &&
+        if (act.unit_type[defender_index] == SHIP && defending_ship.class == TR && bat.special_target[i] != TARGET_TRANSPORTS &&
             rnd(10) != 5) {
             continue;
         }
@@ -6333,27 +6317,26 @@ func do_round(option int, round_number bool, bat *battle_data, act *action_data)
 
 fire:
         /* Update counts. */
-        --act.shots_left[attacker_index];
-        --total_shots;
+        act.shots_left[attacker_index]--
+        total_shots--
 
         /* Since transports generally avoid combat, there is only a 10%
          * chance that they will attack. */
-        if (act.unit_type[attacker_index] == SHIP &&
-            attacking_ship.class == TR &&
-            option != GERM_WARFARE &&
-            rnd(10) != 5) {
+        if (act.unit_type[attacker_index] == SHIP && attacking_ship.class == TR && option != GERM_WARFARE && rnd(10) != 5) {
             continue;
         }
 
         /* Fire! */
         combat_occurred = true;
-        log_string("        ");  log_string(attacker_name);
-        log_string(" fires on ");  log_string(defender_name);
+        log_string("        ");
+        log_string(attacker_name);
+        log_string(" fires on ");
+        log_string(defender_name);
         if (act.unit_type[defender_index] == NAMPLA) {
             log_string(" defenses");
         }
 
-        int combinedMl = attacker_ml + defender_ml;
+        combinedMl := attacker_ml + defender_ml;
         if (combinedMl <= 0) {
             combinedMl = 1;
         }
@@ -6369,12 +6352,9 @@ fire:
             shields_up = true;
         }
 
-        /* If defending ship is field-distorted, chance-to-hit is
-         *      reduced by 25%. */
+        /* If defending ship is field-distorted, chance-to-hit is reduced by 25%. */
         j = act.fighting_species_index[defender_index];
-        if (act.unit_type[defender_index] == SHIP &&
-            field_distorted[j] &&
-            defending_ship.item_quantity[FD] == defending_ship.tonnage) {
+        if (act.unit_type[defender_index] == SHIP && field_distorted[j] && defending_ship.item_quantity[FD] == defending_ship.tonnage) {
             chance_to_hit = (3 * chance_to_hit) / 4;
         }
 
@@ -6387,8 +6367,7 @@ fire:
 
         /* Adjust for age. */
         if (act.unit_type[attacker_index] == SHIP) {
-            chance_to_hit -=
-                (2 * attacking_ship.age * chance_to_hit) / 100;
+            chance_to_hit -= (2 * attacking_ship.age * chance_to_hit) / 100;
         }
 
         /* Calculate damage that shot will do if it hits. */
@@ -6396,8 +6375,7 @@ fire:
         damage_done += ((26 - rnd(51)) * damage_done) / 100;
 
         /* Take care of attempted annihilation and sieges. */
-        if (option == PLANET_BOMBARDMENT || option == GERM_WARFARE ||
-            option == SIEGE) {
+        if (option == PLANET_BOMBARDMENT || option == GERM_WARFARE || option == SIEGE) {
             /* Indicate the action that was attempted against this nampla. */
             if (option == SIEGE) {
                 act.unit_type[defender_index] = BESIEGED_NAMPLA;
@@ -6438,21 +6416,17 @@ fire:
         damage_to_ship = 0;
         if (shields_up) {
             if (act.unit_type[defender_index] == SHIP) {
-                damage_to_shields =
-                    (defending_ship.dest_y * damage_done) / 100;
+                damage_to_shields = (defending_ship.dest_y * damage_done) / 100;
                 damage_to_ship = damage_done - damage_to_shields;
                 act.shield_strength_left[defender_index] -= damage_to_shields;
 
                 /* Calculate percentage of shields left. */
                 if (act.shield_strength_left[defender_index] > 0) {
-                    long int defenderShieldStrength =
-                        act.shield_strength[defender_index];
+                    defenderShieldStrength := act.shield_strength[defender_index];
                     if (defenderShieldStrength <= 0) {
                         defenderShieldStrength = 1;
                     }
-                    defending_ship.dest_y =
-                        (100L * act.shield_strength_left[defender_index])
-                        / defenderShieldStrength;
+                    defending_ship.dest_y = (100 * act.shield_strength_left[defender_index]) / defenderShieldStrength;
                 } else{
                     defending_ship.dest_y = 0;
                 }
@@ -6464,8 +6438,7 @@ fire:
         /* See if it got through shields. */
         units_destroyed  = 0;
         percent_decrease = 0;
-        if (!shields_up || act.shield_strength_left[defender_index] < 0 ||
-            damage_to_ship > 0) {
+        if (!shields_up || act.shield_strength_left[defender_index] < 0 || damage_to_ship > 0) {
             /* Get net damage to ship or PDs. */
             if (shields_up) {
                 if (act.unit_type[defender_index] == SHIP) {
@@ -6481,13 +6454,12 @@ fire:
                 }
             }
 
-            long defenderShieldStrength = act.shield_strength[defender_index];
+            defenderShieldStrength := act.shield_strength[defender_index];
             if (defenderShieldStrength <= 0) {
                 defenderShieldStrength = 1;
             }
 
-            percent_decrease = (50L * damage_done) / defenderShieldStrength;
-
+            percent_decrease = (50 * damage_done) / defenderShieldStrength;
             percent_decrease += ((rnd(51) - 26) * percent_decrease) / 100;
             if (percent_decrease > 100) {
                 percent_decrease = 100;
@@ -6497,8 +6469,7 @@ fire:
                 defending_ship.age += percent_decrease / 2;
                 units_destroyed      = (defending_ship.age > 49);
             }else {
-                units_destroyed = (percent_decrease
-                                   * act.original_age_or_PDs[defender_index]) / 100L;
+                units_destroyed = (percent_decrease * act.original_age_or_PDs[defender_index]) / 100;
                 if (units_destroyed > defending_nampla.item_quantity[PD]) {
                     units_destroyed = defending_nampla.item_quantity[PD];
                 }
@@ -6516,8 +6487,7 @@ fire:
         /* See if this is a hijacking. */
         i = act.fighting_species_index[attacker_index];
         j = act.fighting_species_index[defender_index];
-        if (bat.enemy_mine[i][j] == 2 && (option == DEEP_SPACE_FIGHT ||
-                                           option == PLANET_ATTACK)) {
+        if (bat.enemy_mine[i][j] == 2 && (option == DEEP_SPACE_FIGHT || option == PLANET_ATTACK)) {
             this_is_a_hijacking = true;
         }else{
             this_is_a_hijacking = false;
@@ -6547,27 +6517,22 @@ fire:
                     }
 
                     if (defending_ship.status == UNDER_CONSTRUCTION) {
-                        recycle_value =
-                            (original_cost - defending_ship.remaining_cost) / 2;
+                        recycle_value = (original_cost - defending_ship.remaining_cost) / 2;
                     }else{
-                        recycle_value =
-                            (3 * original_cost * (60 - act.original_age_or_PDs[defender_index])) / 200;
+                        recycle_value = (3 * original_cost * (60 - act.original_age_or_PDs[defender_index])) / 200;
                     }
 
                     economic_units = recycle_value;
 
-                    for (i = 0; i < MAX_ITEMS; i++) {
+                    for i := 0; i < MAX_ITEMS; i++ {
                         j = defending_ship.item_quantity[i];
                         if (j > 0) {
                             if (i == TP) {
-                                long int techLevel_2x =
-                                    2L
-                                    * defending_species.tech_level[BI];
+                                techLevel_2x := 2 * defending_species.tech_level[BI];
                                 if (techLevel_2x <= 0) {
                                     techLevel_2x = 1;
                                 }
-                                recycle_value = (j * item_cost[i])
-                                                / techLevel_2x;
+                                recycle_value = (j * item_cost[i]) / techLevel_2x;
                             }else if (i == RM) {
                                 recycle_value = j / 5;
                             }else{
@@ -6586,7 +6551,7 @@ fire:
                     log_string(" was destroyed.\n");
                 }
 
-                for (i = 0; i < MAX_ITEMS; i++) {
+                for i := 0; i < MAX_ITEMS; i++ {
                     if (defending_ship.item_quantity[i] > 0) {
                         /* If this is a hijacking of a field-distorted ship,
                          *  we want the true name of the hijacked species to
@@ -6642,10 +6607,9 @@ fire:
                 }
                 log_summary = false;
             }
-        }else if (percent_decrease > 0 && !this_is_a_hijacking &&
-                  act.unit_type[defender_index] == SHIP) {
+        }else if (percent_decrease > 0 && !this_is_a_hijacking && act.unit_type[defender_index] == SHIP) {
             /* See if anything carried by the ship was also destroyed. */
-            for (i = 0; i < MAX_ITEMS; i++) {
+            for i := 0; i < MAX_ITEMS; i++ {
                 j = defending_ship.item_quantity[i];
                 if (j > 0) {
                     j = (percent_decrease * j) / 100;
@@ -6660,8 +6624,7 @@ fire:
         }
 
         j = act.fighting_species_index[defender_index];
-        if (FDs_were_destroyed && field_distorted[j] &&
-            defending_ship.dest_x == 0) {
+        if (FDs_were_destroyed && field_distorted[j] && defending_ship.dest_x == 0) {
             /* Reveal the true name of the ship and the owning species. */
             log_summary = true;
             if (this_is_a_hijacking) {
@@ -6681,14 +6644,12 @@ fire:
     }
 
     /* No more surprises. */
-    for (i = 0; i < act.num_units_fighting; i++) {
+    for i := 0; i < act.num_units_fighting; i++ {
         act.surprised[i] = false;
     }
 
-    return(combat_occurred);
+    return combat_occurred;
 }
-
-
 
 //*************************************************************************
 // do_scan.c
