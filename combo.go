@@ -1619,16 +1619,13 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
         }
 
         /* Check if we've met this species and make sure it is not an enemy. */
-        contact_word_number = (g_spec_number - 1) / 32;
-        contact_bit_number  = (g_spec_number - 1) % 32;
-        contact_mask        = 1 << contact_bit_number;
-        if (species.contact[contact_word_number] & contact_mask) == 0 {
+        if !species.contact[g_spec_number] {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
             fprintf(log_file, "!!! You can't do interspecies construction for a species you haven't met.\n");
             return;
         }
-        if (species.enemy[contact_word_number] & contact_mask) != 0 {
+        if species.enemy[g_spec_number] {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
             fprintf(log_file, "!!! You can't do interspecies construction for an ENEMY.\n");
@@ -3220,8 +3217,10 @@ func do_DISBAND_command() {
 
 func do_ENEMY_command() {
     /* See if declaration is for all species. */
+    var allEnemies bool
     if (get_value()) {
-        for i := 0; i < NUM_CONTACT_WORDS; i++ {
+        allEnemies = true
+        for i := 0; i < MAX_SPECIES; i++ {
             species.enemy[i] = true;      /* Set all enemy bits. */
             species.ally[i]  = false;       /* Clear all ally bits. */
         }
@@ -3234,11 +3233,6 @@ func do_ENEMY_command() {
             return;
         }
 
-        /* Get array index and bit mask. */
-        array_index = (g_spec_number - 1) / 32;
-        bit_number  = (g_spec_number - 1) % 32;
-        bit_mask    = 1 << bit_number;
-
         /* Set/clear the appropriate bit. */
         species.enemy[g_spec_number] = true       /* Set enemy bit. */
         species.ally[g_spec_number]  = false       /* Clear ally bit. */
@@ -3246,7 +3240,7 @@ func do_ENEMY_command() {
 
     /* Log the result. */
     log_string("    Enmity was declared towards ");
-    if (bit_mask == 0) {
+    if allEnemies {
         log_string("ALL species");
     }else{
         log_string("SP ");
@@ -3259,12 +3253,13 @@ func do_ENEMY_command() {
 // do_est.c
 
 func do_ESTIMATE_command() {
-    int i, max_error, estimate[6], contact_word_number,
-        contact_bit_number;
-
-    long cost, contact_mask;
-
-    struct species_data *alien;
+    var(
+        i, max_error int
+        estimate[6]int
+        contact_word_number, contact_bit_number int
+        cost, contact_mask int
+        alien *species_data
+    )
 
 
     /* Check if this order was preceded by a PRODUCTION order. */
@@ -3314,14 +3309,13 @@ func do_ESTIMATE_command() {
     }
 
     /* Make the estimates. */
-    alien = &spec_data[g_spec_number - 1];
-    for (i = 0; i < 6; i++) {
+    alien = spec_data[g_spec_number - 1];
+    for i := 0; i < 6; i++ {
         max_error = alien.tech_level[i] - species.tech_level[i];
         if (max_error < 1) {
             max_error = 1;
         }
-        estimate[i] = alien.tech_level[i] + rnd((2 * max_error) + 1)
-                      - (max_error + 1);
+        estimate[i] = alien.tech_level[i] + rnd((2 * max_error) + 1) - (max_error + 1);
         if (alien.tech_level[i] == 0) {
             estimate[i] = 0;
         }
@@ -3335,7 +3329,7 @@ func do_ESTIMATE_command() {
     log_string(" (government name '");
     log_string(alien.govt_name);
     log_string("', government ttype '");
-    log_string(alien.govt_ttype);
+    log_string(alien.govt_type);
     log_string("'):\n      MI = ");   log_int(estimate[MI]);
     log_string(", MA = ");   log_int(estimate[MA]);
     log_string(", ML = ");   log_int(estimate[ML]);
@@ -3349,26 +3343,24 @@ func do_ESTIMATE_command() {
 // do_germ.c
 
 func do_germ_warfare(attacking_species, defending_species, defender_index int, bat *battle_data, act *action_data) {
-    int i, attacker_BI, defender_BI, success_chance, num_bombs,
-        success;
-
-    long econ_units_from_looting;
-
-    struct planet_data *planet;
-    struct nampla_data *attacked_nampla;
-    struct ship_data *  sh;
-
+    var (
+        i, attacker_BI, defender_BI, success_chance, num_bombs, success int
+        econ_units_from_looting int
+        planet *planet_data
+        attacked_nampla *nampla_data
+        sh *ship_data_
+    )
 
     attacker_BI     = c_species[attacking_species].tech_level[BI];
     defender_BI     = c_species[defending_species].tech_level[BI];
-    attacked_nampla = (struct nampla_data *)act.fighting_unit[defender_index];
+    attacked_nampla = act.fighting_unit[defender_index]; // cast to *nampla_data
     planet          = planet_base + attacked_nampla.planet_index;
 
     success_chance = 50 + (2 * (attacker_BI - defender_BI));
     success        = false;
     num_bombs      = germ_bombs_used[attacking_species][defending_species];
 
-    for (i = 0; i < num_bombs; i++) {
+    for i := 0; i < num_bombs; i++ {
         if (rnd(100) <= success_chance) {
             success = true;
             break;
@@ -3411,8 +3403,7 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
     log_string(" germ warfare bombs. The defenders were wiped out!\n");
 
     /* Take care of looting. */
-    econ_units_from_looting =
-        attacked_nampla.mi_base + attacked_nampla.ma_base;
+    econ_units_from_looting = attacked_nampla.mi_base + attacked_nampla.ma_base;
 
     if (attacked_nampla.status & HOME_PLANET) {
         if (c_species[defending_species].hp_original_base < econ_units_from_looting) {
@@ -3428,7 +3419,8 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
             fprintf(stderr, "\nRan out of memory! MAX_TRANSACTIONS is too small!\n\n");
             exit(-1);
         }
-        i = num_transactions++;
+        i = num_transactions
+        num_transactions++
 
         /* Define this transaction. */
         transaction[i].ttype      = LOOTING_EU_TRANSFER;
@@ -3457,16 +3449,15 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
     }
 
     /* Reset status word. */
-    if (attacked_nampla.status & HOME_PLANET) {
+    if (attacked_nampla.status & HOME_PLANET) != 0 {
         attacked_nampla.status = HOME_PLANET;
     }else{
         attacked_nampla.status = COLONY;
     }
 
     /* Delete any ships that were under construction on the planet. */
-    sh = c_ship[defending_species] - 1;
-    for (i = 0; i < c_species[defending_species].num_ships; i++) {
-        ++sh;
+    for i := 0; i < c_species[defending_species].num_ships; i++ {
+        sh = c_ship[defending_species][i]
 
         if (sh.x != attacked_nampla.x) {
             continue;
@@ -3489,11 +3480,6 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
 // do_hide.c
 
 func do_HIDE_command() {
-    int n, status;
-
-    long cost;
-
-
     /* Check if this order was preceded by a PRODUCTION order. */
     if (!doing_production) {
         fprintf(log_file, "!!! Order ignored:\n");
@@ -3503,13 +3489,13 @@ func do_HIDE_command() {
     }
 
     /* Make sure this is not a mining colony or home planet. */
-    if (nampla.status & HOME_PLANET) {
+    if (nampla.status & HOME_PLANET) != 0 {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You may not HIDE a home planet.\n");
         return;
     }
-    if (nampla.status & RESORT_COLONY) {
+    if (nampla.status & RESORT_COLONY) != 0 {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You may not HIDE a resort colony.\n");
@@ -3525,8 +3511,8 @@ func do_HIDE_command() {
     }
 
     /* Check if sufficient funds are available. */
-    cost = (nampla.mi_base + nampla.ma_base) / 10L;
-    if (nampla.status & MINING_COLONY) {
+    cost := (nampla.mi_base + nampla.ma_base) / 10;
+    if (nampla.status & MINING_COLONY) != 0 {
         if (cost > species.econ_units) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", input_line);
@@ -3546,7 +3532,8 @@ func do_HIDE_command() {
     nampla.hiding = true;
 
     /* Log transaction. */
-    log_string("    Spent ");  log_long(cost);
+    log_string("    Spent ");
+    log_long(cost);
     log_string(" hiding this colony.\n");
 }
 
@@ -3554,13 +3541,11 @@ func do_HIDE_command() {
 // do_inst.c
 
 func do_INSTALL_command() {
-    int i, item_class, item_count, num_available, do_all_units,
-        recovering_home_planet, alien_index;
-
-    long n, current_pop, reb;
-
-    struct nampla_data *alien_home_nampla;
-
+    var (
+        i, item_class, item_count, num_available, do_all_units, recovering_home_planet, alien_index int
+        n, current_pop, reb int
+        alien_home_nampla *nampla_data
+    )
 
     /* Get number of items to install. */
     if (get_value()) {
@@ -3602,7 +3587,7 @@ func do_INSTALL_command() {
 get_planet:
 
     /* Get planet where items are to be installed. */
-    if (!get_location() || nampla == NULL) {
+    if (!get_location() || nampla == nil) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid planet name in INSTALL command.\n");
@@ -3610,7 +3595,7 @@ get_planet:
     }
 
     /* Make sure this is not someone else's populated homeworld. */
-    for (alien_index = 0; alien_index < galaxy.num_species; alien_index++) {
+    for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
         if (species_number == alien_index + 1) {
             continue;
         }
@@ -3645,9 +3630,8 @@ get_planet:
 
     /* Make sure it's not a healthy home planet. */
     recovering_home_planet = false;
-    if (nampla.status & HOME_PLANET) {
-        n = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install +
-            nampla.AUs_to_install;
+    if (nampla.status & HOME_PLANET) != 0 {
+        n = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install + nampla.AUs_to_install;
         reb = species.hp_original_base - n;
 
         if (reb > 0) {
@@ -3682,9 +3666,7 @@ check_items:
         }
     }else if (nampla.item_quantity[item_class] < item_count) {
         fprintf(log_file, "! WARNING: %s", input_line);
-        fprintf(log_file,
-                "! Planet does not have %d %ss. Substituting 0 for %d!\n",
-                item_count, item_abbr[item_class], item_count);
+        fprintf(log_file, "! Planet does not have %d %ss. Substituting 0 for %d!\n", item_count, item_abbr[item_class], item_count);
         item_count = 0;
         goto check_items;
     }
@@ -3746,11 +3728,6 @@ check_items:
 // do_int.c
 
 func do_INTERCEPT_command() {
-    int i, n, status;
-
-    long cost;
-
-
     /* Check if this order was preceded by a PRODUCTION order. */
     if (!doing_production) {
         fprintf(log_file, "!!! Order ignored:\n");
@@ -3760,7 +3737,7 @@ func do_INTERCEPT_command() {
     }
 
     /* Get amount to spend. */
-    status = get_value();
+    status := get_value();
     if (status == 0 || value < 0) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
@@ -3773,7 +3750,7 @@ func do_INTERCEPT_command() {
     if (value == 0) {
         return;
     }
-    cost = value;
+    cost := value;
 
     /* Check if planet is under siege. */
     if (nampla.siege_eff != 0) {
@@ -3800,7 +3777,7 @@ func do_INTERCEPT_command() {
     }
 
     /* Allocate funds. */
-    for (i = 0; i < num_intercepts; i++) {
+    for i := 0; i < num_intercepts; i++ {
         if (nampla.x != intercept[i].x) {
             continue;
         }
@@ -3827,26 +3804,23 @@ func do_INTERCEPT_command() {
     intercept[num_intercepts].z            = nampla.z;
     intercept[num_intercepts].amount_spent = cost;
 
-    ++num_intercepts;
+    num_intercepts++
 }
 
 func handle_intercept(intercept_index int) {
-    int i, j, n, num_enemy_ships, alien_index, enemy_index, enemy_num,
-        num_ships_left, array_index, bit_number, is_an_enemy,
-        is_distorted;
-
-    char enemy_number[MAX_ENEMY_SHIPS];
-
-    long bit_mask, cost_to_destroy;
-
-    struct species_data *alien;
-    struct ship_data *   alien_sh, *enemy_sh,
-                     *enemy_ship[MAX_ENEMY_SHIPS];
-
+    var (
+        i, j, n, num_enemy_ships, alien_index, enemy_index, enemy_num, num_ships_left, array_index, bit_number int
+        is_an_enemy, is_distorted bool
+        enemy_number[MAX_ENEMY_SHIPS]byte
+        bit_mask, cost_to_destroy int
+        alien *species_data
+        alien_sh, enemy_sh *ship_data_
+        enemy_ship[MAX_ENEMY_SHIPS]*ship_data_
+    )
 
     /* Make a list of all enemy ships that jumped into this system. */
     num_enemy_ships = 0;
-    for (alien_index = 0; alien_index < galaxy.num_species; alien_index++) {
+    for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
         if (!data_in_memory[alien_index]) {
             continue;
         }
@@ -3856,20 +3830,16 @@ func handle_intercept(intercept_index int) {
         }
 
         /* Is it an enemy species? */
-        array_index = (alien_index) / 32;
-        bit_number  = (alien_index) % 32;
-        bit_mask    = 1 << bit_number;
-        if (species.enemy[array_index] & bit_mask) {
+        if species.enemy[alien_index] {
             is_an_enemy = true;
         }else{
             is_an_enemy = false;
         }
 
         /* Find enemy ships, if any, that jumped to this location. */
-        alien    = &spec_data[alien_index];
-        alien_sh = ship_data[alien_index] - 1;
-        for (i = 0; i < alien.num_ships; i++) {
-            ++alien_sh;
+        alien    = spec_data[alien_index];
+        for i := 0; i < alien.num_ships; i++ {
+            alien_sh = ship_data[alien_index][i]
 
             if (alien_sh.pn == 99) {
                 continue;
@@ -3911,7 +3881,7 @@ func handle_intercept(intercept_index int) {
             }
             enemy_number[num_enemy_ships] = alien_index + 1;
             enemy_ship[num_enemy_ships]   = alien_sh;
-            ++num_enemy_ships;
+            num_enemy_ships++
         }
     }
 
@@ -3919,18 +3889,17 @@ func handle_intercept(intercept_index int) {
         return;                         /* Nothing to intercept. */
     }
     num_ships_left = num_enemy_ships;
-    for (;num_ships_left > 0;) {
+    for num_ships_left > 0 {
         /* Select ship for interception. */
         enemy_index = rnd(num_enemy_ships) - 1;
-        if (enemy_ship[enemy_index] == NULL) {
-            continue;                                   /* We already did this
-                                                         *      one. */
+        if (enemy_ship[enemy_index] == nil) {
+            continue;                                   /* We already did this one. */
         }
         enemy_num = enemy_number[enemy_index];
         enemy_sh  = enemy_ship[enemy_index];
 
         /* Are there enough funds to destroy this ship? */
-        cost_to_destroy = 100L * enemy_sh.tonnage;
+        cost_to_destroy = 100 * enemy_sh.tonnage;
         if (enemy_sh.class == TR) {
             cost_to_destroy /= 10;
         }
@@ -3961,9 +3930,10 @@ func handle_intercept(intercept_index int) {
 
         /* List cargo destroyed. */
         n = 0;
-        for (j = 0; j < MAX_ITEMS; j++) {
+        for j := 0; j < MAX_ITEMS; j++ {
             if (enemy_sh.item_quantity[j] > 0) {
-                if (n++ == 0) {
+                n++
+                if (n == 1) {
                     log_string(" (cargo: ");
                 }else{
                     log_char(',');
@@ -3985,14 +3955,14 @@ func handle_intercept(intercept_index int) {
         log_int(enemy_sh.z);
         log_string(".\n");
 
-        /* Create interspecies transaction so that other player will be
-         *      notified. */
+        /* Create interspecies transaction so that other player will be notified. */
         if (num_transactions == MAX_TRANSACTIONS) {
             fprintf(stderr, "\n\n\tERROR! num_transactions > MAX_TRANSACTIONS in do_int.c!\n\n");
             exit(-1);
         }
 
-        n = num_transactions++;
+        n = num_transactions
+        num_transactions++
         transaction[n].ttype    = SHIP_MISHAP;
         transaction[n].value   = 1;     /* Interception. */
         transaction[n].number1 = enemy_number[enemy_index];
@@ -4000,9 +3970,9 @@ func handle_intercept(intercept_index int) {
 
         delete_ship(enemy_sh);
 
-        enemy_ship[enemy_index] = NULL; /* Don't select this ship again. */
+        enemy_ship[enemy_index] = nil; /* Don't select this ship again. */
 
-        --num_ships_left;
+        num_ships_left--
     }
 }
 
@@ -4010,21 +3980,19 @@ func handle_intercept(intercept_index int) {
 // do_land.c
 
 func do_LAND_command() {
-    int i, n, found, siege_effectiveness, landing_detected, landed,
-        alien_number, alien_index, alien_pn, array_index, bit_number,
-        requested_alien_landing, alien_here, already_logged;
-
-    long bit_mask;
-
-    char *original_line_pointer;
-
-    struct species_data *alien;
-    struct nampla_data * alien_nampla;
-
+    var (
+        i, n, siege_effectiveness, landing_detected, landed int
+        alien_number, alien_index, alien_pn, array_index, bit_number int
+        requested_alien_landing, alien_here, already_logged int
+        bit_mask int
+        original_line_pointer *byte
+        alien *species_data
+        alien_nampla *nampla_data
+    )
 
     /* Get the ship. */
     original_line_pointer = input_line_pointer;
-    found = get_ship();
+    found := get_ship();
     if (!found) {
         /* Check for missing comma or tab after ship name. */
         input_line_pointer = original_line_pointer;
@@ -4071,7 +4039,7 @@ get_planet:
     landed = false;
     if (!found) {
         found = get_location();
-        if (!found || nampla == NULL) {
+        if (!found || nampla == nil) {
             found = false;
         }
     }else {
@@ -4088,10 +4056,10 @@ get_planet:
                 continue;
             }
 
-            alien        = &spec_data[alien_index];
-            alien_nampla = namp_data[alien_index] - 1;
-            for (i = 0; i < alien.num_namplas; i++) {
-                ++alien_nampla;
+            alien        = spec_data[alien_index];
+            for i := 0; i < alien.num_namplas; i++ {
+                alien_nampla = namp_data[alien_index][i]
+
                 if (ship.x != alien_nampla.x) {
                     continue;
                 }
@@ -4140,7 +4108,7 @@ finish_up:
     if (requested_alien_landing && alien_here) {
         /* Notify the other alien(s). */
         landed = found;
-        for (alien_index = 0; alien_index < galaxy.num_species; alien_index++) {
+        for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
             if (!data_in_memory[alien_index]) {
                 continue;
             }
@@ -4149,10 +4117,10 @@ finish_up:
                 continue;
             }
 
-            alien        = &spec_data[alien_index];
-            alien_nampla = namp_data[alien_index] - 1;
-            for (i = 0; i < alien.num_namplas; i++) {
-                ++alien_nampla;
+            alien        = spec_data[alien_index];
+            for i := 0; i < alien.num_namplas; i++ {
+                alien_nampla = namp_data[alien_index][i]
+
                 if (ship.x != alien_nampla.x) {
                     continue;
                 }
@@ -4232,8 +4200,7 @@ finish_up:
     }
 
     if (!found) {
-        if ((ship.status == IN_ORBIT || ship.status == ON_SURFACE) &&
-            !requested_alien_landing) {
+        if ((ship.status == IN_ORBIT || ship.status == ON_SURFACE) && !requested_alien_landing) {
             /* Player forgot to specify planet. Use the one it's already at. */
             value = ship.pn;
             found = true;
@@ -4291,7 +4258,7 @@ finish_up:
             landing_detected = false;
             if (rnd(100) <= siege_effectiveness) {
                 landing_detected = true;
-                for (i = 0; i < num_transactions; i++) {
+                for i := 0; i < num_transactions; i++ {
                     /* Find out who is besieging this planet. */
                     if (transaction[i].ttype != BESIEGE_PLANET) {
                         continue;
@@ -4320,7 +4287,8 @@ finish_up:
                         exit(-1);
                     }
 
-                    n = num_transactions++;
+                    n = num_transactions
+                    num_transactions++
                     transaction[n].ttype  = DETECTION_DURING_SIEGE;
                     transaction[n].value = 1;   /* Landing. */
                     strcpy(transaction[n].name1, nampla.name);
@@ -4363,23 +4331,19 @@ finish_up:
 
 /* This routine will create the "loc" array based on current species' data. */
 func do_locations() {
-    int i;
-
-
     num_locs = 0;
 
-    for (species_number = 1; species_number <= galaxy.num_species; species_number++) {
+    for species_number = 1; species_number <= galaxy.num_species; species_number++ {
         if (!data_in_memory[species_number - 1]) {
             continue;
         }
 
-        species     = &spec_data[species_number - 1];
+        species     = spec_data[species_number - 1];
         nampla_base = namp_data[species_number - 1];
         ship_base   = ship_data[species_number - 1];
 
-        nampla = nampla_base - 1;
-        for (i = 0; i < species.num_namplas; i++) {
-            ++nampla;
+        for i := 0; i < species.num_namplas; i++ {
+            nampla = nampla_base[i]
 
             if (nampla.pn == 99) {
                 continue;
@@ -4390,9 +4354,8 @@ func do_locations() {
             }
         }
 
-        ship = ship_base - 1;
-        for (i = 0; i < species.num_ships; i++) {
-            ++ship;
+        for i := 0; i < species.num_ships; i++ {
+            ship = ship_base[i]
 
             if (ship.pn == 99) {
                 continue;
@@ -4407,10 +4370,7 @@ func do_locations() {
 }
 
 func add_location(x, y, z int) {
-    int i;
-
-
-    for (i = 0; i < num_locs; i++) {
+    for i := 0; i < num_locs; i++ {
         if (loc[i].x != x) {
             continue;
         }
@@ -4433,7 +4393,7 @@ func add_location(x, y, z int) {
     loc[num_locs].z = z;
     loc[num_locs].s = species_number;
 
-    ++num_locs;
+    num_locs++
     if (num_locs < MAX_LOCATIONS) {
         return;
     }
@@ -4446,32 +4406,29 @@ func add_location(x, y, z int) {
 // do_mes.c
 
 func do_MESSAGE_command() {
-    int i, message_number, message_fd, bad_species,
-        unterminated_message;
-
-    char c1, c2, c3, filename[32];
-
-    FILE *message_file;
+    var i, message_number, message_fd int
+    var c1, c2, c3 byte
+    var message_file io.Writer
 
 
     /* Get destination of message. */
+    var bad_species bool
     if (!get_species_name()) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid species name in MESSAGE command.\n");
         bad_species = true;
-    }else {
-        bad_species = false;
     }
 
-    /* Generate a random number, create a filename with it, and use it to
-     *  store message. */
+    /* Generate a random number, create a filename with it, and use it to store message. */
     if (!first_pass && !bad_species) {
+        var filename string
         for {
             /* Generate a random filename. */
             message_number = rnd(32000);
-            sprintf(filename, "m%d.msg\0", message_number);
+            filename := fmt.Sprintf("m%d.msg", message_number);
 
+            // TODO: this should be a stat() call?
             /* Make sure that this filename is not already in use. */
             message_fd = open(filename, 0);
             if (message_fd < 0) {
@@ -4483,20 +4440,18 @@ func do_MESSAGE_command() {
         }
 
         message_file = fopen(filename, "w");
-        if (message_file == NULL) {
-            fprintf(stderr,
-                    "\n\n!!! Cannot open message file '%s' for writing !!!\n\n",
-                    filename);
+        if (message_file == nil) {
+            fprintf(stderr, "\n\n!!! Cannot open message file '%s' for writing !!!\n\n", filename);
             exit(-1);
         }
     }
 
     /* Copy message to file. */
-    unterminated_message = false;
+    unterminated_message := false;
     for {
         /* Read next line. */
         input_line_pointer = fgets(input_line, 256, input_file);
-        if (input_line_pointer == NULL) {
+        if (input_line_pointer == nil) {
             unterminated_message = true;
             end_of_file          = true;
             break;
@@ -4504,9 +4459,9 @@ func do_MESSAGE_command() {
 
         skip_whitespace();
 
-        c1 = *input_line_pointer++;
-        c2 = *input_line_pointer++;
-        c3 = *input_line_pointer;
+        c1 = input_line_pointer.get(); input_line_pointer.incr()
+        c2 = input_line_pointer.get(); input_line_pointer.incr()
+        c3 = input_line_pointer.get(); input_line_pointer.incr()
 
         c1 = toupper(c1);
         c2 = toupper(c2);
@@ -4562,17 +4517,15 @@ func do_MESSAGE_command() {
 // do_name.c
 
 func do_NAME_command() {
-    int i, found, name_length, unused_nampla_available;
-
-    char upper_nampla_name[32], *original_line_pointer;
-
-    struct planet_data *planet;
-    struct nampla_data *unused_nampla;
-
+    var i, name_length int
+    var upper_nampla_name[32] byte
+    var original_line_pointer *cstring
+    var planet *planet_data
+    var unused_nampla *nampla_data
 
     /* Get x y z coordinates. */
-    found = get_location();
-    if (!found || nampla != NULL || pn == 0) {
+    found := get_location();
+    if (!found || nampla != nil || pn == 0) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid coordinates in NAME command.\n");
@@ -4583,10 +4536,8 @@ func do_NAME_command() {
     skip_whitespace();
     original_line_pointer = input_line_pointer;
     if (get_class_abbr() != PLANET_ID) {
-        /* Check if PL was mispelled (i.e, "PT" or "PN"). Otherwise
-         *      assume that it was accidentally omitted. */
-        if (tolower(*original_line_pointer) != 'p' ||
-            isalnum(*(original_line_pointer + 2))) {
+        /* Check if PL was mispelled (i.e, "PT" or "PN"). Otherwise assume that it was accidentally omitted. */
+        if (tolower(*original_line_pointer) != 'p' || isalnum(*(original_line_pointer + 2))) {
             input_line_pointer = original_line_pointer;
         }
     }
@@ -4602,10 +4553,9 @@ func do_NAME_command() {
 
     /* Search existing namplas for name and location. */
     found = false;
-    unused_nampla_available = false;
-    nampla = nampla_base - 1;
-    for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
-        ++nampla;
+    unused_nampla_available := false;
+    for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
+        nampla = nampla_base[nampla_index]
 
         if (nampla.pn == 99) {
             /* We can re-use this nampla rather than append a new one. */
@@ -4624,7 +4574,7 @@ func do_NAME_command() {
         }
 
         /* Make upper case copy of nampla name. */
-        for (i = 0; i < 32; i++) {
+        for i := 0; i < 32; i++ {
             upper_nampla_name[i] = toupper(nampla.name[i]);
         }
 
@@ -4646,7 +4596,7 @@ func do_NAME_command() {
     if (unused_nampla_available) {
         nampla = unused_nampla;
     }else{
-        ++num_new_namplas[species_index];
+        num_new_namplas[species_index]++
         if (num_new_namplas[species_index] > NUM_EXTRA_NAMPLAS) {
             fprintf(stderr, "\n\n\tInsufficient memory for new planet name:\n");
             fprintf(stderr, "\n\t%s\n", input_line);
@@ -4674,10 +4624,16 @@ func do_NAME_command() {
     star_visited(x, y, z);
 
     /* Log result. */
-    log_string("    Named PL ");  log_string(nampla.name);
-    log_string(" at ");  log_int(nampla.x);  log_char(' ');
-    log_int(nampla.y);  log_char(' ');  log_int(nampla.z);
-    log_string(", planet #");  log_int(nampla.pn);
+    log_string("    Named PL ");
+    log_string(nampla.name);
+    log_string(" at ");
+    log_int(nampla.x);
+    log_char(' ');
+    log_int(nampla.y);
+    log_char(' ');
+    log_int(nampla.z);
+    log_string(", planet #");
+    log_int(nampla.pn);
     log_string(".\n");
 }
 
@@ -4685,17 +4641,13 @@ func do_NAME_command() {
 // do_neutral.c
 
 func do_NEUTRAL_command() {
-    int i, array_index, bit_number;
-
-    long bit_mask;
-
-
     /* See if declaration is for all species. */
+    var allSpecies bool
     if (get_value()) {
-        bit_mask = 0;
-        for (i = 0; i < NUM_CONTACT_WORDS; i++) {
-            species.enemy[i] = bit_mask;       /* Clear all enemy bits. */
-            species.ally[i]  = bit_mask;       /* Clear all ally bits. */
+        allSpecies = true
+        for i := 0; i < MAX_SPECIES; i++ {
+            species.enemy[i] = false;       /* Clear all enemy bits. */
+            species.ally[i]  = false;       /* Clear all ally bits. */
         }
     }else {
         /* Get name of species. */
@@ -4706,19 +4658,14 @@ func do_NEUTRAL_command() {
             return;
         }
 
-        /* Get array index and bit mask. */
-        array_index = (g_spec_number - 1) / 32;
-        bit_number  = (g_spec_number - 1) % 32;
-        bit_mask    = 1 << bit_number;
-
         /* Clear the appropriate bit. */
-        species.enemy[array_index] &= ~bit_mask; /* Clear enemy bit. */
-        species.ally[array_index]  &= ~bit_mask; /* Clear ally bit. */
+        species.enemy[g_spec_number] = false /* Clear enemy bit. */
+        species.ally[g_spec_number]  = false /* Clear ally bit. */
     }
 
     /* Log the result. */
     log_string("    Neutrality was declared towards ");
-    if (bit_mask == 0) {
+    if allSpecies {
         log_string("ALL species");
     }else{
         log_string("SP ");

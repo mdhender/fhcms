@@ -131,7 +131,7 @@ type species_data struct {
 	fleet_cost         int      /* Total fleet maintenance cost. */
 	fleet_percent_cost int      /* Fleet maintenance cost as a percentage times one hundred. */
 	govt_name          [32]byte /* Name of government. */
-	govt_ttype         [32]byte /* Type of government. */
+	govt_type          [32]byte /* Type of government. */
 	init_tech_level    [6]int   /* Tech levels at start of turn. */
 	name               [32]byte /* Name of species. */
 	neutral_gas        [6]int   /* Gases neutral to species. */

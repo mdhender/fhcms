@@ -137,7 +137,7 @@ var (
 	log_to_file          bool
 	logging_disabled     bool
 	make_enemy           [MAX_SPECIES][MAX_SPECIES]bool
-	namp_data            [MAX_SPECIES]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
+	namp_data            [MAX_SPECIES][]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
 	nampla1_base         *nampla_data              // warning: code assumes *nampla_data
 	nampla2_base         *nampla_data              // warning: code assumes *nampla_data
 	nampla_base          []*nampla_data            // warning: code assumes *nampla_data
