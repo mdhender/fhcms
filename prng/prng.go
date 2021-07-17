@@ -35,13 +35,40 @@ func New(seed uint64) *PRNG {
 	return &PRNG{seed: seed}
 }
 
+// Roll returns a random number in the range 1..n.
+func Roll(max int) int {
+	return defaultPRNG.Roll(max)
+}
+
+// Seed the default generator
+func Seed(seed string) {
+	var hash uint64
+	if seed == "0xBADC0FFEE" || seed == "0" || len(seed) == 0 {
+		hash = 0xBADC0FFEE
+	} else {
+		hash = 5381
+		for _, ch := range []byte(seed) {
+			hash = (hash * 33) ^ uint64(ch)
+		}
+	}
+	defaultPRNG.Seed(hash)
+}
+
+// SeedFromTime seeds the generator from the system clock.
+func SeedFromTime() {
+	defaultPRNG.SeedFromTime()
+}
+
 func (p *PRNG) Roll(max int) int {
+	if max < 1 {
+		return 1
+	}
+
 	// for congruential method, multiply previous value by the prime number 16417.
-	a, b, c := p.seed, p.seed<<5, p.seed<<14
-	congResult := a + b + c // effectively multiply by 16417
+	congResult := p.seed + (p.seed << 5) + (p.seed << 14) // effectively multiply by 16417
 
 	// for shift-register method, use shift-right 15 and shift-left 17 with no-carry addition (i.e., exclusive-or)
-	a = p.seed >> 15
+	a := p.seed >> 15
 	shiftResult := a ^ p.seed
 	a = shiftResult << 17
 	shiftResult ^= a
@@ -112,28 +139,4 @@ func (p *PRNG) SeedFromEnv(name string) error {
 func (p *PRNG) SeedFromTime() {
 	rand.Seed(time.Now().UnixNano())
 	p.Seed(rand.Uint64())
-}
-
-// Roll returns a random number in the range 1..n.
-func Roll(max int) int {
-	return defaultPRNG.Roll(max)
-}
-
-// Seed random number generator
-func Seed(seed string) {
-	var hash uint64
-	if seed == "0xBADC0FFEE" || seed == "0" || len(seed) == 0 {
-		hash = 0xBADC0FFEE
-	} else {
-		hash = 5381
-		for _, ch := range []byte(seed) {
-			hash = (hash * 33) ^ uint64(ch)
-		}
-	}
-	defaultPRNG.Seed(hash)
-}
-
-// SeedFromTime seeds the generator from the system clock.
-func SeedFromTime() {
-	defaultPRNG.SeedFromTime()
 }
