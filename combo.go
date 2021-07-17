@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/mdhender/fhcms/agrep"
 	"io"
 	"log"
 )
@@ -9429,7 +9430,7 @@ yet_again:
 		}
 
 		/* Compare names. */
-		n = agrep_score(upper_nampla_name, upper_name)
+		n = agrep.Score(upper_nampla_name, upper_name)
 		if n > best_score {
 			best_score = n /* Best match so far. */
 			best_nampla_index = temp_nampla_index
@@ -9605,7 +9606,7 @@ yet_again:
 			upper_ship_name[i] = toupper(ship.name[i])
 		}
 
-		n = agrep_score(upper_ship_name, upper_name)
+		n = agrep.Score(upper_ship_name, upper_name)
 		if n > best_score {
 			/* Best match so far. */
 			best_score = n
@@ -9734,7 +9735,7 @@ yet_again:
 			sp_name[i] = toupper(sp.name[i])
 		}
 
-		n = agrep_score(sp_name, upper_name)
+		n = agrep.Score(sp_name, upper_name)
 		if n > best_score {
 			/* Best match so far. */
 			best_score = n
@@ -10983,54 +10984,6 @@ func check_high_tech_items(tech, old_tech_level, new_tech_level int) {
 	if tech == MA && old_tech_level < 25 && new_tech_level >= 25 {
 		log_string("  You now have the technology to do interspecies construction.\n")
 	}
-}
-
-/* The following routine will return a score indicating how closely two
- * strings match.  If the score is exactly 10000, then the strings are
- * identical.  Otherwise, the value returned is the number of character
- * matches, allowing for accidental transpositions, insertions, and
- * deletions.  Excess characters in either string will subtract from
- * the score.  Thus, it's possible for a score to be negative.
- *
- * In general, if the strings are at least 7 characters each, then you can
- * assume the strings are the same if the highest score equals the length of
- * the correct string, length-1, or length-2, AND if the score of the next
- * best match is less than the highest score.  A non-10000 score will never
- * be higher than the length of the correct string. */
-
-func agrep_score(correct, unknown string) int {
-	if correct == unknown {
-		return 10000
-	}
-
-	score := 0
-	p1, p2 := []rune(correct), []rune(unknown)
-
-	for len(p1) != 0 && len(p2) != 0 {
-		c1, c2 := p1[0], p2[0]
-		p1, p2 = p1[1:], p2[1:]
-		if c1 == c2 {
-			score++
-		} else if (len(p1) != 0 && c2 == p1[0]) && (len(p2) != 0 && c1 == p2[0]) {
-			// transposed
-			score += 2
-			p1, p2 = p1[1:], p2[1:]
-		} else if len(p2) != 0 && c1 == p2[0] {
-			// unneeded character
-			score++
-			p2 = p2[1:]
-		} else if len(p1) != 0 && c2 == p1[0] {
-			// missing character
-			score++
-			p1 = p1[1:]
-		}
-	}
-
-	// reduce score by excess characters, if any
-	score -= len(p1)
-	score -= len(p2)
-
-	return score
 }
 
 /* The following routine will check if coordinates x-y-z contain a star and,

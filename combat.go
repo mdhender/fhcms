@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/mdhender/fhcms/agrep"
 	"io"
 )
 
@@ -723,7 +724,7 @@ func CombatMain(argc int, argv []string) {
 						continue
 					}
 
-					n = agrep_score(sp_name[i], upper_name)
+					n = agrep.Score(sp_name[i], upper_name)
 					if n > best_score {
 						best_score = n
 						best_species_index = i
