@@ -161,7 +161,7 @@ var (
 	pn                   int
 	post_arrival_phase   bool // warning: must be initialized to true for PostArrivalMain
 	printing_alien       int
-	production_done      [1000]byte
+	production_done      [1000]bool
 	prompt_gm            bool
 	report_file          io.Writer
 	ship1_base           *ship_data_

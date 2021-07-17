@@ -4678,14 +4678,11 @@ func do_NEUTRAL_command() {
 // do_orbit.c
 
 func do_ORBIT_command() {
-    int i, found, specified_planet_number;
-
-    char *original_line_pointer;
-
+    var specified_planet_number int
 
     /* Get the ship. */
-    original_line_pointer = input_line_pointer;
-    found = get_ship();
+    original_line_pointer := input_line_pointer;
+    found := get_ship();
     if (!found) {
         /* Check for missing comma or tab after ship name. */
         input_line_pointer = original_line_pointer;
@@ -4737,8 +4734,8 @@ get_planet:
     if (specified_planet_number) {
         found = false;
         specified_planet_number = value;
-        for (i = 0; i < num_stars; i++) {
-            star = star_base + i;
+        for i := 0; i < num_stars; i++ {
+            star = star_base[i]
 
             if (star.x != ship.x) {
                 continue;
@@ -4750,8 +4747,7 @@ get_planet:
                 continue;
             }
 
-            if (specified_planet_number >= 1 &&
-                specified_planet_number <= star.num_planets) {
+            if (specified_planet_number >= 1 && specified_planet_number <= star.num_planets) {
                 found = true;
             }
 
@@ -4803,8 +4799,8 @@ finish_up:
     /* If a planet number is being used, see if it has a name.  If so,
      *  use the name. */
     if (specified_planet_number) {
-        for (i = 0; i < species.num_namplas; i++) {
-            nampla = nampla_base + i;
+        for i := 0; i < species.num_namplas; i++ {
+            nampla = nampla_base[i]
 
             if (nampla.x != ship.x) {
                 continue;
@@ -4848,26 +4844,28 @@ finish_up:
 // do_prod.c
 
 func do_PRODUCTION_command(missing_production_order bool) {
-    int i, j, abbr_type, name_length, found, alien_number, under_siege,
-        siege_percent_effectiveness, new_alien, num_siege_ships,
-        mining_colony, resort_colony, special_colony, ship_index,
-        enemy_on_same_planet, trans_index, production_penalty,
-        ls_needed, shipyards_for_this_species;
+    var (
+        i, j, abbr_type, name_length, alien_number, under_siege int
+        siege_percent_effectiveness, new_alien, num_siege_ships int
+        mining_colony, resort_colony, special_colony, ship_index int
+        enemy_on_same_planet, trans_index, production_penalty int
+        ls_needed, shipyards_for_this_species int
 
-    char upper_nampla_name[32];
+        upper_nampla_name[32]byte
 
-    long n, RMs_produced, num_bytes, total_siege_effectiveness,
-         siege_effectiveness[MAX_SPECIES + 1], EUs_available_for_siege,
-         EUs_for_distribution, EUs_for_this_species, total_EUs_stolen,
-         special_production, pop_units_here[MAX_SPECIES + 1],
-         alien_pop_units, total_alien_pop_here, total_besieged_pop,
-         ib_for_this_species, ab_for_this_species, total_ib, total_ab,
-         total_effective_tonnage;
+        n, RMs_produced, num_bytes, total_siege_effectiveness int
+        siege_effectiveness[MAX_SPECIES + 1], EUs_available_for_siege int
+        EUs_for_distribution, EUs_for_this_species, total_EUs_stolen int
+        special_production int
+        pop_units_here[MAX_SPECIES + 1] int
+        alien_pop_units, total_alien_pop_here, total_besieged_pop int
+        ib_for_this_species, ab_for_this_species, total_ib, total_ab int
+        total_effective_tonnage int
 
-    struct species_data *alien;
-    struct nampla_data * alien_nampla_base, *alien_nampla;
-    struct ship_data *   alien_ship_base, *alien_ship, *ship;
-
+        alien *species_data
+        alien_nampla_base, alien_nampla *nampla_data
+        alien_ship_base, alien_ship, ship *ship_data_
+    )
 
     if (doing_production) {
         /* Terminate production for previous planet. */
@@ -4906,17 +4904,16 @@ func do_PRODUCTION_command(missing_production_order bool) {
     name_length = get_name();
 
     /* Search all namplas for name. */
-    found  = false;
-    nampla = nampla_base - 1;
-    for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
-        ++nampla;
+    found := false;
+    for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
+        nampla = nampla_base[i]
 
         if (nampla.pn == 99) {
             continue;
         }
 
         /* Make upper case copy of nampla name. */
-        for (i = 0; i < 32; i++) {
+        for i := 0; i < 32; i++ {
             upper_nampla_name[i] = toupper(nampla.name[i]);
         }
 
@@ -4944,7 +4941,7 @@ func do_PRODUCTION_command(missing_production_order bool) {
     production_done[nampla_index] = true;
 
     /* Check if this colony was disbanded. */
-    if (nampla.status & DISBANDED_COLONY) {
+    if (nampla.status & DISBANDED_COLONY) != 0 {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Production orders cannot be given for a disbanded colony!\n");
@@ -4961,10 +4958,10 @@ got_nampla:
     mining_colony  = false;
     resort_colony  = false;
     special_colony = false;
-    if (nampla.status & MINING_COLONY) {
+    if (nampla.status & MINING_COLONY) != 0 {
         mining_colony  = true;
         special_colony = true;
-    }else if (nampla.status & RESORT_COLONY) {
+    }else if (nampla.status & RESORT_COLONY) != 0 {
         resort_colony  = true;
         special_colony = true;
     }
@@ -4993,14 +4990,14 @@ got_nampla:
             }
             log_string("manufacturing base by ");
             i = rnd(j);
-            log_int(i);  log_string(" percent");
+            log_int(i);
+            log_string(" percent");
             nampla.ma_base -= (i * nampla.ma_base) / 100;
         }
         log_string("!\n\n");
     }
 
-    /* Calculate "balance" available for spending and create pseudo
-     *  "checking account". */
+    /* Calculate "balance" available for spending and create pseudo "checking account". */
     ls_needed = life_support_needed(species, home_planet, planet);
 
     if (ls_needed == 0) {
@@ -5009,13 +5006,9 @@ got_nampla:
         production_penalty = (100 * ls_needed) / species.tech_level[LS];
     }
 
-    RMs_produced =
-        (10L * species.tech_level[MI] * nampla.mi_base)
-        / planet.mining_difficulty;
-    RMs_produced
-        -= (production_penalty * RMs_produced) / 100;
-    RMs_produced
-        = ((planet.econ_efficiency * RMs_produced) + 50) / 100;
+    RMs_produced = (10 * species.tech_level[MI] * nampla.mi_base) / planet.mining_difficulty;
+    RMs_produced -= (production_penalty * RMs_produced) / 100;
+    RMs_produced = ((planet.econ_efficiency * RMs_produced) + 50) / 100;
 
     if (special_colony) {
         /* RMs just 'sitting' on the planet cannot be converted to EUs on a
@@ -5026,15 +5019,16 @@ got_nampla:
         raw_material_units = RMs_produced + nampla.item_quantity[RM];
     }
 
-    production_capacity =
-        (species.tech_level[MA] * nampla.ma_base) / 10L;
-    production_capacity
-        -= (production_penalty * production_capacity) / 100;
-    production_capacity
-        = ((planet.econ_efficiency * production_capacity) + 50) / 100;
+    production_capacity = (species.tech_level[MA] * nampla.ma_base) / 10;
+    production_capacity -= (production_penalty * production_capacity) / 100;
+    production_capacity = ((planet.econ_efficiency * production_capacity) + 50) / 100;
 
-    balance = (raw_material_units > production_capacity)
-              ? production_capacity : raw_material_units;
+    balance = (raw_material_units > production_capacity) ? production_capacity : raw_material_units;
+    if raw_material_units > production_capacity {
+        balance = production_capacity
+    } else {
+        balance = raw_material_units
+    }
 
     if (species.fleet_percent_cost > 10000) {
         n = 10000;
@@ -5052,7 +5046,7 @@ got_nampla:
         raw_material_units      = balance;
         production_capacity     = balance;
         EUs_available_for_siege = balance;
-        if (nampla.status & HOME_PLANET) {
+        if (nampla.status & HOME_PLANET) != 0 {
             if (species.hp_original_base != 0) { /* HP was bombed. */
                 EU_spending_limit = 4 * balance;  /* Factor = 4 + 1 = 5. */
             }else {
@@ -5073,8 +5067,7 @@ got_nampla:
     }
     log_char('\n');
 
-    /* If this IS a mining or resort colony, convert RMs or production capacity
-     *  to EUs. */
+    /* If this IS a mining or resort colony, convert RMs or production capacity to EUs. */
     if (mining_colony) {
         special_production  = (2 * RMs_produced) / 3;
         special_production -= ((n * special_production) + 5000) / 10000;
@@ -5106,12 +5099,12 @@ got_nampla:
     total_siege_effectiveness = 0;
     enemy_on_same_planet      = false;
     total_alien_pop_here      = 0;
-    for (i = 1; i <= MAX_SPECIES; i++) {
+    for i := 1; i <= MAX_SPECIES; i++ {
         siege_effectiveness[i] = 0;
         pop_units_here[i]      = 0;
     }
 
-    for (trans_index = 0; trans_index < num_transactions; trans_index++) {
+    for trans_index = 0; trans_index < num_transactions; trans_index++ {
         /* Check if this is a siege of this nampla. */
         if (transaction[trans_index].ttype != BESIEGE_PLANET) {
             continue;
@@ -5142,7 +5135,7 @@ got_nampla:
                         alien_number);
                 exit(-1);
             }
-            alien             = &spec_data[alien_number - 1];
+            alien             = spec_data[alien_number - 1];
             alien_nampla_base = namp_data[alien_number - 1];
             alien_ship_base   = ship_data[alien_number - 1];
 
@@ -5151,9 +5144,8 @@ got_nampla:
 
         /* Find the alien ship. */
         found      = false;
-        alien_ship = alien_ship_base - 1;
-        for (i = 0; i < alien.num_ships; i++) {
-            ++alien_ship;
+        for i := 0; i < alien.num_ships; i++ {
+            alien_ship = alien_ship_base[i]
 
             if (alien_ship.pn == 99) {
                 continue;
@@ -5190,18 +5182,18 @@ got_nampla:
             under_siege = true;
         }
 
-        if (num_siege_ships++ > 0) {
+        num_siege_ships++
+        if (num_siege_ships > 1) {
             log_string(", ");
         }
+
         if (new_alien) {
             log_string(alien.name);  log_char(' ');
             new_alien = false;
 
             /* Check if this alien has a colony on the same planet. */
-            alien_nampla = alien_nampla_base - 1;
-            for (i = 0; i < alien.num_namplas; i++) {
-                ++alien_nampla;
-
+            for i := 0; i < alien.num_namplas; i++ {
+                alien_nampla = alien_nampla_base[i]
                 if (alien_nampla.x != nampla.x) {
                     continue;
                 }
@@ -5217,10 +5209,7 @@ got_nampla:
 
                 /* Enemy population that will count for both detection AND
                  *      assimilation. */
-                alien_pop_units = alien_nampla.mi_base
-                                  + alien_nampla.ma_base
-                                  + alien_nampla.IUs_to_install
-                                  + alien_nampla.AUs_to_install;
+                alien_pop_units = alien_nampla.mi_base + alien_nampla.ma_base + alien_nampla.IUs_to_install + alien_nampla.AUs_to_install;
 
                 /* Any base over 200.0 has only 5% effectiveness. */
                 if (alien_pop_units > 2000) {
@@ -5228,9 +5217,7 @@ got_nampla:
                 }
 
                 /* Enemy population that counts ONLY for detection. */
-                n = alien_nampla.pop_units
-                    + alien_nampla.item_quantity[CU]
-                    + alien_nampla.item_quantity[PD];
+                n = alien_nampla.pop_units + alien_nampla.item_quantity[CU] + alien_nampla.item_quantity[PD];
 
                 if (alien_pop_units > 0) {
                     enemy_on_same_planet         = true;
@@ -5249,8 +5236,7 @@ got_nampla:
                 log_string(", ");
 
                 n = (4 * alien_nampla.item_quantity[PD]) / 5;
-                n = (n * alien.tech_level[ML])
-                    / (species.tech_level[ML] + 1);
+                n = (n * alien.tech_level[ML]) / (species.tech_level[ML] + 1);
                 total_siege_effectiveness         += n;
                 siege_effectiveness[alien_number] += n;
             }
@@ -5259,7 +5245,7 @@ got_nampla:
 
         /* Determine the number of planets that this ship is besieging. */
         n = 0;
-        for (j = 0; j < num_transactions; j++) {
+        for j := 0; j < num_transactions; j++ {
             if (transaction[j].ttype != BESIEGE_PLANET) {
                 continue;
             }
@@ -5270,23 +5256,20 @@ got_nampla:
                 continue;
             }
 
-            ++n;
+            n++
         }
 
         /* Determine the effectiveness of this ship on the siege. */
-        if (alien_ship.ttype == STARBASE) {
-            i = alien_ship.tonnage;    /* One quarter of normal ships. */
-        }else {
-            i = 4 * alien_ship.tonnage;
+        effectiveTonnage := alien_ship.tonnage
+        if (alien_ship.ttype != STARBASE) {
+            effectiveTonnage *= 4 /* starbases are 1/4 as effective as normal ships. */
         }
 
-        i = (i * alien.tech_level[ML])
-            / (species.tech_level[ML] + 1);
+        effectiveTonnage = (effectiveTonnage * alien.tech_level[ML]) / (species.tech_level[ML] + 1);
+        effectiveTonnage /= n;
 
-        i /= n;
-
-        total_siege_effectiveness         += i;
-        siege_effectiveness[alien_number] += i;
+        total_siege_effectiveness         += effectiveTonnage;
+        siege_effectiveness[alien_number] += effectiveTonnage;
     }
 
     if (under_siege) {
@@ -5302,10 +5285,7 @@ got_nampla:
         siege_percent_effectiveness = -9999;    /* New colony with nothing
                                                  *  installed yet. */
     }else {
-        siege_percent_effectiveness = total_effective_tonnage
-                                      / (((species.tech_level[MI] * nampla.mi_base)
-                                          + (species.tech_level[MA] * nampla.ma_base))
-                                         / 10L);
+        siege_percent_effectiveness = total_effective_tonnage / (((species.tech_level[MI] * nampla.mi_base) + (species.tech_level[MA] * nampla.ma_base)) / 10);
     }
 
     if (siege_percent_effectiveness > 95) {
@@ -5329,19 +5309,17 @@ got_nampla:
     log_string("% effective.\n");
 
     /* Add siege EU transfer(s). */
-    EUs_for_distribution
-        = (siege_percent_effectiveness * EUs_available_for_siege) / 100;
+    EUs_for_distribution = (siege_percent_effectiveness * EUs_available_for_siege) / 100;
 
     total_EUs_stolen = 0;
 
-    for (alien_number = 1; alien_number <= MAX_SPECIES; alien_number++) {
+    for alien_number = 1; alien_number <= MAX_SPECIES; alien_number++ {
         n = siege_effectiveness[alien_number];
         if (n < 1) {
             continue;
         }
         alien = &spec_data[alien_number - 1];
-        EUs_for_this_species
-            = (n * EUs_for_distribution) / total_siege_effectiveness;
+        EUs_for_this_species = (n * EUs_for_distribution) / total_siege_effectiveness;
         if (EUs_for_this_species < 1) {
             continue;
         }
@@ -5396,16 +5374,11 @@ got_nampla:
         return;
     }
 
-    /* All ships currently under construction may be detected by the besiegers
-     *  and destroyed. */
-    for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-        ship = ship_base + ship_index;
+    /* All ships currently under construction may be detected by the besiegers and destroyed. */
+    for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+        ship = ship_base[ship_index]
 
-        if (ship.status == UNDER_CONSTRUCTION &&
-            ship.x == nampla.x &&
-            ship.y == nampla.y &&
-            ship.z == nampla.z &&
-            ship.pn == nampla.pn) {
+        if (ship.status == UNDER_CONSTRUCTION && ship.x == nampla.x && ship.y == nampla.y && ship.z == nampla.z && ship.pn == nampla.pn) {
             if (rnd(100) > siege_percent_effectiveness) {
                 continue;
             }
@@ -5420,15 +5393,14 @@ got_nampla:
     }
 
     /* Check for assimilation. */
-    if (nampla.status & HOME_PLANET) {
+    if (nampla.status & HOME_PLANET) != 0 {
         return;
     }
     if (total_alien_pop_here < 1) {
         return;
     }
 
-    total_besieged_pop = nampla.mi_base + nampla.ma_base
-                         + nampla.IUs_to_install + nampla.AUs_to_install;
+    total_besieged_pop = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install + nampla.AUs_to_install;
 
     /* Any base over 200.0 has only 5% effectiveness. */
     if (total_besieged_pop > 2000) {
@@ -5446,27 +5418,23 @@ got_nampla:
     log_string(" has become assimilated by the besieging species");
     log_string(" and is no longer under your control.\n\n");
 
-    total_ib  = nampla.mi_base; /* My stupid compiler can't add an int and
-                                  *     an unsigned short. */
+    total_ib  = nampla.mi_base; /* My stupid compiler can't add an int and an unsigned short. */
     total_ib += nampla.IUs_to_install;
     total_ab  = nampla.ma_base;
     total_ab += nampla.AUs_to_install;
 
-    for (alien_number = 1; alien_number <= MAX_SPECIES; alien_number++) {
+    for alien_number = 1; alien_number <= MAX_SPECIES; alien_number++ {
         n = pop_units_here[alien_number];
         if (n < 1) {
             continue;
         }
 
-        shipyards_for_this_species
-            = (n * nampla.shipyards) / total_alien_pop_here;
+        shipyards_for_this_species = (n * nampla.shipyards) / total_alien_pop_here;
 
-        ib_for_this_species
-                  = (n * total_ib) / total_alien_pop_here;
+        ib_for_this_species = (n * total_ib) / total_alien_pop_here;
         total_ib -= ib_for_this_species;
 
-        ab_for_this_species
-                  = (n * total_ab) / total_alien_pop_here;
+        ab_for_this_species = (n * total_ab) / total_alien_pop_here;
         total_ab -= ab_for_this_species;
 
         if (ib_for_this_species == 0 && ab_for_this_species == 0) {
@@ -5514,7 +5482,7 @@ got_nampla:
     nampla.hidden         = 0;
     nampla.use_on_ambush  = 0;
 
-    for (i = 0; i < MAX_ITEMS; i++) {
+    for i := 0; i < MAX_ITEMS; i++ {
         nampla.item_quantity[i] = 0;
     }
 }
@@ -5524,10 +5492,8 @@ got_nampla:
 // do_recy.c
 
 func do_RECYCLE_command() {
-    int i, class, cargo;
-
-    long recycle_value, original_cost, units_available;
-
+    var i, class int
+    var recycle_value, original_cost, units_available int
 
     /* Check if this order was preceded by a PRODUCTION order. */
     if (!doing_production) {
@@ -5579,12 +5545,11 @@ func do_RECYCLE_command() {
 
     /* Determine recycle value. */
     if (class == TP) {
-        recycle_value = (value * item_cost[class])
-                        / (2L * species.tech_level[BI]);
+        recycle_value = (value * item_cost[class]) / (2 * species.tech_level[BI]);
     }else if (class == RM) {
-        recycle_value = value / 5L;
+        recycle_value = value / 5;
     }else{
-        recycle_value = (value * item_cost[class]) / 2L;
+        recycle_value = (value * item_cost[class]) / 2;
     }
 
     /* Update inventories. */
@@ -5593,12 +5558,14 @@ func do_RECYCLE_command() {
         nampla.pop_units += value;
     }
     species.econ_units += recycle_value;
-    if (nampla.status & HOME_PLANET) {
+    if (nampla.status & HOME_PLANET) != 0 {
         EU_spending_limit += recycle_value;
     }
 
     /* Log what was recycled. */
-    log_string("    ");  log_long(value);  log_char(' ');
+    log_string("    ");
+    log_long(value);
+    log_char(' ');
     log_string(item_name[class]);
 
     if (value > 1) {
@@ -5658,18 +5625,20 @@ recycle_ship:
     }
 
     species.econ_units += recycle_value;
-    if (nampla.status & HOME_PLANET) {
+    if (nampla.status & HOME_PLANET) != 0 {
         EU_spending_limit += recycle_value;
     }
 
     /* Log what was recycled. */
-    log_string("    ");  log_string(ship_name(ship));
-    log_string(" was recycled, generating ");  log_long(recycle_value);
+    log_string("    ");
+    log_string(ship_name(ship));
+    log_string(" was recycled, generating ");
+    log_long(recycle_value);
     log_string(" economic units");
 
     /* Transfer cargo, if any, from ship to planet. */
-    cargo = false;
-    for (i = 0; i < MAX_ITEMS; i++) {
+    cargo := false;
+    for i := 0; i < MAX_ITEMS; i++ {
         if (ship.item_quantity[i] > 0) {
             nampla.item_quantity[i] += ship.item_quantity[i];
             cargo = true;
@@ -5693,19 +5662,18 @@ recycle_ship:
 // do_rep.c
 
 func do_REPAIR_command() {
-    int i, j, n, x, y, z, age_reduction, num_dr_units,
-        total_dr_units, dr_units_used, max_age, desired_age;
-
-    char *original_line_pointer;
-
-    struct ship_data *damaged_ship;
-
+    var i, j, n, x, y, z, age_reduction, num_dr_units int
+    var total_dr_units, dr_units_used, max_age, desired_age int
+    var original_line_pointer *cstring
+    var damaged_ship *ship_data_
 
     /* See if this is a "pool" repair. */
     if (get_value()) {
         x = value;
-        get_value();   y = value;
-        get_value();   z = value;
+        get_value();
+        y = value;
+        get_value();
+        z = value;
 
         if (get_value()) {
             desired_age = value;
@@ -5792,15 +5760,18 @@ func do_REPAIR_command() {
     }
 
     /* Log what was repaired. */
-    log_string("    ");  log_string(ship_name(ship));
+    log_string("    ");
+    log_string(ship_name(ship));
     log_string(" was repaired using ");
-    log_int(num_dr_units);  log_char(' ');
+    log_int(num_dr_units);
+    log_char(' ');
     log_string(item_name[DR]);
     if (num_dr_units != 1) {
         log_char('s');
     }
     log_string(". Age went from ");
-    log_int(ship.age);    log_string(" to ");
+    log_int(ship.age);
+    log_string(" to ");
     ship.age -= age_reduction;
     if (ship.age < 0) {
         ship.age = 0;
@@ -5816,9 +5787,8 @@ pool_repair:
 
     /* Get total number of DR units available. */
     total_dr_units = 0;
-    ship           = ship_base - 1;
-    for (i = 0; i < species.num_ships; i++) {
-        ++ship;
+    for i := 0; i < species.num_ships; i++ {
+        ship           = ship_base[i]
 
         if (ship.pn == 99) {
             continue;
@@ -5840,12 +5810,11 @@ pool_repair:
 
     /* Repair ships, starting with the most heavily damaged. */
     dr_units_used = 0;
-    for (;total_dr_units > 0;) {
+    for total_dr_units > 0 {
         /* Find most heavily damaged ship. */
         max_age = 0;
-        ship    = ship_base - 1;
-        for (i = 0; i < species.num_ships; i++) {
-            ++ship;
+        for i := 0; i < species.num_ships; i++ {
+            ship    = ship_base[i]
 
             if (ship.pn == 99) {
                 continue;
@@ -5891,7 +5860,8 @@ pool_repair:
         if (age_reduction < 1) {
             continue;                     /* This ship is too big. */
         }
-        log_string("    ");  log_string(ship_name(damaged_ship));
+        log_string("    ");
+        log_string(ship_name(damaged_ship));
         log_string(" was repaired using ");
         log_int(num_dr_units);  log_char(' ');
         log_string(item_name[DR]);
@@ -5899,7 +5869,8 @@ pool_repair:
             log_char('s');
         }
         log_string(". Age went from ");
-        log_int(damaged_ship.age);    log_string(" to ");
+        log_int(damaged_ship.age);
+        log_string(" to ");
         damaged_ship.age -= age_reduction;
         if (damaged_ship.age < 0) {
             damaged_ship.age = 0;
@@ -5916,9 +5887,8 @@ pool_repair:
     }
 
     /* Subtract units used from ships at the location. */
-    ship = ship_base - 1;
-    for (i = 0; i < species.num_ships; i++) {
-        ++ship;
+    for i := 0; i < species.num_ships; i++ {
+        ship = ship_base[i]
 
         if (ship.pn == 99) {
             continue;
@@ -5950,18 +5920,12 @@ pool_repair:
     }
 }
 
-
-
 //*************************************************************************
 // do_res.c
 
 func do_RESEARCH_command() {
-    int n, status, tech, initial_level, current_level,
-        need_amount_to_spend;
-
-    long cost, amount_spent, cost_for_one_level, funds_remaining,
-         max_funds_available;
-
+    var n, status, tech, initial_level, current_level int
+    var cost, amount_spent, cost_for_one_level, funds_remaining, max_funds_available int
 
     /* Check if this order was preceded by a PRODUCTION order. */
     if (!doing_production) {
@@ -5973,7 +5937,7 @@ func do_RESEARCH_command() {
 
     /* Get amount to spend. */
     status = get_value();
-    need_amount_to_spend = (status == 0);       /* Sometimes players reverse
+    need_amount_to_spend := (status == 0);       /* Sometimes players reverse
                                                  * the arguments. */
     /* Get technology. */
     if (get_class_abbr() != TECH_ID) {
@@ -6023,8 +5987,7 @@ do_cost:
 
         if (max_funds_available > 0) {
             fprintf(log_file, "! WARNING: %s", input_line);
-            fprintf(log_file, "! Insufficient funds. Substituting %ld for %ld.\n",
-                    max_funds_available, cost);
+            fprintf(log_file, "! Insufficient funds. Substituting %ld for %ld.\n", max_funds_available, cost);
             value = max_funds_available;
             goto do_cost;
         }
@@ -6040,7 +6003,7 @@ do_cost:
     amount_spent    = 0;
     initial_level   = sp_tech_level[tech];
     current_level   = initial_level;
-    for (;current_level < species.tech_knowledge[tech];) {
+    for current_level < species.tech_knowledge[tech] {
         cost_for_one_level  = current_level * current_level;
         cost_for_one_level -= cost_for_one_level / 4;     /* 25% discount. */
         if (funds_remaining < cost_for_one_level) {
@@ -6048,7 +6011,7 @@ do_cost:
         }
         funds_remaining -= cost_for_one_level;
         amount_spent    += cost_for_one_level;
-        ++current_level;
+        current_level++
     }
 
     if (current_level > initial_level) {
@@ -6074,8 +6037,6 @@ do_cost:
     log_string(" on ");  log_string(tech_name[tech]);
     log_string(" research.\n");
 }
-
-
 
 //*************************************************************************
 // do_round.c
