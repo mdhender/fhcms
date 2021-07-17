@@ -30,7 +30,9 @@ var (
 	attacking_ML      int
 	balance           int
 	battle_base       []*battle_data // warning: code expects *battle_data
-	c_nampla          [MAX_SPECIES]*nampla_data
+	c_nampla          [MAX_SPECIES][]*nampla_data // warning: code expects [MAX_SPECIES]*nampla_data
+	c_ship            [MAX_SPECIES]*ship_data_
+	c_species         [MAX_SPECIES]*species_data
 	color_char        = []byte(" OBAFGKM")
 	command_abbr      = []string{ // warning: code assumes [NUM_COMMANDS][4]byte
 		"   ", "ALL", "AMB", "ATT", "AUT", "BAS", "BAT", "BUI", "CON",
@@ -51,8 +53,6 @@ var (
 		"Teach", "Tech", "Telescope", "Terraform", "Transfer", "Unload",
 		"Upgrade", "Visited", "Withdraw", "Wormhole", "ZZZ",
 	}
-	c_ship             [MAX_SPECIES]*ship_data_
-	c_species          [MAX_SPECIES]*species_data
 	combat_option      [1000]int
 	combat_location    [1000]int
 	data_in_memory     [MAX_SPECIES]bool
@@ -60,6 +60,7 @@ var (
 	deep_space_defense int
 	defending_ML       int
 	doing_production   bool
+	EU_spending_limit  int
 	end_of_file        bool
 	field_distorted    [MAX_SPECIES]bool
 	first_battle       bool = true
@@ -155,9 +156,9 @@ var (
 	num_transactions     int
 	orders_file          io.Writer
 	original_line        [256]byte
-	planet_base          []*planet_data // warning: code assumes *planet_data
-	planet_data_modified int
 	planet               *planet_data
+	planet_base          []*planet_data // warning: code assumes *planet_data
+	planet_data_modified bool
 	pn                   int
 	post_arrival_phase   bool // warning: must be initialized to true for PostArrivalMain
 	printing_alien       int

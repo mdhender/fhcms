@@ -804,8 +804,8 @@ func do_battle(bat *battle_data) {
         namp                  = c_nampla[i] - 1;
         num_namplas           = c_species[i].num_namplas;
         bat.ambush_amount[i] = 0;
-        for (j = 0; j < num_namplas; j++) {
-            ++namp;
+        for j = 0; j < num_namplas; j++ {
+            namp++
 
             if (namp.x != bat.x) {
                 continue;
@@ -877,7 +877,7 @@ consolidate:
     /* Handle each combat option. */
     battle_here  = false;
     first_action = true;
-    for (option_index = 0; option_index < num_combat_options; option_index++) {
+    for option_index = 0; option_index < num_combat_options; option_index++ {
         option = combat_option[option_index];
         where  = combat_location[option_index];
 
@@ -893,7 +893,7 @@ consolidate:
         /* See if anyone is taken by surprise. */
         if (!battle_here) {
             /* Combat is just starting. */
-            for (species_index = 0; species_index < num_sp; ++species_index) {
+            for species_index = 0; species_index < num_sp; species_index++ {
                 species_number = bat.spec_num[species_index];
 
                 if (bat.can_be_surprised[species_index] == 55) {
@@ -915,7 +915,7 @@ consolidate:
         battle_here = true;
 
         /* Clear out can_be_surprised array. */
-        for (i = 0; i < MAX_SPECIES; i++) {
+        for i = 0; i < MAX_SPECIES; i++ {
             bat.can_be_surprised[i] = false;
         }
 
@@ -971,7 +971,7 @@ consolidate:
         truncate_name = false;
         log_string("\n      Units present:");
         current_species = -1;
-        for (unit_index = 0; unit_index < act.num_units_fighting; unit_index++) {
+        for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
             if (act.fighting_species_index[unit_index] != current_species) {
                 /* Display species name. */
                 i = act.fighting_species_index[unit_index];
@@ -2076,7 +2076,7 @@ build_ship:
         }
 
         /* Make upper case copy of ship name. */
-        for (i = 0; i < 32; i++) {
+        for i = 0; i < 32; i++ {
             upper_ship_name[i] = toupper(ship.name[i]);
         }
 
@@ -3444,7 +3444,7 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
     attacked_nampla.hidden         = 0;
     attacked_nampla.use_on_ambush  = 0;
 
-    for (i = 0; i < MAX_ITEMS; i++) {
+    for i = 0; i < MAX_ITEMS; i++ {
         attacked_nampla.item_quantity[i] = 0;
     }
 
@@ -4051,7 +4051,7 @@ get_planet:
         array_index             = (species_number - 1) / 32;
         bit_number = (species_number - 1) % 32;
         bit_mask   = 1 << bit_number;
-        for (alien_index = 0; alien_index < galaxy.num_species; alien_index++) {
+        for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
             if (!data_in_memory[alien_index]) {
                 continue;
             }
@@ -7185,10 +7185,8 @@ func do_TELESCOPE_command() {
 
         alien = spec_data[alien_index];
 
-        alien_nampla = namp_data[alien_index] - 1;
-        for (alien_nampla_index = 0; alien_nampla_index < alien.num_namplas;
-             alien_nampla_index++) {
-            alien_nampla++
+        for alien_nampla_index = 0; alien_nampla_index < alien.num_namplas; alien_nampla_index++ {
+            alien_nampla = namp_data[alien_index][alien_nampla_index]
 
             if ((alien_nampla.status & POPULATED) == 0) {
                 continue;
@@ -7476,11 +7474,8 @@ func do_TELESCOPE_command() {
 // do_terr.c
 
 func do_TERRAFORM_command() {
-    int i, j, ls_needed, num_plants, got_required_gas,
-        correct_percentage;
-
-    struct planet_data *home_planet, *colony_planet;
-
+    var i, j, ls_needed, num_plants int
+    var home_planet, colony_planet *planet_data
 
     /* Get number of TPs to use. */
     if (get_value()) {
@@ -7490,7 +7485,7 @@ func do_TERRAFORM_command() {
     }
 
     /* Get planet where terraforming is to be done. */
-    if (!get_location() || nampla == NULL) {
+    if (!get_location() || nampla == nil) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Invalid planet name in TERRAFORM command.\n");
@@ -7498,7 +7493,7 @@ func do_TERRAFORM_command() {
     }
 
     /* Make sure planet is not a home planet. */
-    if (nampla.status & HOME_PLANET) {
+    if (nampla.status & HOME_PLANET) != 0 {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! Terraforming may not be done on a home planet.\n");
@@ -7506,8 +7501,8 @@ func do_TERRAFORM_command() {
     }
 
     /* Find out how many terraforming plants are needed. */
-    colony_planet = planet_base + nampla.planet_index;
-    home_planet   = planet_base + nampla_base.planet_index;
+    colony_planet = planet_base[nampla.planet_index];
+    home_planet   = planet_base[nampla_base[0].planet_index]; // warning: this was planet_base + nampla_base.planet_index
 
     ls_needed = life_support_needed(species, home_planet, colony_planet);
 
@@ -7543,8 +7538,10 @@ func do_TERRAFORM_command() {
     }
 
     /* Log results. */
-    log_string("    PL ");  log_string(nampla.name);
-    log_string(" was terraformed using ");  log_int(num_plants);
+    log_string("    PL ");
+    log_string(nampla.name);
+    log_string(" was terraformed using ");
+    log_int(num_plants);
     log_string(" Terraforming Unit");
     if (num_plants != 1) {
         log_char('s');
@@ -7555,16 +7552,15 @@ func do_TERRAFORM_command() {
     planet_data_modified       = true;
 
     /* Terraform the planet. */
-    for (;num_plants > 1;) {
-        got_required_gas   = false;
-        correct_percentage = false;
-        for (j = 0; j < 4; j++) {     /* Check gases on planet. */
-            for (i = 0; i < 6; i++) { /* Compare with poisonous gases. */
+    for num_plants > 1 {
+        got_required_gas   := 0
+        correct_percentage := false
+        for j = 0; j < 4; j++ {     /* Check gases on planet. */
+            for i = 0; i < 6; i++ { /* Compare with poisonous gases. */
                 if (colony_planet.gas[j] == species.required_gas) {
                     got_required_gas = j + 1;
 
-                    if (colony_planet.gas_percent[j] >= species.required_gas_min &&
-                        colony_planet.gas_percent[j] <= species.required_gas_max) {
+                    if (colony_planet.gas_percent[j] >= species.required_gas_min && colony_planet.gas_percent[j] <= species.required_gas_max) {
                         correct_percentage = true;
                     }
                 }
@@ -7581,16 +7577,16 @@ func do_TERRAFORM_command() {
             }
         }
 
-        if (got_required_gas && correct_percentage) {
+        if (got_required_gas != 0 && correct_percentage) {
             goto do_temp;
         }
 
         j = 0;  /* If all 4 gases are neutral gases, replace the first one. */
 
-        if (got_required_gas) {
+        if (got_required_gas!=0) {
             j = got_required_gas - 1;
         }else{
-            for (i = 0; i < 4; i++) {
+            for i = 0; i < 4; i++ {
                 if (colony_planet.gas_percent[i] == 0) {
                     j = i;
                     break;
@@ -7611,9 +7607,9 @@ do_temp:
 
         if (colony_planet.temperature_class != home_planet.temperature_class) {
             if (colony_planet.temperature_class > home_planet.temperature_class) {
-                --colony_planet.temperature_class;
+                colony_planet.temperature_class--
             }else{
-                ++colony_planet.temperature_class;
+                colony_planet.temperature_class++
             }
 
             goto next_change;
@@ -7621,9 +7617,9 @@ do_temp:
 
         if (colony_planet.pressure_class != home_planet.pressure_class) {
             if (colony_planet.pressure_class > home_planet.pressure_class) {
-                --colony_planet.pressure_class;
+                colony_planet.pressure_class--
             }else{
-                ++colony_planet.pressure_class;
+                colony_planet.pressure_class++
             }
         }
 
@@ -7634,13 +7630,11 @@ next_change:
 }
 
 func fix_gases(pl *planet_data) {
-    int i, j, total, left, add_neutral;
+    var i, j, left int
+    var n int
 
-    long n;
-
-
-    total = 0;
-    for (i = 0; i < 4; i++) {
+    total := 0;
+    for i = 0; i < 4; i++ {
         total += pl.gas_percent[i];
     }
 
@@ -7653,8 +7647,8 @@ func fix_gases(pl *planet_data) {
     /* If we have at least one gas that is not the required gas, then we
      *  simply need to adjust existing gases. Otherwise, we have to add a
      *  neutral gas. */
-    add_neutral = true;
-    for (i = 0; i < 4; i++) {
+    add_neutral := true;
+    for i = 0; i < 4; i++ {
         if (pl.gas_percent[i] == 0) {
             continue;
         }
@@ -7674,7 +7668,7 @@ func fix_gases(pl *planet_data) {
 
     /* Randomly modify existing non-required gases until total percentage
      *  is exactly 100. */
-    for (;left != 0;) {
+    for left != 0 {
         i = rnd(4) - 1;
 
         if (pl.gas_percent[i] == 0) {
@@ -7714,7 +7708,7 @@ add_neutral_gas:
 
     /* If we reach this point, there is either no atmosphere or it contains
     *  only the required gas.  In either case, add a random neutral gas. */
-    for (i = 0; i < 4; i++) {
+    for i = 0; i < 4; i++ {
         if (pl.gas_percent[i] > 0) {
             continue;
         }
@@ -7727,24 +7721,19 @@ add_neutral_gas:
     }
 }
 
-
-
 //*************************************************************************
 // do_tran.c
 
 func do_TRANSFER_command() {
-    int i, n, item_class, item_count, capacity, transfer_ttype,
-        attempt_during_siege, siege_1_chance, siege_2_chance,
-        alien_number, first_try, both_args_present, need_destination;
-
-    char c, x1, x2, y1, y2, z1, z2, *original_line_pointer, *temp_ptr,
-         already_notified[MAX_SPECIES];
-
-    long num_available, original_count;
-
-    struct nampla_data *nampla1, *nampla2, *temp_nampla;
-    struct ship_data *  ship1, *ship2;
-
+    var i, n, item_class, item_count, capacity, transfer_ttype int
+    var attempt_during_siege, siege_1_chance, siege_2_chance int
+    var alien_number, first_try, both_args_present, need_destination int
+    var c, x1, x2, y1, y2, z1, z2 byte
+    var original_line_pointer, temp_ptr *byte
+    var already_notified[MAX_SPECIES]byte
+    var num_available, original_count int
+    var nampla1, nampla2, temp_nampla *nampla_data
+    var ship1, ship2 *ship_data_
 
     /* Get number of items to transfer. */
     i = get_value();
@@ -7763,8 +7752,7 @@ func do_TRANSFER_command() {
     item_class = get_class_abbr();
 
     if (item_class != ITEM_CLASS) {
-        /* Players sometimes accidentally use "MI" for "IU"
-         *      or "MA" for "AU". */
+        /* Players sometimes accidentally use "MI" for "IU" or "MA" for "AU". */
         if (item_class == TECH_ID && abbr_index == MI) {
             abbr_index = IU;
         }else if (item_class == TECH_ID && abbr_index == MA) {
@@ -7779,8 +7767,8 @@ func do_TRANSFER_command() {
     item_class = abbr_index;
 
     /* Get source of transfer. */
-    nampla1 = NULL;
-    nampla2 = NULL;
+    nampla1 = nil;
+    nampla2 = nil;
     original_line_pointer = input_line_pointer;
     if (!get_transfer_point()) {
         /* Check for missing comma or tab after source name. */
@@ -7799,7 +7787,8 @@ func do_TRANSFER_command() {
     temp_ptr          = input_line_pointer;
     both_args_present = false;
     for {
-        c = *temp_ptr++;
+        c = *temp_ptr
+        temp_ptr++
 
         if (c == ';' || c == '\n') {
             break;                              /* End of order. */
@@ -7819,8 +7808,7 @@ func do_TRANSFER_command() {
         if (ship1.status == UNDER_CONSTRUCTION) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! %s is still under construction!\n",
-                    ship_name(ship1));
+            fprintf(log_file, "!!! %s is still under construction!\n", ship_name(ship1));
             return;
         }
 
@@ -7849,14 +7837,12 @@ check_ship_items:
                 if (num_available == 0) {
                     fprintf(log_file, "!!! Order ignored:\n");
                     fprintf(log_file, "!!! %s", original_line);
-                    fprintf(log_file, "!!! %s does not have specified item(s)!\n",
-                            ship_name(ship1));
+                    fprintf(log_file, "!!! %s does not have specified item(s)!\n", ship_name(ship1));
                     return;
                 }
 
                 fprintf(log_file, "! WARNING: %s", original_line);
-                fprintf(log_file, "! Ship does not have %d units. Substituting %d for %d!\n",
-                        item_count, num_available, item_count);
+                fprintf(log_file, "! Ship does not have %d units. Substituting %d for %d!\n", item_count, num_available, item_count);
                 item_count = 0;
                 goto check_ship_items;
             }
@@ -7871,9 +7857,8 @@ check_ship_items:
 
 next_ship_try:
 
-            nampla1 = nampla_base - 1;
-            for (i = 0; i < species.num_namplas; i++) {
-                ++nampla1;
+            for i = 0; i < species.num_namplas; i++ {
+                nampla1 = nampla_base[i]
 
                 if (nampla1.x != ship1.x) {
                     continue;
@@ -7911,8 +7896,7 @@ next_ship_try:
 
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! %s does not have specified item(s)!\n",
-                    ship_name(ship1));
+            fprintf(log_file, "!!! %s does not have specified item(s)!\n", ship_name(ship1));
             return;
         }
 
@@ -7938,14 +7922,12 @@ check_planet_items:
                 if (num_available == 0) {
                     fprintf(log_file, "!!! Order ignored:\n");
                     fprintf(log_file, "!!! %s", original_line);
-                    fprintf(log_file, "!!! PL %s does not have specified item(s)!\n",
-                            nampla1.name);
+                    fprintf(log_file, "!!! PL %s does not have specified item(s)!\n", nampla1.name);
                     return;
                 }
 
                 fprintf(log_file, "! WARNING: %s", original_line);
-                fprintf(log_file, "! Planet does not have %d units. Substituting %d for %d!\n",
-                        item_count, num_available, item_count);
+                fprintf(log_file, "! Planet does not have %d units. Substituting %d for %d!\n", item_count, num_available, item_count);
                 item_count = 0;
                 goto check_planet_items;
             }
@@ -7954,9 +7936,8 @@ check_planet_items:
              *  If so, we'll assume that it is the source and that the
              *  named planet is the destination. */
 
-            temp_nampla = nampla_base - 1;
-            for (i = 0; i < species.num_namplas; i++) {
-                ++temp_nampla;
+            for i = 0; i < species.num_namplas; i++ {
+                temp_nampla = nampla_base[i]
 
                 if (temp_nampla.x != nampla1.x) {
                     continue;
@@ -7985,8 +7966,7 @@ check_planet_items:
 
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! PL %s does not have specified item(s)!\n",
-                    nampla1.name);
+            fprintf(log_file, "!!! PL %s does not have specified item(s)!\n", nampla1.name);
             return;
         }
 
@@ -8012,8 +7992,7 @@ get_destination:
         if (ship2.status == UNDER_CONSTRUCTION) {
             fprintf(log_file, "!!! Order ignored:\n");
             fprintf(log_file, "!!! %s", original_line);
-            fprintf(log_file, "!!! %s is still under construction!\n",
-                    ship_name(ship2));
+            fprintf(log_file, "!!! %s is still under construction!\n", ship_name(ship2));
             return;
         }
 
@@ -8033,7 +8012,7 @@ get_destination:
             capacity = ship2.tonnage;
         }
 
-        for (i = 0; i < MAX_ITEMS; i++) {
+        for i = 0; i < MAX_ITEMS; i++ {
             capacity -= ship2.item_quantity[i] * item_carry_capacity[i];
         }
 
@@ -8051,8 +8030,7 @@ do_capacity:
 
         if (capacity < item_count * item_carry_capacity[item_class]) {
             fprintf(log_file, "! WARNING: %s", original_line);
-            fprintf(log_file, "! %s does not have sufficient carrying capacity!",
-                    ship_name(ship2));
+            fprintf(log_file, "! %s does not have sufficient carrying capacity!", ship_name(ship2));
             fprintf(log_file, " Changed %d to 0.\n", original_count);
             original_count = 0;
             goto do_capacity;
@@ -8132,8 +8110,10 @@ do_capacity:
     case 0:             /* Ship to ship. */
         ship1.item_quantity[item_class] -= item_count;
         ship2.item_quantity[item_class] += item_count;
-        log_string(ship_name(ship1));  log_string(" to ");
-        log_string(ship_name(ship2));  log_char('.');
+        log_string(ship_name(ship1));
+        log_string(" to ");
+        log_string(ship_name(ship2));
+        log_char('.');
         break;
 
     case 1:             /* Planet to ship. */
@@ -8146,24 +8126,30 @@ do_capacity:
                 ship2.loading_point = (nampla1 - nampla_base);
             }
         }
-        log_string("PL ");  log_string(nampla1.name);
-        log_string(" to ");  log_string(ship_name(ship2));
+        log_string("PL ");
+        log_string(nampla1.name);
+        log_string(" to ");
+        log_string(ship_name(ship2));
         log_char('.');
         break;
 
     case 2:             /* Ship to planet. */
         ship1.item_quantity[item_class]   -= item_count;
         nampla2.item_quantity[item_class] += item_count;
-        log_string(ship_name(ship1));  log_string(" to PL ");
-        log_string(nampla2.name);  log_char('.');
+        log_string(ship_name(ship1));
+        log_string(" to PL ");
+        log_string(nampla2.name);
+        log_char('.');
         break;
 
     case 3:             /* Planet to planet. */
         nampla1.item_quantity[item_class] -= item_count;
         nampla2.item_quantity[item_class] += item_count;
 
-        log_string("PL ");  log_string(nampla1.name);
-        log_string(" to PL ");  log_string(nampla2.name);
+        log_string("PL ");
+        log_string(nampla1.name);
+        log_string(" to PL ");
+        log_string(nampla2.name);
         if (attempt_during_siege) {
             log_string(" despite the siege");
         }
@@ -8173,8 +8159,7 @@ do_capacity:
             break;
         }
 
-        /* Check if either planet is under siege and if transfer
-         *      was detected by the besiegers. */
+        /* Check if either planet is under siege and if transfer was detected by the besiegers. */
         if (rnd(100) > siege_1_chance && rnd(100) > siege_2_chance) {
             break;
         }
@@ -8182,11 +8167,11 @@ do_capacity:
         log_string(" However, the transfer was detected by the besiegers and the items were destroyed!!!");
         nampla2.item_quantity[item_class] -= item_count;
 
-        for (i = 0; i < MAX_SPECIES; i++) {
+        for i = 0; i < MAX_SPECIES; i++ {
             already_notified[i] = false;
         }
 
-        for (i = 0; i < num_transactions; i++) {
+        for i = 0; i < num_transactions; i++ {
             /* Find out who is besieging this planet. */
             if (transaction[i].ttype != BESIEGE_PLANET) {
                 continue;
@@ -8264,12 +8249,9 @@ do_capacity:
 // do_unl.c
 
 func do_UNLOAD_command() {
-    int i, found, item_count, recovering_home_planet, alien_index;
-
-    long n, reb, current_pop;
-
-    struct nampla_data *alien_home_nampla;
-
+    var i, found, item_count, recovering_home_planet, alien_index int
+    var n, reb, current_pop int
+    var alien_home_nampla *nampla_data
 
     /* Get the ship. */
     if (!get_ship()) {
@@ -8295,9 +8277,8 @@ func do_UNLOAD_command() {
 
     /* Find which planet the ship is at. */
     found  = false;
-    nampla = nampla_base - 1;
-    for (i = 0; i < species.num_namplas; i++) {
-        ++nampla;
+    for i = 0; i < species.num_namplas; i++ {
+        nampla = nampla_base[i]
         if (ship.x != nampla.x) {
             continue;
         }
@@ -8322,7 +8303,7 @@ func do_UNLOAD_command() {
     }
 
     /* Make sure this is not someone else's populated homeworld. */
-    for (alien_index = 0; alien_index < galaxy.num_species; alien_index++) {
+    for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
         if (species_number == alien_index + 1) {
             continue;
         }
@@ -8357,7 +8338,7 @@ func do_UNLOAD_command() {
 
     /* Make sure it's not a healthy home planet. */
     recovering_home_planet = false;
-    if (nampla.status & HOME_PLANET) {
+    if (nampla.status & HOME_PLANET) != 0 {
         n = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install +
             nampla.AUs_to_install;
         reb = species.hp_original_base - n;
@@ -8377,8 +8358,10 @@ func do_UNLOAD_command() {
 
     item_count = ship.item_quantity[CU];
     nampla.item_quantity[CU] += item_count;
-    log_int(item_count);    log_char(' ');
-    log_string(item_abbr[CU]);    if (item_count != 1) {
+    log_int(item_count);
+    log_char(' ');
+    log_string(item_abbr[CU]);
+    if (item_count != 1) {
         log_char('s');
     }
     ship.item_quantity[CU] = 0;
@@ -8386,8 +8369,10 @@ func do_UNLOAD_command() {
     item_count = ship.item_quantity[IU];
     nampla.item_quantity[IU] += item_count;
     log_string(", ");
-    log_int(item_count);    log_char(' ');
-    log_string(item_abbr[IU]);    if (item_count != 1) {
+    log_int(item_count);
+    log_char(' ');
+    log_string(item_abbr[IU]);
+    if (item_count != 1) {
         log_char('s');
     }
     ship.item_quantity[IU] = 0;
@@ -8395,8 +8380,10 @@ func do_UNLOAD_command() {
     item_count = ship.item_quantity[AU];
     nampla.item_quantity[AU] += item_count;
     log_string(", and ");
-    log_int(item_count);    log_char(' ');
-    log_string(item_abbr[AU]);    if (item_count != 1) {
+    log_int(item_count);
+    log_char(' ');
+    log_string(item_abbr[AU]);
+    if (item_count != 1) {
         log_char('s');
     }
     ship.item_quantity[AU] = 0;
@@ -8404,7 +8391,8 @@ func do_UNLOAD_command() {
     log_string(" were transferred from ");
     log_string(ship_name(ship));
     log_string(" to PL ");
-    log_string(nampla.name);    log_string(". ");
+    log_string(nampla.name);
+    log_string(". ");
 
     /* Do the installation. */
     item_count = nampla.item_quantity[CU];
@@ -8424,8 +8412,10 @@ func do_UNLOAD_command() {
     current_pop += item_count;
 
     log_string("Installation of ");
-    log_int(item_count);    log_char(' ');
-    log_string(item_abbr[IU]);    if (item_count != 1) {
+    log_int(item_count);
+    log_char(' ');
+    log_string(item_abbr[IU]);
+    if (item_count != 1) {
         log_char('s');
     }
 
@@ -8445,8 +8435,10 @@ func do_UNLOAD_command() {
     nampla.AUs_to_install    += item_count;
 
     log_string(" and ");
-    log_int(item_count);    log_char(' ');
-    log_string(item_abbr[AU]);    if (item_count != 1) {
+    log_int(item_count);
+    log_char(' ');
+    log_string(item_abbr[AU]);
+    if (item_count != 1) {
         log_char('s');
     }
     log_string(" began on the planet.\n");
@@ -8460,12 +8452,8 @@ func do_UNLOAD_command() {
 // do_upg.c
 
 func do_UPGRADE_command() {
-    int age_reduction, value_specified;
-
-    char *original_line_pointer;
-
-    long amount_to_spend, original_cost, max_funds_available;
-
+    var age_reduction, value_specified int
+    var amount_to_spend, original_cost, max_funds_available int
 
     /* Check if this order was preceded by a PRODUCTION order. */
     if (!doing_production) {
@@ -8476,7 +8464,7 @@ func do_UPGRADE_command() {
     }
 
     /* Get the ship to be upgraded. */
-    original_line_pointer = input_line_pointer;
+    original_line_pointer := input_line_pointer;
     if (!get_ship()) {
         /* Check for missing comma or tab after ship name. */
         input_line_pointer = original_line_pointer;
@@ -8587,16 +8575,17 @@ try_again:
     }
 
     /* Log what was upgraded. */
-    log_string("    ");  log_string(ship_name(ship));
+    log_string("    ");
+    log_string(ship_name(ship));
     log_string(" was upgraded from age ");
-    log_int(ship.age);    log_string(" to age ");
+    log_int(ship.age);
+    log_string(" to age ");
     ship.age -= age_reduction;
     log_int(ship.age);
-    log_string(" at a cost of ");    log_long(amount_to_spend);
+    log_string(" at a cost of ");
+    log_long(amount_to_spend);
     log_string(".\n");
 }
-
-
 
 //*************************************************************************
 // fight_par.c
@@ -8612,21 +8601,15 @@ try_again:
  */
 
 func fighting_params(option, location int, bat *battle_data, act *action_data) int {
-    char x, y, z, pn;
-
-    int i, j, found, ttype, num_sp, unit_index, species_index,
-        ship_index, nampla_index, sp1, sp2, use_this_ship, n_shots,
-        engage_option, engage_location, attacking_ships_here,
-        defending_ships_here, attacking_pds_here, defending_pds_here,
-        num_fighting_units;
-
-    short tons;
-
-    long ml, ls, unit_power, offensive_power, defensive_power;
-
-    struct ship_data *  sh;
-    struct nampla_data *nam;
-
+    var x, y, z, pn int
+    var i, j, found, ttype, num_sp, unit_index, species_index int
+    var ship_index, nampla_index, sp1, sp2, use_this_ship, n_shots int
+    var engage_option, engage_location, attacking_ships_here int
+    var defending_ships_here, attacking_pds_here, defending_pds_here int
+    var num_fighting_units, tons int
+    var ml, ls, unit_power, offensive_power, defensive_power int
+    var sh *ship_data_
+    var nam *nampla_data
 
     /* Add fighting units to "act" arrays. At the same time, check if
      *  a fight of the current option ttype will occur at the current
@@ -8644,11 +8627,10 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) i
     deep_space_defense   = false;
     num_sp               = bat.num_species_here;
 
-    for (species_index = 0; species_index < num_sp; ++species_index) {
+    for species_index = 0; species_index < num_sp; ++species_index {
         /* Check which ships can take part in fight. */
-        sh = c_ship[species_index] - 1;
-        for (ship_index = 0; ship_index < c_species[species_index].num_ships; ship_index++) {
-            ++sh;
+        for ship_index = 0; ship_index < c_species[species_index].num_ships; ship_index++ {
+            sh = c_ship[species_index][ship_index]
             use_this_ship = false;
 
             if (sh.x != x) {
@@ -8688,7 +8670,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) i
                 }
             }
 
-            for (i = 0; i < bat.num_engage_options[species_index]; i++) {
+            for i = 0; i < bat.num_engage_options[species_index]; i++ {
                 engage_option   = bat.engage_option[species_index][i];
                 engage_location = bat.engage_planet[species_index][i];
 
@@ -8742,9 +8724,9 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) i
                     use_this_ship        = true;
                     break;
 
-                case PLANET_ATTACK:
-                case PLANET_BOMBARDMENT:
-                case GERM_WARFARE:
+                case PLANET_ATTACK: fallthrough
+                case PLANET_BOMBARDMENT: fallthrough
+                case GERM_WARFARE: fallthrough
                 case SIEGE:
                     if (sh.class == BA && sh.pn != location) {
                         break;
@@ -8762,7 +8744,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) i
                          *  species has a planet here. */
 
                         found = false;
-                        for (nampla_index = 0; nampla_index < c_species[species_index].num_namplas; nampla_index++) {
+                        for nampla_index = 0; nampla_index < c_species[species_index].num_namplas; nampla_index++ {
                             nam = c_nampla[species_index] + nampla_index;
 
                             if (nam.x != x) {
@@ -8791,8 +8773,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) i
                             break;
                         }
                     }
-                    if (option != engage_option &&
-                        option != PLANET_ATTACK) {
+                    if (option != engage_option && option != PLANET_ATTACK) {
                         break;
                     }
                     if (location != engage_location) {
@@ -8813,16 +8794,15 @@ add_ship:
                 /* Add data for this ship to action array. */
                 act.fighting_species_index[num_fighting_units] = species_index;
                 act.unit_type[num_fighting_units]           = SHIP;
-                act.fighting_unit[num_fighting_units]       = (char *)sh;
+                act.fighting_unit[num_fighting_units]       = sh; // warning: cast to *char
                 act.original_age_or_PDs[num_fighting_units] = sh.age;
-                ++num_fighting_units;
+                num_fighting_units++
             }
         }
 
         /* Check which namplas can take part in fight. */
-        nam = c_nampla[species_index] - 1;
-        for (nampla_index = 0; nampla_index < c_species[species_index].num_namplas; nampla_index++) {
-            ++nam;
+        for nampla_index = 0; nampla_index < c_species[species_index].num_namplas; nampla_index++ {
+            nam = c_nampla[species_index][nampla_index]
 
             if (nam.x != x) {
                 continue;
@@ -8849,7 +8829,7 @@ add_ship:
              *  more species to have colonies on the SAME planet, and for
              *  one to attack the other. */
 
-            for (i = 0; i < bat.num_engage_options[species_index]; i++) {
+            for i = 0; i < bat.num_engage_options[species_index]; i++ {
                 engage_option   = bat.engage_option[species_index][i];
                 engage_location = bat.engage_planet[species_index][i];
                 if (engage_location != location) {
@@ -8857,15 +8837,15 @@ add_ship:
                 }
 
                 switch (engage_option) {
-                case DEFENSE_IN_PLACE:
-                case DEEP_SPACE_DEFENSE:
-                case PLANET_DEFENSE:
+                case DEFENSE_IN_PLACE: fallthrough
+                case DEEP_SPACE_DEFENSE: fallthrough
+                case PLANET_DEFENSE: fallthrough
                 case DEEP_SPACE_FIGHT:
                     break;
 
-                case PLANET_ATTACK:
-                case PLANET_BOMBARDMENT:
-                case GERM_WARFARE:
+                case PLANET_ATTACK: fallthrough
+                case PLANET_BOMBARDMENT: fallthrough
+                case GERM_WARFARE: fallthrough
                 case SIEGE:
                     if (option != engage_option &&
                         option != PLANET_ATTACK) {
@@ -8889,9 +8869,9 @@ add_ship:
             /* Add data for this nampla to action array. */
             act.fighting_species_index[num_fighting_units] = species_index;
             act.unit_type[num_fighting_units]           = NAMPLA;
-            act.fighting_unit[num_fighting_units]       = (char *)nam;
+            act.fighting_unit[num_fighting_units]       = nam; // warning: cast to *char
             act.original_age_or_PDs[num_fighting_units] = nam.item_quantity[PD];
-            ++num_fighting_units;
+            num_fighting_units++
         }
     }
 
@@ -8904,14 +8884,14 @@ add_ship:
         }
         break;
 
-    case PLANET_ATTACK:
+    case PLANET_ATTACK: fallthrough
     case PLANET_BOMBARDMENT:
         if (!attacking_ships_here && !attacking_pds_here) {
             return(false);
         }
         break;
 
-    case SIEGE:
+    case SIEGE: fallthrough
     case GERM_WARFARE:
         if (!attacking_ships_here) {
             return(false);
@@ -8925,9 +8905,9 @@ add_ship:
 
     /* There is at least one attacker and one defender here. See if they
      *  are enemies. */
-    for (i = 0; i < num_fighting_units; i++) {
+    for i = 0; i < num_fighting_units; i++ {
         sp1 = act.fighting_species_index[i];
-        for (j = 0; j < num_fighting_units; j++) {
+        for j = 0; j < num_fighting_units; j++ {
             sp2 = act.fighting_species_index[j];
             if (bat.enemy_mine[sp1][sp2]) {
                 goto next_step;
@@ -8943,13 +8923,13 @@ next_step:
 
     /* Determine number of shots, shield power and weapons power for
      *  all combatants. */
-    for (unit_index = 0; unit_index < act.num_units_fighting; unit_index++) {
+    for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
         ttype = act.unit_type[unit_index];
         if (ttype == SHIP) {
-            sh   = (struct ship_data *)act.fighting_unit[unit_index];
+            sh   = act.fighting_unit[unit_index]; // warning: cast to *ship_data
             tons = sh.tonnage;
         }else {
-            nam  = (struct nampla_data *)act.fighting_unit[unit_index];
+            nam  = act.fighting_unit[unit_index]; // warning: cast to *nampla_data
             tons = nam.item_quantity[PD] / 200;
             if (tons < 1 && nam.item_quantity[PD] > 0) {
                 tons = 1;
@@ -8970,20 +8950,18 @@ next_step:
             }else if (sh.class != BA) {
                 /* Add auxiliary shield generator contribution, if any. */
                 tons = 5;
-                for (i = SG1; i <= SG9; i++) {
+                for i = SG1; i <= SG9; i++ {
                     if (sh.item_quantity[i] > 0) {
-                        defensive_power +=
-                            sh.item_quantity[i] * power(tons);
+                        defensive_power += sh.item_quantity[i] * power(tons);
                     }
                     tons += 5;
                 }
 
                 /* Add auxiliary gun unit contribution, if any. */
                 tons = 5;
-                for (i = GU1; i <= GU9; i++) {
+                for i = GU1; i <= GU9; i++ {
                     if (sh.item_quantity[i] > 0) {
-                        offensive_power +=
-                            sh.item_quantity[i] * power(tons);
+                        offensive_power += sh.item_quantity[i] * power(tons);
                     }
                     tons += 5;
                 }
@@ -9001,8 +8979,7 @@ next_step:
         defensive_power += (ls * defensive_power) / 50;
 
         /* Adjust values if this species is hijacking anyone. */
-        if (bat.hijacker[species_index] && (option == DEEP_SPACE_FIGHT ||
-                                             option == PLANET_ATTACK)) {
+        if (bat.hijacker[species_index] && (option == DEEP_SPACE_FIGHT || option == PLANET_ATTACK)) {
             offensive_power /= 4;
             defensive_power /= 4;
         }
@@ -9031,12 +9008,11 @@ next_step:
             /* Adjust for results of previous action, if any. "dest_y"
              *  contains the percentage of shields that remained at end
              *  of last action. */
-            defensive_power = (sh.dest_y * defensive_power) / 100L;
+            defensive_power = (sh.dest_y * defensive_power) / 100; // warning: dest_y is overloaded
         }
         act.shield_strength_left[unit_index] = defensive_power;
 
-        /* Set bomb damage to zero in case this is planet bombardment or
-         *      germ warfare. */
+        /* Set bomb damage to zero in case this is planet bombardment or germ warfare. */
         act.bomb_damage[unit_index] = 0;
 
         /* Set flag for individual unit if species can be surprised. */
@@ -9051,13 +9027,8 @@ next_step:
 }
 
 func disbanded_ship(species_index int, sh *ship_data_) {
-    int nampla_index;
-
-    struct nampla_data *nam;
-
-    nam = c_nampla[species_index] - 1;
-    for (nampla_index = 0; nampla_index < c_species[species_index].num_namplas; nampla_index++) {
-        ++nam;
+    for nampla_index := 0; nampla_index < c_species[species_index].num_namplas; nampla_index++ {
+        nam := c_nampla[species_index][nampla_index]
 
         if (nam.x != sh.x) {
             continue;
@@ -9086,28 +9057,20 @@ func disbanded_ship(species_index int, sh *ship_data_) {
     return(false);
 }
 
-
-
 //*************************************************************************
 // for_jum.c
-
 
 /* This routine will return true if forced jump or misjump units are used,
  * even if they fail. It will return false if the attacker has none or
  * not enough. */
 
-func forced_jump_units_used(attacker_index, defender_index int, total_shots *int, bat *battle_data, act *action_data) {
-    int i, att_sp_index, def_sp_index, attacker_gv, defender_gv,
-        ttype, fj_num, fm_num, number, success_chance, failure;
-
-    char x, y, z;
-
-    struct ship_data *attacking_ship, *defending_ship;
-
-
+func forced_jump_units_used(attacker_index, defender_index int, total_shots *int, bat *battle_data, act *action_data) bool {
+    var i, att_sp_index, def_sp_index, attacker_gv, defender_gv, ttype, fj_num, fm_num, number, success_chance, failure int
+    var x, y, z int
+    var attacking_ship, defending_ship *ship_data_
 
     /* Make sure attacking unit is a starbase. */
-    attacking_ship = (struct ship_data *)act.fighting_unit[attacker_index];
+    attacking_ship = act.fighting_unit[attacker_index]; // warning: cast to *ship_data
     if (attacking_ship.ttype != STARBASE) {
         return(false);
     }
@@ -9144,7 +9107,7 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
     defender_gv  = c_species[def_sp_index].tech_level[GV];
 
     /* Check if sufficient units are available. */
-    defending_ship = (struct ship_data *)act.fighting_unit[defender_index];
+    defending_ship = act.fighting_unit[defender_index]; // warning: cast to *ship_data
     if (number < defending_ship.tonnage) {
         return(false);
     }
@@ -9155,15 +9118,15 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
     }
 
     /* Calculate percent chance of success. */
-    success_chance = 2 *
-                     ((number - defending_ship.tonnage) + (attacker_gv - defender_gv));
+    success_chance = 2 * ((number - defending_ship.tonnage) + (attacker_gv - defender_gv));
 
     /* See if it worked. */
     failure = rnd(100) > success_chance;
 
     log_summary = !failure;
 
-    log_string("        ");  log_string(ship_name(attacking_ship));
+    log_string("        ");
+    log_string(ship_name(attacking_ship));
     log_string(" attempts to use ");
     log_string(item_name[ttype]);
     log_string("s against ");
@@ -9189,7 +9152,7 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
     }else {
         /* Random location close to battle. */
         i = 3;
-        for (;i == 3;) {
+        for i == 3 {
             i = rnd(5);
         }
         x = bat.x + i - 3;
@@ -9198,7 +9161,7 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
         }
 
         i = 3;
-        for (;i == 3;) {
+        for i == 3 {
             i = rnd(5);
         }
         y = bat.y + i - 3;
@@ -9207,7 +9170,7 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
         }
 
         i = 3;
-        for (;i == 3;) {
+        for i == 3 {
             i = rnd(5);
         }
         z = bat.z + i - 3;
@@ -9229,14 +9192,11 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
     return(true);
 }
 
-
-
-
 //*************************************************************************
 // gam_abo.c
 
 func gamemaster_abort_option() {
-    char answer[16];
+    var answer[16]byte
 
     /* Give the gamemaster a chance to abort. */
     printf("*** Gamemaster safe-abort option ... ttype q or Q to quit: ");
@@ -9251,10 +9211,7 @@ func gamemaster_abort_option() {
 // get_gal.c
 
 func get_galaxy_data() {
-    int galaxy_fd;
-
-    long n, num_bytes, byte_size;
-
+    var galaxy_fd, n, num_bytes, byte_size int
 
     /* Open galaxy file. */
     galaxy_fd = open("galaxy.dat", 0);
@@ -9264,7 +9221,7 @@ func get_galaxy_data() {
     }
 
     /* Read data. */
-    byte_size = sizeof(struct galaxy_data);
+    byte_size = sizeof("struct galaxy_data");
     num_bytes = read(galaxy_fd, &galaxy, byte_size);
     if (num_bytes != byte_size) {
         fprintf(stderr, "\n\tCannot read data in file 'galaxy.dat'!\n\n");
@@ -9286,17 +9243,13 @@ func get_galaxy_data() {
  * returned. */
 
 func get_location() int {
-    int i, n, found, temp_nampla_index, first_try, name_length,
-        best_score, next_best_score, best_nampla_index,
-        minimum_score;
-
-    char upper_nampla_name[32], *temp1_ptr, *temp2_ptr;
-
-    struct nampla_data *temp_nampla;
-
+    var i, n, found, temp_nampla_index, first_try, name_length, best_score, next_best_score, best_nampla_index, minimum_score int
+    var upper_nampla_name[32]byte
+    var temp1_ptr, temp2_ptr *byte
+    var temp_nampla *nampla_data
 
     /* Check first if x, y, z are specified. */
-    nampla = NULL;
+    nampla = nil;
     skip_whitespace();
 
     if (get_value() == 0) {
@@ -9326,9 +9279,8 @@ func get_location() int {
 
     /* Get star. Check if planet exists. */
     found = false;
-    star  = star_base - 1;
-    for (i = 0; i < num_stars; i++) {
-        ++star;
+    for i = 0; i < num_stars; i++ {
+        star  = star_base [i]
 
         if (star.x != x) {
             continue;
@@ -9374,16 +9326,15 @@ again:
     get_name();
 
     /* Search all temp_namplas for name. */
-    temp_nampla = nampla_base - 1;
-    for (temp_nampla_index = 0; temp_nampla_index < species.num_namplas; temp_nampla_index++) {
-        ++temp_nampla;
+    for temp_nampla_index = 0; temp_nampla_index < species.num_namplas; temp_nampla_index++ {
+        temp_nampla = nampla_base[temp_nampla_index]
 
         if (temp_nampla.pn == 99) {
             continue;
         }
 
         /* Make upper case copy of temp_nampla name. */
-        for (i = 0; i < 32; i++) {
+        for i = 0; i < 32; i++ {
             upper_nampla_name[i] = toupper(temp_nampla.name[i]);
         }
 
@@ -9418,15 +9369,15 @@ yet_again:
 
     best_score      = -9999;
     next_best_score = -9999;
-    for (temp_nampla_index = 0; temp_nampla_index < species.num_namplas; temp_nampla_index++) {
-        temp_nampla = nampla_base + temp_nampla_index;
+    for temp_nampla_index = 0; temp_nampla_index < species.num_namplas; temp_nampla_index++ {
+        temp_nampla = nampla_base[temp_nampla_index]
 
         if (temp_nampla.pn == 99) {
             continue;
         }
 
         /* Make upper case copy of temp_nampla name. */
-        for (i = 0; i < 32; i++) {
+        for i = 0; i < 32; i++ {
             upper_nampla_name[i] = toupper(temp_nampla.name[i]);
         }
 
@@ -9446,8 +9397,7 @@ yet_again:
 
     if (best_score < minimum_score ||           /* Score too low. */
         name_length < 5 ||                      /* No errors allowed. */
-        best_score == next_best_score) {        /* Another name with equal
-                                                 *      score. */
+        best_score == next_best_score) {        /* Another name with equal score. */
         if (first_try) {
             first_try = false;
             goto yet_again;
@@ -9476,10 +9426,7 @@ done:
 // get_plan.c
 
 func get_planet_data() {
-    int planet_fd;
-
-    long n, data_size, mem_size;
-
+    var planet_fd, n, data_size int
 
     /* Open planet file. */
     planet_fd = open("planets.dat", 0);
@@ -9489,19 +9436,15 @@ func get_planet_data() {
     }
 
     /* Read header data. */
-    data_size = read(planet_fd, &num_planets, sizeof(num_planets));
-    if (data_size != sizeof(num_planets)) {
+    data_size = read(planet_fd, &num_planets, sizeof("num_planets"));
+    if (data_size != sizeof("num_planets")) {
         fprintf(stderr, "\n\tCannot read num_planets in file 'planets.dat'!\n\n");
         exit(-1);
     }
 
     /* Allocate enough memory for all planets. */
-    mem_size =
-        (num_planets + NUM_EXTRA_PLANETS) * sizeof(struct planet_data);
-    data_size =
-        num_planets * sizeof(struct planet_data);
-    planet_base = (struct planet_data *)malloc(mem_size);
-    if (planet_base == NULL) {
+    planet_base = make([]*planet_data, num_planets, num_planets); // warning: was num_planets + NUM_EXTRA_PLANETS
+    if (planet_base == nil) {
         fprintf(stderr, "\nCannot allocate enough memory for planet file!\n\n");
         exit(-1);
     }
@@ -9517,8 +9460,6 @@ func get_planet_data() {
     planet_data_modified = false;
 }
 
-
-
 //*************************************************************************
 // get_ship.c
 
@@ -9528,13 +9469,10 @@ func get_planet_data() {
  * accidental deletion of a ship abbreviation. */
 
 func get_ship() bool {
-    int i, n, name_length, best_score, next_best_score, best_ship_index,
-        first_try, minimum_score;
-
-    char upper_ship_name[32], *temp1_ptr, *temp2_ptr;
-
-    struct ship_data *best_ship = NULL;
-
+    var i, n, name_length, best_score, next_best_score, best_ship_index, first_try, minimum_score int
+    var upper_ship_name[32]byte
+    var temp1_ptr, temp2_ptr *byte
+    var best_ship *ship_data_
 
     /* Save in case of an error. */
     temp1_ptr = input_line_pointer;
@@ -9562,16 +9500,15 @@ again:
     name_length = get_name();
 
     /* Search all ships for name. */
-    ship = ship_base - 1;
-    for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-        ++ship;
+    for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+        ship = ship_base[ship_index]
 
         if (ship.pn == 99) {
             continue;
         }
 
         /* Make upper case copy of ship name. */
-        for (i = 0; i < 32; i++) {
+        for i = 0; i < 32; i++ {
             upper_ship_name[i] = toupper(ship.name[i]);
         }
 
@@ -9595,8 +9532,7 @@ again:
     }
 
 
-    /* Possibly a spelling error.  Find the best match that is approximately
-     *  the same. */
+    /* Possibly a spelling error.  Find the best match that is approximately the same. */
 
     first_try = true;
 
@@ -9614,15 +9550,15 @@ yet_again:
 
     best_score      = -9999;
     next_best_score = -9999;
-    for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-        ship = ship_base + ship_index;
+    for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+        ship = ship_base[ship_index];
 
         if (ship.pn == 99) {
             continue;
         }
 
         /* Make upper case copy of ship name. */
-        for (i = 0; i < 32; i++) {
+        for i = 0; i < 32; i++ {
             upper_ship_name[i] = toupper(ship.name[i]);
         }
 
@@ -9673,13 +9609,10 @@ yet_again:
  * as well as accidental deletion of the SP abbreviation. */
 
 func get_species_name() bool {
-    int i, n, species_index, best_score, best_species_index,
-        next_best_score, first_try, minimum_score, name_length;
-
-    char sp_name[32], *temp1_ptr, *temp2_ptr;
-
-    struct species_data *sp;
-
+    var i, n, species_index, best_score, best_species_index, next_best_score, first_try, minimum_score, name_length int
+    var sp_name[32]byte
+    var temp1_ptr, temp2_ptr *byte
+    var sp *species_data
 
     g_spec_number = 0;
 
@@ -9704,15 +9637,15 @@ again:
     /* Get species name. */
     get_name();
 
-    for (species_index = 0; species_index < galaxy.num_species; species_index++) {
+    for species_index = 0; species_index < galaxy.num_species; species_index++ {
         if (!data_in_memory[species_index]) {
             continue;
         }
 
-        sp = &spec_data[species_index];
+        sp = spec_data[species_index];
 
         /* Copy name to g_spec_name and convert it to upper case. */
-        for (i = 0; i < 31; i++) {
+        for i = 0; i < 31; i++ {
             g_spec_name[i] = sp.name[i];
             sp_name[i]     = toupper(g_spec_name[i]);
         }
@@ -9729,9 +9662,7 @@ again:
         goto again;
     }
 
-    /* Possibly a spelling error.  Find the best match that is approximately
-     *  the same. */
-
+    /* Possibly a spelling error.  Find the best match that is approximately the same. */
     first_try = true;
 
 yet_again:
@@ -9748,15 +9679,15 @@ yet_again:
 
     best_score      = -9999;
     next_best_score = -9999;
-    for (species_index = 0; species_index < galaxy.num_species; species_index++) {
+    for species_index = 0; species_index < galaxy.num_species; species_index++ {
         if (!data_in_memory[species_index]) {
             continue;
         }
 
-        sp = &spec_data[species_index];
+        sp = spec_data[species_index];
 
         /* Convert name to upper case. */
-        for (i = 0; i < 31; i++) {
+        for i = 0; i < 31; i++ {
             sp_name[i] = toupper(sp.name[i]);
         }
 
@@ -9770,14 +9701,13 @@ yet_again:
         }
     }
 
-    sp            = &spec_data[best_species_index];
+    sp            = spec_data[best_species_index];
     name_length   = strlen(sp.name);
     minimum_score = name_length - ((name_length / 7) + 1);
 
     if (best_score < minimum_score ||           /* Score too low. */
         name_length < 5 ||                      /* No errors allowed. */
-        best_score == next_best_score) {        /* Another name with equal
-                                                 *      score. */
+        best_score == next_best_score) {        /* Another name with equal score. */
         if (first_try) {
             first_try = false;
             goto yet_again;
@@ -9787,7 +9717,7 @@ yet_again:
     }
 
     /* Copy name to g_spec_name. */
-    for (i = 0; i < 31; i++) {
+    for i = 0; i < 31; i++ {
         g_spec_name[i] = sp.name[i];
     }
     g_spec_number = best_species_index + 1;
@@ -9795,17 +9725,11 @@ yet_again:
     return(true);
 }
 
-
-
-
 //*************************************************************************
 // get_star.c
 
 func get_star_data() {
-    int star_fd;
-
-    long byte_size, star_data_size, mem_size;
-
+    var star_fd, byte_size, star_data_size, mem_size int
 
     /* Open star file. */
     star_fd = open("stars.dat", 0);
@@ -9814,19 +9738,17 @@ func get_star_data() {
         exit(999);
     }
 
-    byte_size = read(star_fd, &num_stars, sizeof(num_stars));
-    if (byte_size != sizeof(num_stars)) {
+    byte_size = read(star_fd, &num_stars, sizeof("num_stars"));
+    if (byte_size != sizeof("num_stars")) {
         fprintf(stderr, "\n\tCannot read num_stars in file 'stars.dat'!\n\n");
         exit(999);
     }
 
     /* Allocate enough memory for all stars. */
-    mem_size =
-        (num_stars + NUM_EXTRA_STARS) * sizeof(struct star_data);
-    star_data_size =
-        num_stars * sizeof(struct star_data);
-    star_base = (struct star_data *)malloc(mem_size);
-    if (star_base == NULL) {
+    mem_size = (num_stars + NUM_EXTRA_STARS) * sizeof("struct star_data");
+    star_data_size = num_stars * sizeof("struct star_data");
+    star_base = make([]*star_data, num_stars, num_stars) // warning: was num_stars + NUM_EXTRA_STARS
+    if (star_base == nil) {
         fprintf(stderr, "\nCannot allocate enough memory for star file!\n\n");
         exit(-1);
     }
@@ -9842,15 +9764,11 @@ func get_star_data() {
     star_data_modified = false;
 }
 
-
-
 //*************************************************************************
 // get_transact.c
 
 func get_transaction_data() {
-    int  i, trans_fd;
-    long num_bytes;
-
+    var i, trans_fd, num_bytes int
 
     /* Open file for reading. */
     trans_fd = open("interspecies.dat", 0);
@@ -9863,16 +9781,16 @@ func get_transaction_data() {
     /* Read transactions from file. */
     i = 0;
     for {
-        num_bytes = read(trans_fd, &transaction[i], sizeof(struct trans_data));
+        num_bytes = read(trans_fd, &transaction[i], sizeof("struct trans_data"));
         if (num_bytes == 0) {
             break;                      /* End of file. */
         }
-        if (num_bytes != sizeof(struct trans_data)) {
+        if (num_bytes != sizeof("struct trans_data")) {
             fprintf(stderr, "\n\n\tError reading transaction from file 'interspecies.dat'!\n\n");
             exit(-1);
         }
 
-        ++i;
+        i++
     }
 
     num_transactions = i;
@@ -9880,31 +9798,26 @@ func get_transaction_data() {
     close(trans_fd);
 }
 
-
-
 //*************************************************************************
 // get_transfer.c
 
 func get_transfer_point() bool {
-    char *temp_ptr;
-
-
     /* Find out if it is a ship or a planet. First try for a correctly
      *  spelled ship name. */
-    temp_ptr = input_line_pointer;
+    temp_ptr := input_line_pointer; // TODO: this does not work
     correct_spelling_required = true;
     if (get_ship()) {
         return(true);
     }
 
     /* Probably not a ship. See if it's a planet. */
-    input_line_pointer = temp_ptr;
+    input_line_pointer = temp_ptr; // TODO: this does not work
     if (get_location()) {
-        return(nampla != NULL);
+        return(nampla != nil);
     }
 
     /* Now check for an incorrectly spelled ship name. */
-    input_line_pointer = temp_ptr;
+    input_line_pointer = temp_ptr; // TODO: this does not work
     if (get_ship()) {
         return(true);
     }
@@ -9912,15 +9825,11 @@ func get_transfer_point() bool {
     return(false);
 }
 
-
-
-
 //*************************************************************************
 // money.c
 
 func check_bounced(amount_needed int) bool {
-    long take_from_EUs, limiting_balance;
-
+    var take_from_EUs, limiting_balance int
 
     /* Check if we have sufficient funds for this purchase. */
     if (amount_needed > balance) {
@@ -9954,8 +9863,11 @@ func check_bounced(amount_needed int) bool {
             raw_material_units   = 0;
         }else {
             /* Not enough RMs or PC. */
-            limiting_balance = (raw_material_units > production_capacity)
-                               ? production_capacity : raw_material_units;
+            if raw_material_units > production_capacity{
+                limiting_balance = production_capacity
+            } else {
+                limiting_balance = raw_material_units
+            }
             raw_material_units  -= limiting_balance;
             production_capacity -= limiting_balance;
         }
@@ -9967,16 +9879,15 @@ func check_bounced(amount_needed int) bool {
 }
 
 func transfer_balance() {
-    long limiting_amount;
-
-
-    /* Log end of production. Do not print ending balance for mining
-     *  or resort colonies. */
-    limiting_amount = 0;
+    /* Log end of production. Do not print ending balance for mining or resort colonies. */
+    limiting_amount := 0;
     fprintf(log_file, "  End of production on PL %s.", nampla.name);
-    if (!(nampla.status & (MINING_COLONY | RESORT_COLONY))) {
-        limiting_amount = (raw_material_units > production_capacity)
-                          ? production_capacity : raw_material_units;
+    if (nampla.status & (MINING_COLONY | RESORT_COLONY)) != 0 {
+        if raw_material_units > production_capacity {
+            limiting_balance = production_capacity
+        } else {
+            limiting_balance = raw_material_units
+        }
         fprintf(log_file, " (Ending balance is %ld.)", limiting_amount);
     }
     fprintf(log_file, "\n");
@@ -9990,9 +9901,6 @@ func transfer_balance() {
 
     balance = 0;
 }
-
-
-
 
 //*************************************************************************
 // parse.c
@@ -10018,7 +9926,7 @@ again:
         if (strncmp(input_line, "From ", 5) == 0) { /* This is a mail header. */
             for {
                 input_line_pointer = fgets(input_line, 256, input_file);
-                if (input_line_pointer == NULL) {
+                if (input_line_pointer == nil) {
                     end_of_file = true;         /* Weird. */
                     return;
                 }
@@ -10036,14 +9944,14 @@ again:
     /* Skip white space and comments. */
     for {
         switch (*input_line_pointer) {
-        case ';':                       /* Semi-colon. */
+        case ';':  fallthrough                     /* Semi-colon. */
         case '\n':                      /* Newline. */
             goto again;
 
-        case '\t':                      /* Tab. */
-        case ' ':                       /* Space. */
+        case '\t': fallthrough                     /* Tab. */
+        case ' ':  fallthrough                     /* Space. */
         case ',':                       /* Comma. */
-            ++input_line_pointer;
+            input_line_pointer++
             continue;
 
         default:
@@ -10055,10 +9963,10 @@ again:
 func skip_whitespace() {
     for {
         switch (*input_line_pointer) {
-        case '\t':                      /* Tab. */
-        case ' ':                       /* Space. */
+        case '\t': fallthrough                     /* Tab. */
+        case ' ':  fallthrough                     /* Space. */
         case ',':                       /* Comma. */
-            ++input_line_pointer;
+            input_line_pointer++
             break;
 
         default:
@@ -10068,14 +9976,14 @@ func skip_whitespace() {
 }
 
 /* The following "get" routines will return 0 if the item found was not
- * of the appropriate ttype, and 1 or greater if an item of the correct
- * ttype was found. */
+ * of the appropriate type, and 1 or greater if an item of the correct
+ * type was found. */
 
 /* Get a command and return its index. */
-int get_command() {
-    int  i, cmd_n;
-    char c, cmd_s[4];
-
+func get_command() int {
+    var i, cmd_n int
+    var c byte
+    var cmd_s[4]byte
 
     skip_junk();
     if (end_of_file) {
@@ -10084,28 +9992,28 @@ int get_command() {
 
     c = *input_line_pointer;
     /* Get first three characters of command word. */
-    for (i = 0; i < 3; i++) {
+    for i = 0; i < 3; i++ {
         if (!isalpha(c)) {
             return(0);
         }
         cmd_s[i] = toupper(c);
-        ++input_line_pointer;
+        input_line_pointer++
         c = *input_line_pointer;
     }
-    cmd_s[3] = '\0';
+    cmd_s[3] = 0;
 
     /* Skip everything after third character of command word. */
     for {
         switch (c) {
-        case '\t':
-        case '\n':
-        case ' ':
-        case ',':
+        case '\t':fallthrough
+        case '\n':fallthrough
+        case ' ':fallthrough
+        case ',':fallthrough
         case ';':
             goto find_cmd;
 
         default:
-            ++input_line_pointer;
+            input_line_pointer++
             c = *input_line_pointer;
         }
     }
@@ -10114,7 +10022,7 @@ find_cmd:
 
     /* Find corresponding string in list. */
     cmd_n = UNKNOWN;
-    for (i = 1; i < NUM_COMMANDS; i++) {
+    for i = 1; i < NUM_COMMANDS; i++ {
         if (strcmp(cmd_s, command_abbr[i]) == 0) {
             cmd_n = i;
             break;
@@ -10133,10 +10041,8 @@ find_cmd:
  * ONLY on abbreviation.) */
 
 func get_class_abbr() int {
-    int i;
-
-    char *digit_start;
-
+    var i int
+    var digit_start *byte
 
     skip_whitespace();
 
@@ -10146,26 +10052,27 @@ func get_class_abbr() int {
         return(UNKNOWN);
     }
     input_abbr[0] = toupper(*input_line_pointer);
-    ++input_line_pointer;
+    input_line_pointer++
 
     if (!isalnum(*input_line_pointer)) {
         return(UNKNOWN);
     }
     input_abbr[1] = toupper(*input_line_pointer);
-    ++input_line_pointer;
+    input_line_pointer++
 
     input_abbr[2] = '\0';
 
     /* Check for IDs that are followed by one or more digits or letters. */
     i           = 2;
     digit_start = input_line_pointer;
-    for (;isalnum(*input_line_pointer);) {
-        input_abbr[i++] = *input_line_pointer++;
-        input_abbr[i]   = '\0';
+    for isalnum(*input_line_pointer) {
+        input_abbr[i++] = *input_line_pointer
+        input_line_pointer++
+        input_abbr[i]   = 0
     }
 
     /* Check tech ID. */
-    for (i = 0; i < 6; i++) {
+    for i = 0; i < 6; i++ {
         if (strcmp(input_abbr, tech_abbr[i]) == 0) {
             abbr_index = i;
             abbr_type  = TECH_ID;
@@ -10174,7 +10081,7 @@ func get_class_abbr() int {
     }
 
     /* Check item abbreviations. */
-    for (i = 0; i < MAX_ITEMS; i++) {
+    for i = 0; i < MAX_ITEMS; i++ {
         if (strcmp(input_abbr, item_abbr[i]) == 0) {
             abbr_index = i;
             abbr_type  = ITEM_CLASS;
@@ -10183,22 +10090,22 @@ func get_class_abbr() int {
     }
 
     /* Check ship abbreviations. */
-    for (i = 0; i < NUM_SHIP_CLASSES; i++) {
+    for i = 0; i < NUM_SHIP_CLASSES; i++ {
         if (strncmp(input_abbr, ship_abbr[i], 2) == 0) {
             input_line_pointer = digit_start;
             abbr_index         = i;
             tonnage            = ship_tonnage[i];
             if (i == TR) {
                 tonnage = 0;
-                for (;isdigit(*input_line_pointer);) {
+                for isdigit(*input_line_pointer) {
                     tonnage = (10 * tonnage) + (*input_line_pointer - '0');
-                    ++input_line_pointer;
+                    input_line_pointer++
                 }
             }
 
             if (toupper(*input_line_pointer) == 'S') {
                 sub_light = true;
-                ++input_line_pointer;
+                input_line_pointer++
             }else {
                 sub_light = false;
             }
@@ -10230,10 +10137,8 @@ func get_class_abbr() int {
 /* Get a name and copy original version to "original_name" and upper
  * case version to "upper_name". Return length of name. */
 func get_name() int {
-    int name_length;
-
-    char c;
-
+    var name_length int
+    var c byte
 
     skip_whitespace();
 
@@ -10243,51 +10148,48 @@ func get_name() int {
         if (c == ';') {
             break;
         }
-        ++input_line_pointer;
+        input_line_pointer++
         if (c == ',' || c == '\t' || c == '\n') {
             break;
         }
         if (name_length < 31) {
             original_name[name_length] = c;
             upper_name[name_length]    = toupper(c);
-            ++name_length;
+            name_length++
         }
     }
 
     /* Remove any final spaces in name. */
-    for (;name_length > 0;) {
+    for name_length > 0 {
         c = original_name[name_length - 1];
         if (c != ' ') {
             break;
         }
-        --name_length;
+        name_length--
     }
 
     /* Terminate strings. */
-    original_name[name_length] = '\0';
-    upper_name[name_length]    = '\0';
+    original_name[name_length] = 0;
+    upper_name[name_length]    = 0;
 
     return(name_length);
 }
 
 /* Read a long decimal and place its value in 'value'. */
 func get_value() bool {
-    int n;
-
-
     skip_whitespace();
 
-    n = sscanf(input_line_pointer, "%ld", &value);
+    n := sscanf(input_line_pointer, "%ld", &value);
     if (n != 1) {
-        return(0);              /* Not a numeric value. */
+        return false;              /* Not a numeric value. */
     }
     /* Skip numeric string. */
-    ++input_line_pointer;       /* Skip first sign or digit. */
-    for (;isdigit(*input_line_pointer);) {
-        ++input_line_pointer;
+    input_line_pointer++       /* Skip first sign or digit. */
+    for isdigit(*input_line_pointer) {
+        input_line_pointer++
     }
 
-    return(1);
+    return true
 }
 
 /* The following routine will check that the next argument in the current
@@ -10296,17 +10198,16 @@ func get_value() bool {
  * be called only AFTER an error has been detected. */
 
 func fix_separator() {
-    int n, first_class, fix_made, num_commas;
-
-    char c, *temp_ptr, *temp2_ptr, *first_comma;
-
+    var n, first_class, fix_made, num_commas int
+    var c byte
+    var temp_ptr, temp2_ptr, first_comma *byte
 
     skip_whitespace();
 
     if (isdigit(*input_line_pointer)) {
         return;                                 /* Nothing can be done. */
     }
-    if (strchr(input_line_pointer, ' ') == NULL) {
+    if (strchr(input_line_pointer, ' ') == nil) {
         return;                                           /* Ditto. */
     }
     fix_made = false;
@@ -10327,7 +10228,7 @@ func fix_separator() {
 
         /* The following is to prevent an infinite loop. */
         if (!isalnum(*input_line_pointer)) {
-            ++input_line_pointer;
+            input_line_pointer++
             continue;
         }
 
@@ -10352,7 +10253,8 @@ func fix_separator() {
      *  Build TR1 Seeker,7,50. */
     num_commas = 0;
     for {
-        c = *temp_ptr++;
+        c = *temp_ptr
+        temp_ptr++
 
         if (c == '\n') {
             break;
@@ -10365,12 +10267,13 @@ func fix_separator() {
             continue;
         }
         if (isdigit(*temp_ptr)) {
-            --temp_ptr;         /* Convert space to a comma. */
+            temp_ptr--         /* Convert space to a comma. */
             *temp_ptr = ',';
-            if (num_commas++ == 0) {
+            num_commas++
+            if (num_commas == 1) {
                 first_comma = temp_ptr;
             }
-            ++temp_ptr;
+            temp_ptr++
             fix_made = true;
         }
     }
@@ -10385,8 +10288,7 @@ func fix_separator() {
     /* Now's the time for wild guesses. */
     temp_ptr = input_line_pointer;
 
-    /* If first word is a valid abbreviation, put a comma after the
-     *  second word. */
+    /* If first word is a valid abbreviation, put a comma after the second word. */
     if (first_class == SHIP_CLASS || first_class == PLANET_ID || first_class == SPECIES_ID) {
         temp_ptr = strchr(temp_ptr, ' ') + 1;
         temp_ptr = strchr(temp_ptr, ' ');
@@ -10403,29 +10305,21 @@ func fix_separator() {
     }
 }
 
-
-
-
 //*************************************************************************
 // regen_sh.c
 
 func regenerate_shields(act *action_data) {
-    int i, species_index, unit_index;
-
-    long ls, max_shield_strength, percent;
-
-    struct ship_data *sh;
-
+    var i, species_index, unit_index, ls, max_shield_strength, percent int
+    var sh *ship_data_
 
     /* Shields are regenerated by 5 + LS/10 percent per round. */
-    for (unit_index = 0; unit_index < act.num_units_fighting; unit_index++) {
+    for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
         species_index       = act.fighting_species_index[unit_index];
         ls                  = c_species[species_index].tech_level[LS];
         max_shield_strength = act.shield_strength[unit_index];
 
-        percent = (ls / 10L) + 5L;
-        act.shield_strength_left[unit_index] +=
-            (percent * max_shield_strength) / 100L;
+        percent = (ls / 10) + 5;
+        act.shield_strength_left[unit_index] += (percent * max_shield_strength) / 100;
         if (act.shield_strength_left[unit_index] > max_shield_strength) {
             act.shield_strength_left[unit_index] = max_shield_strength;
         }
@@ -10436,10 +10330,7 @@ func regenerate_shields(act *action_data) {
 // sav_plan.c
 
 func save_planet_data() {
-    int planet_fd;
-
-    long n, byte_size;
-
+    var planet_fd, n, byte_size int
 
     /* Open planet file for writing. */
     planet_fd = creat("planets.dat", 0600);
@@ -10449,14 +10340,14 @@ func save_planet_data() {
     }
 
     /* Write header data. */
-    byte_size = write(planet_fd, &num_planets, sizeof(num_planets));
-    if (byte_size != sizeof(num_planets)) {
+    byte_size = write(planet_fd, &num_planets, sizeof("num_planets"));
+    if (byte_size != sizeof("num_planets")) {
         fprintf(stderr, "\n\tCannot write num_planets to file 'planets.dat'!\n\n");
         exit(-1);
     }
 
     /* Write planet data to disk. */
-    byte_size = num_planets * sizeof(struct planet_data);
+    byte_size = num_planets * sizeof("struct planet_data");
     n         = write(planet_fd, planet_base, byte_size);
     if (n != byte_size) {
         fprintf(stderr, "\nCannot write planet data to disk!\n\n");
@@ -10470,10 +10361,7 @@ func save_planet_data() {
 // sav_star.c
 
 func save_star_data() {
-    int star_fd;
-
-    long n, byte_size;
-
+    var star_fd, n, byte_size int
 
     /* Open star file for writing. */
     star_fd = creat("stars.dat", 0600);
@@ -10483,14 +10371,14 @@ func save_star_data() {
     }
 
     /* Write header data. */
-    byte_size = write(star_fd, &num_stars, sizeof(num_stars));
-    if (byte_size != sizeof(num_stars)) {
+    byte_size = write(star_fd, &num_stars, sizeof("num_stars"));
+    if (byte_size != sizeof("num_stars")) {
         fprintf(stderr, "\n\tCannot write num_stars to file 'stars.dat'!\n\n");
         exit(-1);
     }
 
     /* Write star data to disk. */
-    byte_size = num_stars * sizeof(struct star_data);
+    byte_size = num_stars * sizeof("struct star_data");
     n         = write(star_fd, star_base, byte_size);
     if (n != byte_size) {
         fprintf(stderr, "\nCannot write star data to disk!\n\n");
@@ -10504,9 +10392,7 @@ func save_star_data() {
 // sav_transact.c
 
 func save_transaction_data() {
-    int  i, trans_fd;
-    long num_bytes;
-
+    var i, trans_fd, num_bytes int
 
     /* Open file for writing. */
     trans_fd = creat("interspecies.dat", 0600);
@@ -10517,10 +10403,10 @@ func save_transaction_data() {
     }
 
     /* Write transactions to file. */
-    for (i = 0; i < num_transactions; i++) {
-        num_bytes = write(trans_fd, &transaction[i], sizeof(struct trans_data));
+    for i = 0; i < num_transactions; i++ {
+        num_bytes = write(trans_fd, &transaction[i], sizeof("struct trans_data"));
 
-        if (num_bytes != sizeof(struct trans_data)) {
+        if (num_bytes != sizeof("struct trans_data")) {
             fprintf(stderr, "\n\n\tError writing transaction to file 'interspecies.dat'!\n\n");
             exit(-1);
         }
@@ -10533,43 +10419,35 @@ func save_transaction_data() {
 // scan.c
 
 func scan(x, y, z int) {
-    int i, j, k, n, found, num_gases, ls_needed;
-
-    char filename[32];
-
-    struct star_data *  star;
-    struct planet_data *planet, *home_planet;
-    struct nampla_data *home_nampla;
-
+    var i, j, k, n, found, num_gases, ls_needed int
+    var filename[32]byte
+    var star *star_data
+    var planet, home_planet *planet_data
+    var home_nampla *nampla_data
 
     /* Find star. */
-    star  = star_base;
     found = false;
-    for (i = 0; i < num_stars; i++) {
+    for i = 0; i < num_stars; i++ {
+        star  = star_base[i]
         if (star.x == x && star.y == y && star.z == z) {
             found = true;
             break;
         }
-        ++star;
     }
 
     if (!found) {
-        fprintf(log_file,
-                "Scan Report: There is no star system at x = %d, y = %d, z = %d.\n",
-                x, y, z);
+        fprintf(log_file, "Scan Report: There is no star system at x = %d, y = %d, z = %d.\n", x, y, z);
         return;
     }
 
     /* Print data for star, */
     fprintf(log_file, "Coordinates:\tx = %d\ty = %d\tz = %d", x, y, z);
-    fprintf(log_file, "\tstellar ttype = %c%c%c", ttype_char[star.ttype],
-            color_char[star.color], size_char[star.size]);
+    fprintf(log_file, "\tstellar ttype = %c%c%c", ttype_char[star.ttype], color_char[star.color], size_char[star.size]);
 
     fprintf(log_file, "   %d planets.\n\n", star.num_planets);
 
     if (star.worm_here) {
-        fprintf(log_file,
-                "This star system is the terminus of a natural wormhole.\n\n");
+        fprintf(log_file, "This star system is the terminus of a natural wormhole.\n\n");
     }
 
     /* Print header. */
@@ -10585,13 +10463,13 @@ func scan(x, y, z int) {
     }
 
     /* Print data for each planet. */
-    planet = planet_base + star.planet_index;
+    planet = planet_base[star.planet_index]
     if (print_LSN) {
-        home_nampla = nampla_base;
-        home_planet = planet_base + home_nampla.planet_index;
+        home_nampla = nampla_base[0]; // TODO: does this work to get the home planet?
+        home_planet = planet_base[home_nampla.planet_index]
     }
 
-    for (i = 1; i <= star.num_planets; i++) {
+    for i = 1; i <= star.num_planets; i++ {
         /* Get life support tech level needed. */
         if (print_LSN) {
             ls_needed = life_support_needed(species, home_planet, planet);
@@ -10599,26 +10477,16 @@ func scan(x, y, z int) {
             ls_needed = 99;
         }
 
-        fprintf(log_file, "  %d  %3d  %d.%02d  %2d    %2d    %d.%02d %4d  ",
-                i,
-                planet.diameter,
-                planet.gravity / 100,
-                planet.gravity % 100,
-                planet.temperature_class,
-                planet.pressure_class,
-                planet.mining_difficulty / 100,
-                planet.mining_difficulty % 100,
-                ls_needed);
+        fprintf(log_file, "  %d  %3d  %d.%02d  %2d    %2d    %d.%02d %4d  ", i, planet.diameter, planet.gravity / 100, planet.gravity % 100, planet.temperature_class, planet.pressure_class, planet.mining_difficulty / 100, planet.mining_difficulty % 100, ls_needed);
 
         num_gases = 0;
-        for (n = 0; n < 4; n++) {
+        for n = 0; n < 4; n++ {
             if (planet.gas_percent[n] > 0) {
                 if (num_gases > 0) {
                     fprintf(log_file, ",");
                 }
-                fprintf(log_file, "%s(%d%%)", gas_string[planet.gas[n]],
-                        planet.gas_percent[n]);
-                ++num_gases;
+                fprintf(log_file, "%s(%d%%)", gas_string[planet.gas[n]], planet.gas_percent[n]);
+                num_gases++
             }
         }
 
@@ -10627,13 +10495,13 @@ func scan(x, y, z int) {
         }
 
         fprintf(log_file, "\n");
-        ++planet;
+        planet++
     }
 
     if (star.message) {
         /* There is a message that must be logged whenever this star
          *      system is scanned. */
-        sprintf(filename, "message%ld.txt\0", star.message);
+        filename := fmt.Sprint("message%ld.txt", star.message);
         log_message(filename);
     }
 
@@ -10689,7 +10557,7 @@ func get_species_data() {
     struct species_data *sp;
 
 
-    for (species_index = 0; species_index < galaxy.num_species; species_index++) {
+    for species_index = 0; species_index < galaxy.num_species; species_index++ {
         data_modified[species_index] = false;
 
         sp = &spec_data[species_index];
@@ -10763,7 +10631,7 @@ func save_species_data() {
     struct species_data *sp;
 
 
-    for (species_index = 0; species_index < galaxy.num_species; species_index++) {
+    for species_index = 0; species_index < galaxy.num_species; species_index++ {
         if (!data_modified[species_index]) {
             continue;
         }
@@ -10814,7 +10682,7 @@ func save_species_data() {
 func free_species_data() {
     int species_index;
 
-    for (species_index = 0; species_index < galaxy.num_species; species_index++) {
+    for species_index = 0; species_index < galaxy.num_species; species_index++ {
         if (data_in_memory[species_index]) {
             free(namp_data[species_index]);
 
@@ -10838,7 +10706,7 @@ func delete_ship(ship *ship_data_) {
 
     /* Set all bytes of record to zero. */
     cp = (char *)ship;
-    for (i = 0; i < sizeof(struct ship_data); i++) {
+    for i = 0; i < sizeof(struct ship_data); i++ {
         *cp++ = 0;
     }
 
@@ -10854,7 +10722,7 @@ func delete_nampla(nampla *nampla_data) {
 
     /* Set all bytes of record to zero. */
     cp = (char *)nampla;
-    for (i = 0; i < sizeof(struct nampla_data); i++) {
+    for i = 0; i < sizeof(struct nampla_data); i++ {
         *cp++ = 0;
     }
 
@@ -10888,7 +10756,7 @@ func commas(value int) string {
     i = length - 1;
     j = 31;
     result_plus_commas[32] = '\0';
-    for (n = 0; n < length; n++) {
+    for n = 0; n < length; n++ {
         result_plus_commas[j--] = temp[i--];
         if (j % 4 == 0) {
             result_plus_commas[j--] = ',';
@@ -11097,7 +10965,7 @@ func undistorted(distorted_species_number int) int {
     int i, species_number;
 
 
-    for (i = 0; i < MAX_SPECIES; i++) {
+    for i = 0; i < MAX_SPECIES; i++ {
         species_number = i + 1;
 
         if (distorted(species_number) == distorted_species_number) {
@@ -11175,11 +11043,11 @@ func life_support_needed(species *species, home *planet_data, colony *planet_dat
 
     /* Check gases. Assume required gas is NOT present. */
     ls_needed += 3;
-    for (j = 0; j < 4; j++) {   /* Check gases on planet. */
+    for j = 0; j < 4; j++ {   /* Check gases on planet. */
         if (colony.gas_percent[j] == 0) {
             continue;
         }
-        for (i = 0; i < 6; i++) { /* Compare with poisonous gases. */
+        for i = 0; i < 6; i++ { /* Compare with poisonous gases. */
             if (species.poison_gas[i] == colony.gas[j]) {
                 ls_needed += 3;
             }
@@ -11199,7 +11067,7 @@ func check_high_tech_items(tech, old_tech_level, new_tech_level int) {
     int i;
 
 
-    for (i = 0; i < MAX_ITEMS; i++) {
+    for i = 0; i < MAX_ITEMS; i++ {
         if (item_critical_tech[i] != tech) {
             continue;
         }
@@ -11303,7 +11171,7 @@ func star_visited(x, y, z int) bool {
 
     found = false;
 
-    for (i = 0; i < num_stars; i++) {
+    for i = 0; i < num_stars; i++ {
         star = star_base + i;
 
         if (x != star.x) {
@@ -11348,7 +11216,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
     struct ship_data *sh;
 
 
-    for (i = 0; i < MAX_SPECIES; i++) {
+    for i = 0; i < MAX_SPECIES; i++ {
         num_ships_gone[i]  = 0;
         num_ships_total[i] = 0;
     }
@@ -11357,7 +11225,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
     truncate_name = false;
 
     /* Compile statistics and handle individual ships that must leave. */
-    for (ship_index = 0; ship_index < act.num_units_fighting; ship_index++) {
+    for ship_index = 0; ship_index < act.num_units_fighting; ship_index++ {
         if (act.unit_type[ship_index] != SHIP) {
             continue;
         }
@@ -11419,7 +11287,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
     }
 
     /* Now check if a fleet has reached its limit. */
-    for (ship_index = 0; ship_index < act.num_units_fighting; ship_index++) {
+    for ship_index = 0; ship_index < act.num_units_fighting; ship_index++ {
         if (act.unit_type[ship_index] != SHIP) {
             continue;
         }
