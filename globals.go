@@ -18,11 +18,15 @@
 
 package main
 
-import "io"
+import (
+	"github.com/mdhender/fhcms/prng"
+	"io"
+)
 
 /* Global data used in most or all programs. */
 
 var (
+	__defaultPRNG *prng.PRNG
 	abbr_index        int
 	abbr_type         int
 	ambush_took_place bool
@@ -74,7 +78,7 @@ var (
 	g_spec_number           int
 	header_printed          int
 	home_planet             *planet_data
-	ignore_field_distorters int
+	ignore_field_distorters bool
 	input_file              io.Reader
 	input_line              [256]byte
 	input_line_pointer      *cstring
@@ -215,7 +219,7 @@ var (
 	species_index      int
 	species_number     int
 	star_base          []*star_data // warning: code assumes *star_data
-	star_data_modified int
+	star_data_modified bool
 	star               *star_data
 	strike_phase       bool
 	summary_file       io.Writer
@@ -759,3 +763,9 @@ extern FILE *log_file, *summary_file;
 
 
 */
+
+func init() {
+	if __defaultPRNG == nil {
+		__defaultPRNG = prng.New(1924085713)
+	}
+}

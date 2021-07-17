@@ -20,6 +20,7 @@ package main
 
 import (
     "fmt"
+    "github.com/mdhender/fhcms/prng"
     "io"
     "log"
 )
@@ -10515,28 +10516,8 @@ func scan(x, y, z int) {
  * It uses the so-called "Algorithm M" method, which is a combination
  * of the congruential and shift-register methods. */
 
-func rnd(max uint32) int {
-    unsigned long a, b, c, cong_result, shift_result;
-
-    /* For congruential method, multiply previous value by the
-     * prime number 16417. */
-    a           = last_random;
-    b           = last_random << 5;
-    c           = last_random << 14;
-    cong_result = a + b + c;            /* Effectively multiply by 16417. */
-
-    /* For shift-register method, use shift-right 15 and shift-left 17
-     * with no-carry addition (i.e., exclusive-or). */
-    a             = last_random >> 15;
-    shift_result  = a ^ last_random;
-    a             = shift_result << 17;
-    shift_result ^= a;
-
-    last_random = cong_result ^ shift_result;
-
-    a = last_random & 0x0000FFFF;
-
-    return(((a * max) >> 16) + 1L);
+func rnd(max int) int {
+    return __defaultPRNG.Roll(max)
 }
 
 /* Routine "get_species_data" will read in data files for all species,
@@ -10548,22 +10529,17 @@ func rnd(max uint32) int {
  * necessary, by the main program. */
 
 func get_species_data() {
-    int species_fd, species_index;
-
-    long n, num_bytes;
-
-    char filename[16];
-
-    struct species_data *sp;
-
+    var species_fd, species_index, n, num_bytes int
+    var filename[16]byte
+    var sp *species_data
 
     for species_index = 0; species_index < galaxy.num_species; species_index++ {
         data_modified[species_index] = false;
 
-        sp = &spec_data[species_index];
+        sp = spec_data[species_index];
 
         /* Open the species data file. */
-        sprintf(filename, "sp%02d.dat\0", species_index + 1);
+        filename := fmt.Sprintf("sp%02d.dat", species_index + 1);
         species_fd = open(filename, 0);
         if (species_fd < 0) {
             sp.pn = 0; /* Extinct! */
@@ -10572,23 +10548,21 @@ func get_species_data() {
         }
 
         /* Read in species data. */
-        num_bytes = read(species_fd, sp, sizeof(struct species_data));
-        if (num_bytes != sizeof(struct species_data)) {
-            fprintf(stderr, "\n\tCannot read species record in file '%s'!\n\n",
-                    filename);
+        num_bytes = read(species_fd, sp, sizeof("struct species_data"));
+        if (num_bytes != sizeof("struct species_data")) {
+            fprintf(stderr, "\n\tCannot read species record in file '%s'!\n\n", filename);
             exit(-1);
         }
 
         /* Allocate enough memory for all namplas. */
-        num_bytes = (sp.num_namplas + extra_namplas) * sizeof(struct nampla_data);
-        namp_data[species_index] = (struct nampla_data *)malloc(num_bytes);
-        if (namp_data[species_index] == NULL) {
+        namp_data[species_index] = make([]*nampla_data, sp.num_namplas, sp.num_namplas) // warning: was sp.num_namplas + extra_namplas
+        if (namp_data[species_index] == nil) {
             fprintf(stderr, "\nCannot allocate enough memory for nampla data!\n\n");
             exit(-1);
         }
 
         /* Read it all into memory. */
-        num_bytes = sp.num_namplas * sizeof(struct nampla_data);
+        num_bytes = sp.num_namplas * sizeof("struct nampla_data");
         n         = read(species_fd, namp_data[species_index], num_bytes);
         if (n != num_bytes) {
             fprintf(stderr, "\nCannot read nampla data into memory!\n\n");
@@ -10596,16 +10570,15 @@ func get_species_data() {
         }
 
         /* Allocate enough memory for all ships. */
-        num_bytes = (sp.num_ships + extra_ships) * sizeof(struct ship_data);
-        ship_data[species_index] = (struct ship_data *)malloc(num_bytes);
-        if (ship_data[species_index] == NULL) {
+        ship_data[species_index] = make([]*ship_data_, sp.num_ships, sp.num_ships) // warning: was sp.num_ships + extra_ships
+        if (ship_data[species_index] == nil) {
             fprintf(stderr, "\nCannot allocate enough memory for ship data!\n\n");
             exit(-1);
         }
 
         if (sp.num_ships > 0) {
             /* Read it all into memory. */
-            num_bytes = sp.num_ships * sizeof(struct ship_data);
+            num_bytes = sp.num_ships * sizeof("struct ship_data");
             n         = read(species_fd, ship_data[species_index], num_bytes);
             if (n != num_bytes) {
                 fprintf(stderr, "\nCannot read ship data into memory!\n\n");
@@ -10622,41 +10595,34 @@ func get_species_data() {
 }
 
 func save_species_data() {
-    int species_fd, species_index;
-
-    long n, num_bytes;
-
-    char filename[16];
-
-    struct species_data *sp;
-
+    var species_fd, species_index, n, num_bytes int
+    var filename[16]byte
+    var sp *species_data
 
     for species_index = 0; species_index < galaxy.num_species; species_index++ {
         if (!data_modified[species_index]) {
             continue;
         }
 
-        sp = &spec_data[species_index];
+        sp = spec_data[species_index];
 
         /* Open the species data file. */
-        sprintf(filename, "sp%02d.dat\0", species_index + 1);
+        filename := fmt.Sprintf("sp%02d.dat", species_index + 1);
         species_fd = creat(filename, 0600);
         if (species_fd < 0) {
-            fprintf(stderr, "\n  Cannot create new version of file '%s'!\n",
-                    filename);
+            fprintf(stderr, "\n  Cannot create new version of file '%s'!\n", filename);
             exit(-1);
         }
 
         /* Write species data. */
-        num_bytes = write(species_fd, sp, sizeof(struct species_data));
-        if (num_bytes != sizeof(struct species_data)) {
-            fprintf(stderr, "\n\tCannot write species record to file '%s'!\n\n",
-                    filename);
+        num_bytes = write(species_fd, sp, sizeof("struct species_data"));
+        if (num_bytes != sizeof("struct species_data")) {
+            fprintf(stderr, "\n\tCannot write species record to file '%s'!\n\n", filename);
             exit(-1);
         }
 
         /* Write nampla data. */
-        num_bytes = sp.num_namplas * sizeof(struct nampla_data);
+        num_bytes = sp.num_namplas * sizeof("struct nampla_data");
         n         = write(species_fd, namp_data[species_index], num_bytes);
         if (n != num_bytes) {
             fprintf(stderr, "\nCannot write nampla data to file!\n\n");
@@ -10665,7 +10631,7 @@ func save_species_data() {
 
         if (sp.num_ships > 0) {
             /* Write ship data. */
-            num_bytes = sp.num_ships * sizeof(struct ship_data);
+            num_bytes = sp.num_ships * sizeof("struct ship_data");
             n         = write(species_fd, ship_data[species_index], num_bytes);
             if (n != num_bytes) {
                 fprintf(stderr, "\nCannot write ship data to file!\n\n");
@@ -10680,9 +10646,7 @@ func save_species_data() {
 }
 
 func free_species_data() {
-    int species_index;
-
-    for species_index = 0; species_index < galaxy.num_species; species_index++ {
+    for species_index := 0; species_index < galaxy.num_species; species_index++ {
         if (data_in_memory[species_index]) {
             free(namp_data[species_index]);
 
@@ -10699,33 +10663,13 @@ func free_species_data() {
 /* The following two routines will delete a ship or nampla record. */
 
 func delete_ship(ship *ship_data_) {
-    int i;
-
-    char *cp;
-
-
-    /* Set all bytes of record to zero. */
-    cp = (char *)ship;
-    for i = 0; i < sizeof(struct ship_data); i++ {
-        *cp++ = 0;
-    }
-
+    // TODO: /* Set all bytes of record to zero. */
     ship.pn = 99;
     strcpy(ship.name, "Unused");
 }
 
 func delete_nampla(nampla *nampla_data) {
-    int i;
-
-    char *cp;
-
-
-    /* Set all bytes of record to zero. */
-    cp = (char *)nampla;
-    for i = 0; i < sizeof(struct nampla_data); i++ {
-        *cp++ = 0;
-    }
-
+    // TODO: /* Set all bytes of record to zero. */
     nampla.pn = 99;
     strcpy(nampla.name, "Unused");
 }
@@ -10734,45 +10678,8 @@ func delete_nampla(nampla *nampla_data) {
  * to a string that has embedded commas to make the string more readable. */
 
 func commas(value int) string {
-    int i, j, n, length, negative;
-
-    char *ptr, temp[32];
-
-    long abs_value;
-
-
-    if (value < 0) {
-        abs_value = -value;
-        negative  = true;
-    }else {
-        abs_value = value;
-        negative  = false;
-    }
-
-    sprintf(temp, "%ld\0", abs_value);
-
-    length = strlen(temp);
-
-    i = length - 1;
-    j = 31;
-    result_plus_commas[32] = '\0';
-    for n = 0; n < length; n++ {
-        result_plus_commas[j--] = temp[i--];
-        if (j % 4 == 0) {
-            result_plus_commas[j--] = ',';
-        }
-    }
-
-    j++;
-    if (result_plus_commas[j] == ',') {
-        j++;
-    }
-
-    if (negative) {
-        result_plus_commas[--j] = '-';
-    }
-
-    return(&result_plus_commas[j]);
+    // TODO: implement
+    return fmt.Sprintf("%d", value)
 }
 
 /* This routine will return a pointer to a string containing a complete
@@ -10781,17 +10688,10 @@ func commas(value int) string {
  * will not be included. */
 
 func ship_name(ship *ship_data_) string {
-    int effective_age, status, ship_is_distorted;
+    var effective_age, status int
+    var temp[16] byte
 
-    char temp[16];
-
-
-    if (ship.item_quantity[FD] == ship.tonnage) {
-        ship_is_distorted = true;
-    }else{
-        ship_is_distorted = false;
-    }
-
+    ship_is_distorted := ship.item_quantity[FD] == ship.tonnage
     if (ship.status == ON_SURFACE) {
         ship_is_distorted = false;
     }
@@ -10802,27 +10702,23 @@ func ship_name(ship *ship_data_) string {
 
     if (ship_is_distorted) {
         if (ship.class == TR) {
-            sprintf(full_ship_id, "%s%d ???\0", ship_abbr[ship.class],
-                    ship.tonnage);
+            full_ship_id = fmt.Sprintf("%s%d ???", ship_abbr[ship.class], ship.tonnage);
         }else if (ship.class == BA) {
-            sprintf(full_ship_id, "BAS ???\0");
+            full_ship_id = fmt.Sprintf("BAS ???");
         }else{
-            sprintf(full_ship_id, "%s ???\0", ship_abbr[ship.class]);
+            full_ship_id = fmt.Sprintf("%s ???", ship_abbr[ship.class]);
         }
     }else if (ship.class == TR) {
-        sprintf(full_ship_id, "%s%d%s %s\0",
-                ship_abbr[ship.class], ship.tonnage, ship_type[ship.ttype],
-                ship.name);
+        full_ship_id = fmt.Sprintf( "%s%d%s %s", ship_abbr[ship.class], ship.tonnage, ship_type[ship.ttype], ship.name);
     }else {
-        sprintf(full_ship_id, "%s%s %s\0",
-                ship_abbr[ship.class], ship_type[ship.ttype], ship.name);
+        full_ship_id = fmt.Sprintf( "%s%s %s", ship_abbr[ship.class], ship_type[ship.ttype], ship.name);
     }
 
     if (truncate_name) {
-        return(&full_ship_id[0]);
+        return full_ship_id
     }
 
-    strcat(full_ship_id, " (");
+    full_ship_id += " ("
 
     effective_age = ship.age;
     if (effective_age < 0) {
@@ -10832,74 +10728,65 @@ func ship_name(ship *ship_data_) string {
     if (!ship_is_distorted) {
         if (ship.status != UNDER_CONSTRUCTION) {
             /* Do age. */
-            sprintf(temp, "A%d,\0", effective_age);
-            strcat(full_ship_id, temp);
+            full_ship_id += fmt.Sprintf("A%d", effective_age);
         }
     }
 
     status = ship.status;
     switch (status) {
     case UNDER_CONSTRUCTION:
-        sprintf(temp, "C\0");
+        full_ship_id +=  "C"
         break;
 
     case IN_ORBIT:
-        sprintf(temp, "O%d\0", ship.pn);
+        full_ship_id +=  fmt.Sprintf("O%d", ship.pn);
         break;
 
     case ON_SURFACE:
-        sprintf(temp, "L%d\0", ship.pn);
+        full_ship_id += fmt.Sprintf("L%d", ship.pn);
         break;
 
     case IN_DEEP_SPACE:
-        sprintf(temp, "D\0");
+        full_ship_id +=  "D"
         break;
 
     case FORCED_JUMP:
-        sprintf(temp, "FJ\0");
+        full_ship_id += "FJ"
         break;
 
     case JUMPED_IN_COMBAT:
-        sprintf(temp, "WD\0");
+        full_ship_id += "WD"
         break;
 
     default:
-        sprintf(temp, "***???***\0");
+        full_ship_id +=  "***???***"
         fprintf(stderr, "\n\tWARNING!!!  Internal error in subroutine 'ship_name'\n\n");
     }
 
-    strcat(full_ship_id, temp);
-
     if (ship.ttype == STARBASE) {
-        sprintf(temp, ",%ld tons\0", 10000L * ship.tonnage);
-        strcat(full_ship_id, temp);
+        full_ship_id += fmt.Sprintf(",%d tons", 10000 * ship.tonnage);
     }
 
-    strcat(full_ship_id, ")");
+    full_ship_id += ")"
 
-    return(&full_ship_id[0]);
+    return full_ship_id
 }
 
 func get_location_data() {
-    int locations_fd;
-
-    long n, file_size;
-
-
     /* Open locations file. */
-    locations_fd = open("locations.dat", 0);
+    locations_fd := open("locations.dat", 0);
     if (locations_fd < 0) {
         fprintf(stderr, "\nCannot open file 'locations.dat' for reading!\n\n");
         exit(-1);
     }
 
     /* Get size of file. */
-    file_size = lseek(locations_fd, 0L, 2);
-    num_locs  = file_size / sizeof(struct sp_loc_data);
+    file_size := lseek(locations_fd, 0, 2);
+    num_locs  = file_size / sizeof("struct sp_loc_data");
 
     /* Read it all into memory. */
     lseek(locations_fd, 0L, 0);         /* Rewind first. */
-    n = read(locations_fd, loc, file_size);
+    n := read(locations_fd, loc, file_size);
     if (n != file_size) {
         fprintf(stderr, "\nCannot read file 'locations.dat' into memory!\n\n");
         exit(-1);
@@ -10909,13 +10796,8 @@ func get_location_data() {
 }
 
 func save_location_data() {
-    int locations_fd;
-
-    long n, num_bytes;
-
-
     /* Open file 'locations.dat' for writing. */
-    locations_fd = creat("locations.dat", 0600);
+    locations_fd := creat("locations.dat", 0600);
     if (locations_fd < 0) {
         fprintf(stderr, "\n\tCannot create file 'locations.dat'!\n\n");
         exit(-1);
@@ -10927,9 +10809,8 @@ func save_location_data() {
     }
 
     /* Write array to disk. */
-    num_bytes = num_locs * sizeof(struct sp_loc_data);
-
-    n = write(locations_fd, loc, num_bytes);
+    num_bytes := num_locs * sizeof("struct sp_loc_data");
+    n := write(locations_fd, loc, num_bytes);
     if (n != num_bytes) {
         fprintf(stderr, "\n\n\tCannot write to 'locations.dat'!\n\n");
         exit(-1);
@@ -10944,35 +10825,22 @@ func save_location_data() {
  *      creation for the species. */
 
 func distorted(species_number int) int {
-    int i, j, n, ls;
-
-
     /* We must use the LS tech level at the start of the turn because
      * the distorted species number must be the same throughout the
      * turn, even if the tech level changes during production. */
-
-    ls = spec_data[species_number - 1].init_tech_level[LS];
-
-    i = species_number & 0x000F;                /* Lower four bits. */
-    j = (species_number >> 4) & 0x000F;         /* Upper four bits. */
-
-    n = (ls % 5 + 3) * (4 * i + j) + (ls % 11 + 7);
-
-    return(n);
+    ls := spec_data[species_number - 1].init_tech_level[LS];
+    i := species_number & 0x000F;                /* Lower four bits. */
+    j := (species_number >> 4) & 0x000F;         /* Upper four bits. */
+    return (ls % 5 + 3) * (4 * i + j) + (ls % 11 + 7)
 }
 
 func undistorted(distorted_species_number int) int {
-    int i, species_number;
-
-
-    for i = 0; i < MAX_SPECIES; i++ {
-        species_number = i + 1;
-
+    for i := 0; i < MAX_SPECIES; i++ {
+        species_number := i + 1;
         if (distorted(species_number) == distorted_species_number) {
             return(species_number);
         }
     }
-
     return(0);   /* Not a legitimate species. */
 }
 
@@ -10980,60 +10848,38 @@ func undistorted(distorted_species_number int) int {
  * return true if the nampla is populated or false if not. It will also
  * check if a message associated with this planet should be logged. */
 
-func check_population(nampla *nampla_data) int {
-    int is_now_populated, was_already_populated;
+func check_population(nampla *nampla_data) bool {
+    var is_now_populated bool
 
-    long total_pop;
-
-    char filename[32];
-
-
-    if (nampla.status & POPULATED) {
-        was_already_populated = true;
-    }else{
-        was_already_populated = false;
-    }
-
-    total_pop = nampla.mi_base
-                + nampla.ma_base
-                + nampla.IUs_to_install
-                + nampla.AUs_to_install
-                + nampla.item_quantity[PD]
-                + nampla.item_quantity[CU]
-                + nampla.pop_units;
-
+    was_already_populated := (nampla.status & POPULATED) != 0
+    total_pop := nampla.mi_base + nampla.ma_base + nampla.IUs_to_install + nampla.AUs_to_install + nampla.item_quantity[PD] + nampla.item_quantity[CU] + nampla.pop_units;
     if (total_pop > 0) {
         nampla.status  |= POPULATED;
         is_now_populated = true;
     }else {
-        nampla.status &= ~(POPULATED | MINING_COLONY
-                            | RESORT_COLONY);
+        nampla.status &= ^(POPULATED | MINING_COLONY | RESORT_COLONY);
         is_now_populated = false;
     }
 
     if (is_now_populated && !was_already_populated) {
         if (nampla.message) {
-            /* There is a message that must be logged whenever this planet
-             *      becomes populated for the first time. */
-            sprintf(filename, "message%ld.txt\0", nampla.message);
+            /* There is a message that must be logged whenever this planet becomes populated for the first time. */
+            filename := fmt.Sprintf("message%ld.txt", nampla.message);
             log_message(filename);
         }
     }
 
-    return(is_now_populated);
+    return is_now_populated
 }
 
 /* Get life support tech level needed. */
 
-func life_support_needed(species *species, home *planet_data, colony *planet_data) int {
-    int i, j, k, ls_needed;
-
-
-    i = colony.temperature_class - home.temperature_class;
+func life_support_needed(species *species_data, home *planet_data, colony *planet_data) int {
+    i := colony.temperature_class - home.temperature_class;
     if (i < 0) {
         i = -i;
     }
-    ls_needed = 3 * i;          /* Temperature class. */
+    ls_needed := 3 * i;          /* Temperature class. */
 
     i = colony.pressure_class - home.pressure_class;
     if (i < 0) {
@@ -11043,7 +10889,7 @@ func life_support_needed(species *species, home *planet_data, colony *planet_dat
 
     /* Check gases. Assume required gas is NOT present. */
     ls_needed += 3;
-    for j = 0; j < 4; j++ {   /* Check gases on planet. */
+    for j := 0; j < 4; j++ {   /* Check gases on planet. */
         if (colony.gas_percent[j] == 0) {
             continue;
         }
@@ -11064,10 +10910,7 @@ func life_support_needed(species *species, home *planet_data, colony *planet_dat
 }
 
 func check_high_tech_items(tech, old_tech_level, new_tech_level int) {
-    int i;
-
-
-    for i = 0; i < MAX_ITEMS; i++ {
+    for i := 0; i < MAX_ITEMS; i++ {
         if (item_critical_tech[i] != tech) {
             continue;
         }
@@ -11103,52 +10946,39 @@ func check_high_tech_items(tech, old_tech_level, new_tech_level int) {
  * best match is less than the highest score.  A non-10000 score will never
  * be higher than the length of the correct string. */
 
-func agrep_score(correct_string, unknown_string string) int {
-    int score;
-
-    char c1, c2, *p1, *p2;
-
-
-    if (strcmp(correct_string, unknown_string) == 0) {
-        return(10000);
+func agrep_score(correct, unknown string) int {
+    if correct == unknown {
+        return 10000
     }
 
-    score = 0;
-    p1    = correct_string;
-    p2    = unknown_string;
+    score := 0
+    p1, p2 := []rune(correct), []rune(unknown)
 
-    for {
-        if ((c1 = *p1++) == '\0') {
-            score -= strlen(p2);        /* Reduce score by excess characters,
-                                         * if any. */
-            break;
-        }
-
-        if ((c2 = *p2++) == '\0') {
-            score -= strlen(p1);        /* Reduce score by excess characters,
-                                         * if any. */
-            break;
-        }
-
-        if (c1 == c2) {
-            ++score;
-        }else if (c1 == *p2 && c2 == *p1) {
-            /* Transposed. */
-            score += 2;
-            ++p1;
-            ++p2;
-        }else if (c1 == *p2) {
-            /* Unneeded character. */
-            ++score;
-            ++p2;
-        }else if (c2 == *p1) {
-            /* Missing character. */
-            ++score;
-            ++p1;
+    for len(p1) != 0 && len(p2) != 0 {
+        c1, c2 := p1[0], p2[0]
+        p1, p2 = p1[1:], p2[1:]
+        if c1 == c2 {
+            score++
+        } else if (len(p1) != 0 && c2 == p1[0]) && (len(p2) != 0 && c1 == p2[0]) {
+            // transposed
+            score += 2
+            p1, p2 = p1[1:], p2[1:]
+        } else if len(p2) != 0 && c1 == p2[0] {
+            // unneeded character
+            score++
+            p2 = p2[1:]
+        } else if len(p1) != 0 && c2 == p1[0] {
+            // missing character
+            score++
+            p1 = p1[1:]
         }
     }
 
-    return(score);
+    // reduce score by excess characters, if any
+    score -= len(p1)
+    score -= len(p2)
+
+    return score
 }
 
 /* The following routine will check if coordinates x-y-z contain a star and,
@@ -11157,22 +10987,9 @@ func agrep_score(correct_string, unknown_string string) int {
  * be returned. */
 
 func star_visited(x, y, z int) bool {
-    int i, found, species_array_index, species_bit_number;
-
-    long species_bit_mask;
-
-    struct star_data *star;
-
-
-    /* Get array index and bit mask. */
-    species_array_index = (species_number - 1) / 32;
-    species_bit_number  = (species_number - 1) % 32;
-    species_bit_mask    = 1 << species_bit_number;
-
-    found = false;
-
-    for i = 0; i < num_stars; i++ {
-        star = star_base + i;
+    found := false;
+    for i := 0; i < num_stars; i++ {
+        star := star_base[i]
 
         if (x != star.x) {
             continue;
@@ -11187,12 +11004,12 @@ func star_visited(x, y, z int) bool {
         found = true;
 
         /* Check if bit is already set. */
-        if (star.visited_by[species_array_index] & species_bit_mask) {
+        if star.visited_by[species_number] {
             break;
         }
 
         /* Set the appropriate bit. */
-        star.visited_by[species_array_index] |= species_bit_mask;
+        star.visited_by[species_number] = true
         star_data_modified = true;
         break;
     }
@@ -11208,15 +11025,12 @@ func withdrawal_check(bat *battle_data, act *action_data) {
      *  withdraw. If so, it will set the ship's status to JUMPED_IN_COMBAT.
      *  The actual jump will be handled by the Jump program. */
 
-    int i, old_trunc, ship_index, species_index, percent_loss,
-        num_ships_gone[MAX_SPECIES], num_ships_total[MAX_SPECIES];
+    var old_trunc, ship_index, species_index, percent_loss int
+    var num_ships_gone, num_ships_total [MAX_SPECIES] int
+    var withdraw_age int
+    var sh *ship_data_
 
-    char withdraw_age;
-
-    struct ship_data *sh;
-
-
-    for i = 0; i < MAX_SPECIES; i++ {
+    for i := 0; i < MAX_SPECIES; i++ {
         num_ships_gone[i]  = 0;
         num_ships_total[i] = 0;
     }
@@ -11230,22 +11044,22 @@ func withdrawal_check(bat *battle_data, act *action_data) {
             continue;
         }
 
-        sh            = (struct ship_data *)act.fighting_unit[ship_index];
+        sh            = act.fighting_unit[ship_index]; // warning: was cast to *ship_data
         species_index = act.fighting_species_index[ship_index];
-        ++num_ships_total[species_index];
+        num_ships_total[species_index]++
 
         if (sh.status == JUMPED_IN_COMBAT) {   /* Already withdrawn. */
-            ++num_ships_gone[species_index];
+            num_ships_gone[species_index]++
             continue;
         }
 
         if (sh.status == FORCED_JUMP) {        /* Forced to leave. */
-            ++num_ships_gone[species_index];
+            num_ships_gone[species_index]++
             continue;
         }
 
         if (sh.age > 49) {                     /* Already destroyed. */
-            ++num_ships_gone[species_index];
+            num_ships_gone[species_index]++
             continue;
         }
 
@@ -11269,10 +11083,8 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 
             ignore_field_distorters = !field_distorted[species_index];
 
-            fprintf(log_file, "        %s jumps away from the battle.\n",
-                    ship_name(sh));
-            fprintf(summary_file, "        %s jumps away from the battle.\n",
-                    ship_name(sh));
+            fprintf(log_file, "        %s jumps away from the battle.\n", ship_name(sh));
+            fprintf(summary_file, "        %s jumps away from the battle.\n", ship_name(sh));
 
             ignore_field_distorters = false;
 
@@ -11282,7 +11094,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 
             sh.status = JUMPED_IN_COMBAT;
 
-            ++num_ships_gone[species_index];
+            num_ships_gone[species_index]++
         }
     }
 
@@ -11292,7 +11104,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
             continue;
         }
 
-        sh            = (struct ship_data *)act.fighting_unit[ship_index];
+        sh            = act.fighting_unit[ship_index]; // warning: was cast to *ship_data
         species_index = act.fighting_species_index[ship_index];
 
         if (sh.ttype != FTL) {
@@ -11310,8 +11122,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
         if (bat.fleet_withdraw_percentage[species_index] == 0) {
             percent_loss = 101;         /* Always withdraw immediately. */
         }else {
-            percent_loss = (100 * num_ships_gone[species_index])
-                           / num_ships_total[species_index];
+            percent_loss = (100 * num_ships_gone[species_index]) / num_ships_total[species_index];
         }
 
         if (percent_loss > bat.fleet_withdraw_percentage[species_index]) {
@@ -11321,10 +11132,8 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 
             ignore_field_distorters = !field_distorted[species_index];
 
-            fprintf(log_file, "        %s jumps away from the battle.\n",
-                    ship_name(sh));
-            fprintf(summary_file, "        %s jumps away from the battle.\n",
-                    ship_name(sh));
+            fprintf(log_file, "        %s jumps away from the battle.\n", ship_name(sh));
+            fprintf(summary_file, "        %s jumps away from the battle.\n", ship_name(sh));
 
             ignore_field_distorters = false;
 
