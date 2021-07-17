@@ -6655,10 +6655,7 @@ fire:
 // do_scan.c
 
 func do_SCAN_command() {
-    int i, found, x, y, z;
-
-
-    found = get_ship();
+    found := get_ship();
     if (!found) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
@@ -6689,7 +6686,7 @@ func do_SCAN_command() {
     }
 
     /* Write scan of ship's location to log file. */
-    x = ship.x;        y = ship.y;    z = ship.z;
+    x, y, z := ship.x, ship.y, ship.z;
 
     if (test_mode) {
         fprintf(log_file, "\nA scan will be done by %s.\n\n", ship_name(ship));
@@ -6701,20 +6698,13 @@ func do_SCAN_command() {
     fprintf(log_file, "\n");
 }
 
-
-
 //*************************************************************************
 // do_send.c
 
 func do_SEND_command() {
-    int i, n, found, contact_word_number, contact_bit_number;
-
-    char *temp_pointer;
-
-    long num_available, contact_mask, item_count;
-
-    struct nampla_data *nampla1, *nampla2;
-
+    var i, n, contact_word_number, contact_bit_number int
+    var num_available, contact_mask, item_count int
+    var nampla1, nampla2 *nampla_data
 
     /* Get number of EUs to transfer. */
     i = get_value();
@@ -6749,7 +6739,7 @@ func do_SEND_command() {
     }
 
     /* Get destination of transfer. */
-    found = get_species_name();
+    found := get_species_name();
     if (!found) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
@@ -6758,16 +6748,13 @@ func do_SEND_command() {
     }
 
     /* Check if we've met this species and make sure it is not an enemy. */
-    contact_word_number = (g_spec_number - 1) / 32;
-    contact_bit_number  = (g_spec_number - 1) % 32;
-    contact_mask        = 1 << contact_bit_number;
-    if ((species.contact[contact_word_number] & contact_mask) == 0) {
+    if !species.contact[g_spec_number] {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You can't SEND to a species you haven't met.\n");
         return;
     }
-    if (species.enemy[contact_word_number] & contact_mask) {
+    if species.enemy[g_spec_number] {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You may not SEND economic units to an ENEMY.\n");
@@ -6776,7 +6763,8 @@ func do_SEND_command() {
 
     /* Make the transfer and log the result. */
     log_string("    ");
-    log_long(item_count);  log_string(" economic unit");
+    log_long(item_count);
+    log_string(" economic unit");
     if (item_count > 1) {
         log_string("s were");
     }else{
@@ -6797,7 +6785,8 @@ func do_SEND_command() {
         exit(-1);
     }
 
-    n = num_transactions++;
+    n = num_transactions
+    num_transactions++;
     transaction[n].ttype      = EU_TRANSFER;
     transaction[n].donor     = species_number;
     transaction[n].recipient = g_spec_number;
@@ -6810,15 +6799,10 @@ func do_SEND_command() {
     data_modified[g_spec_number - 1]         = true;
 }
 
-
-
 //*************************************************************************
 // do_shipyard.c
 
 func do_SHIPYARD_command() {
-    long cost;
-
-
     /* Check if this order was preceded by a PRODUCTION order. */
     if (!doing_production) {
         fprintf(log_file, "!!! Order ignored:\n");
@@ -6828,7 +6812,7 @@ func do_SHIPYARD_command() {
     }
 
     /* Make sure this is not a mining or resort colony. */
-    if ((nampla.status & MINING_COLONY) || (nampla.status & RESORT_COLONY)) {
+    if (nampla.status & MINING_COLONY)!=0 || (nampla.status & RESORT_COLONY)!=0 {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You may not build shipyards on a mining or resort colony!\n");
@@ -6844,7 +6828,7 @@ func do_SHIPYARD_command() {
     }
 
     /* Check if sufficient funds are available. */
-    cost = 10 * species.tech_level[MA];
+    cost := 10 * species.tech_level[MA];
     if (check_bounced(cost)) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
@@ -6852,34 +6836,28 @@ func do_SHIPYARD_command() {
         return;
     }
 
-    ++nampla.shipyards;
+    nampla.shipyards++
 
     shipyard_built = true;
 
     /* Log transaction. */
-    log_string("    Spent ");  log_long(cost);
+    log_string("    Spent ");
+    log_long(cost);
     log_string(" to increase shipyard capacity by 1.\n");
 }
-
-
 
 //*************************************************************************
 // do_siege.c
 
 func do_siege(bat *battle_data, act *action_data) {
-    int a, d, i, attacker_index, defender_index,
-        attacking_species_number, defending_species_number;
+    var a, d, attacking_species_number, defending_species_number int
+    var defending_nampla *nampla_data
+    var attacking_ship *ship_data
+    var defending_species, attacking_species *species_data
 
-    struct nampla_data * defending_nampla;
-    struct ship_data *   attacking_ship;
-    struct species_data *defending_species, *attacking_species;
-
-
-    for (defender_index = 0; defender_index < act.num_units_fighting;
-         defender_index++) {
+    for defender_index := 0; defender_index < act.num_units_fighting; defender_index++ {
         if (act.unit_type[defender_index] == BESIEGED_NAMPLA) {
-            defending_nampla =
-                (struct nampla_data *)act.fighting_unit[defender_index];
+            defending_nampla = act.fighting_unit[defender_index]; // cast to *nampla_data
 
             defending_nampla.siege_eff = true;
 
@@ -6887,11 +6865,9 @@ func do_siege(bat *battle_data, act *action_data) {
             defending_species        = c_species[d];
             defending_species_number = bat.spec_num[d];
 
-            for (attacker_index = 0; attacker_index < act.num_units_fighting;
-                 attacker_index++) {
+            for attacker_index := 0; attacker_index < act.num_units_fighting; attacker_index++ {
                 if (act.unit_type[attacker_index] == SHIP) {
-                    attacking_ship =
-                        (struct ship_data *)act.fighting_unit[attacker_index];
+                    attacking_ship = act.fighting_unit[attacker_index]; // cast to *ship_data
 
                     a = act.fighting_species_index[attacker_index];
 
@@ -6899,13 +6875,13 @@ func do_siege(bat *battle_data, act *action_data) {
                         attacking_species        = c_species[a];
                         attacking_species_number = bat.spec_num[a];
 
-                        /* Check if there's enough memory for a new
-                         *      interspecies transaction. */
+                        /* Check if there's enough memory for a new interspecies transaction. */
                         if (num_transactions == MAX_TRANSACTIONS) {
                             fprintf(stderr, "\nRan out of memory! MAX_TRANSACTIONS is too small!\n\n");
                             exit(-1);
                         }
-                        i = num_transactions++;
+                        i := num_transactions
+                        num_transactions++;
 
                         /* Define this transaction. */
                         transaction[i].ttype    = BESIEGE_PLANET;
@@ -6927,27 +6903,18 @@ func do_siege(bat *battle_data, act *action_data) {
     log_string("      Only those ships that actually remain in the system will take part in the siege.\n");
 }
 
-
-
 //*************************************************************************
 // do_teach.c
 
 func do_TEACH_command() {
-    int i, tech, contact_word_number, contact_bit_number,
-        max_level_specified, need_technology;
-
-    char *temp_ptr;
-
-    short max_tech_level;
-
-    long contact_mask;
-
+    var tech, contact_word_number, contact_bit_number, max_level_specified, need_technologyint
+    var max_tech_level int
+    var contact_mask int
 
     /* Get technology. */
-    temp_ptr = input_line_pointer;
+    temp_ptr := input_line_pointer;
     if (get_class_abbr() != TECH_ID) {
-        need_technology    = true;      /* Sometimes players accidentally
-                                         * reverse the arguments. */
+        need_technology    = true;      /* Sometimes players accidentally reverse the arguments. */
         input_line_pointer = temp_ptr;
     }else {
         need_technology = false;
@@ -6985,17 +6952,14 @@ func do_TEACH_command() {
     }
 
     /* Check if we've met this species and make sure it is not an enemy. */
-    contact_word_number = (g_spec_number - 1) / 32;
-    contact_bit_number  = (g_spec_number - 1) % 32;
-    contact_mask        = 1 << contact_bit_number;
-    if ((species.contact[contact_word_number] & contact_mask) == 0) {
+    if !species.contact[g_spec_number] {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You can't TEACH a species you haven't met.\n");
         return;
     }
 
-    if (species.enemy[contact_word_number] & contact_mask) {
+    if species.enemy[g_spec_number] {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You can't TEACH an ENEMY.\n");
@@ -7012,7 +6976,8 @@ func do_TEACH_command() {
         exit(-1);
     }
 
-    i = num_transactions++;
+    i := num_transactions
+    num_transactions++;
     transaction[i].ttype      = KNOWLEDGE_TRANSFER;
     transaction[i].donor     = species_number;
     transaction[i].recipient = g_spec_number;
@@ -7021,20 +6986,14 @@ func do_TEACH_command() {
     transaction[i].number3 = max_tech_level;
 }
 
-
-
-
 //*************************************************************************
 // do_tech.c
 
 func do_TECH_command() {
-    int i, tech, contact_word_number, contact_bit_number,
-        max_level_specified, max_tech_level, max_cost_specified,
-        need_technology;
-
-    long contact_mask, max_cost;
-
-
+    var tech, contact_word_number, contact_bit_number int
+    var max_level_specified, max_tech_level, max_cost_specified int
+    var need_technology int
+    var contact_mask, max_cost int
 
     /* See if a maximum cost was specified. */
     max_cost_specified = get_value();
@@ -7046,8 +7005,7 @@ func do_TECH_command() {
 
     /* Get technology. */
     if (get_class_abbr() != TECH_ID) {
-        need_technology = true;         /* Sometimes players accidentally
-                                         * reverse the arguments. */
+        need_technology = true;         /* Sometimes players accidentally reverse the arguments. */
     }else {
         need_technology = false;
         tech            = abbr_index;
@@ -7066,16 +7024,13 @@ func do_TECH_command() {
     }
 
     /* Check if we've met this species and make sure it is not an enemy. */
-    contact_word_number = (g_spec_number - 1) / 32;
-    contact_bit_number  = (g_spec_number - 1) % 32;
-    contact_mask        = 1 << contact_bit_number;
-    if ((species.contact[contact_word_number] & contact_mask) == 0) {
+    if !species.contact[g_spec_number] {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You can't transfer tech to a species you haven't met.\n");
         return;
     }
-    if (species.enemy[contact_word_number] & contact_mask) {
+    if species.enemy[g_spec_number] {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
         fprintf(log_file, "!!! You can't transfer tech to an ENEMY.\n");
@@ -7095,7 +7050,7 @@ func do_TECH_command() {
 
     /* Make sure there isn't already a transfer of the same technology from
      *  the same donor species to the same recipient species. */
-    for (i = 0; i < num_transactions; i++) {
+    for i := 0; i < num_transactions; i++ {
         if (transaction[i].ttype != TECH_TRANSFER) {
             continue;
         }
@@ -7132,7 +7087,8 @@ func do_TECH_command() {
         exit(-1);
     }
 
-    i = num_transactions++;
+    i := num_transactions
+    num_transactions++;
     transaction[i].ttype      = TECH_TRANSFER;
     transaction[i].donor     = species_number;
     transaction[i].recipient = g_spec_number;
@@ -7147,29 +7103,23 @@ func do_TECH_command() {
     }
 }
 
-
-
 //*************************************************************************
 // do_tel.c
 
 func do_TELESCOPE_command() {
-    int i, n, found, range_in_parsecs, max_range, alien_index,
-        alien_number, alien_nampla_index, alien_ship_index,
-        location_printed, industry, detection_chance, num_obs_locs,
-        alien_name_printed, loc_index, success_chance, something_found;
+    var i, n, range_in_parsecs, max_range, alien_index int
+    var alien_number, alien_nampla_index, alien_ship_index int
+    var location_printed, industry, detection_chance, num_obs_locs int
+    var alien_name_printed, loc_index, success_chance, something_found int
+    var max_distance, max_distance_squared int
+    var delta_x, delta_y, delta_z, distance_squared int
+    var planet_ttype[32] byte
+    var obs_x[MAX_OBS_LOCS], obs_y[MAX_OBS_LOCS], obs_z[MAX_OBS_LOCS]byte
+    var alien *species_data
+    var alien_nampla *nampla_data
+    var starbase, alien_ship *ship_data_
 
-    long x, y, z, max_distance, max_distance_squared,
-         delta_x, delta_y, delta_z, distance_squared;
-
-    char planet_ttype[32], obs_x[MAX_OBS_LOCS], obs_y[MAX_OBS_LOCS],
-         obs_z[MAX_OBS_LOCS];
-
-    struct species_data *alien;
-    struct nampla_data * alien_nampla;
-    struct ship_data *   starbase, *alien_ship;
-
-
-    found = get_ship();
+    found := get_ship();
     if (!found || ship.ttype != STARBASE) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
@@ -7178,8 +7128,7 @@ func do_TELESCOPE_command() {
     }
     starbase = ship;
 
-    /* Make sure starbase does not get more than one TELESCOPE order per
-     *  turn. */
+    /* Make sure starbase does not get more than one TELESCOPE order per turn. */
     if (starbase.dest_z != 0) {
         fprintf(log_file, "!!! Order ignored:\n");
         fprintf(log_file, "!!! %s", input_line);
@@ -7200,8 +7149,10 @@ func do_TELESCOPE_command() {
     /* Log the result. */
     if (first_pass) {
         log_string("    A gravitic telescope at ");
-        log_int(starbase.x);  log_char(' ');
-        log_int(starbase.y);  log_char(' ');
+        log_int(starbase.x);
+        log_char(' ');
+        log_int(starbase.y);
+        log_char(' ');
         log_int(starbase.z);
         log_string(" will be operated by ");
         log_string(ship_name(starbase));
@@ -7215,17 +7166,14 @@ func do_TELESCOPE_command() {
         range_in_parsecs = max_range;
     }
 
-    x = starbase.x;
-    y = starbase.y;
-    z = starbase.z;
+    x, y, z := starbase.x, starbase.y, starbase.z;
 
     max_distance         = range_in_parsecs;
     max_distance_squared = max_distance * max_distance;
 
-    /* First pass. Simply create a list of X Y Z locations that have observable
-     *  aliens. */
+    /* First pass. Simply create a list of X Y Z locations that have observable aliens. */
     num_obs_locs = 0;
-    for (alien_index = 0; alien_index < galaxy.num_species; alien_index++) {
+    for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
         if (!data_in_memory[alien_index]) {
             continue;
         }
@@ -7235,12 +7183,12 @@ func do_TELESCOPE_command() {
             continue;
         }
 
-        alien = &spec_data[alien_index];
+        alien = spec_data[alien_index];
 
         alien_nampla = namp_data[alien_index] - 1;
         for (alien_nampla_index = 0; alien_nampla_index < alien.num_namplas;
              alien_nampla_index++) {
-            ++alien_nampla;
+            alien_nampla++
 
             if ((alien_nampla.status & POPULATED) == 0) {
                 continue;
@@ -7249,8 +7197,7 @@ func do_TELESCOPE_command() {
             delta_x          = x - alien_nampla.x;
             delta_y          = y - alien_nampla.y;
             delta_z          = z - alien_nampla.z;
-            distance_squared = (delta_x * delta_x) + (delta_y * delta_y)
-                               + (delta_z * delta_z);
+            distance_squared = (delta_x * delta_x) + (delta_y * delta_y) + (delta_z * delta_z);
 
             if (distance_squared == 0) {
                 continue;                         /* Same loc as telescope. */
@@ -7260,7 +7207,7 @@ func do_TELESCOPE_command() {
             }
 
             found = false;
-            for (i = 0; i < num_obs_locs; i++) {
+            for i = 0; i < num_obs_locs; i++ {
                 if (alien_nampla.x != obs_x[i]) {
                     continue;
                 }
@@ -7283,14 +7230,12 @@ func do_TELESCOPE_command() {
                 obs_y[num_obs_locs] = alien_nampla.y;
                 obs_z[num_obs_locs] = alien_nampla.z;
 
-                ++num_obs_locs;
+                num_obs_locs++
             }
         }
 
-        alien_ship = ship_data[alien_index] - 1;
-        for (alien_ship_index = 0; alien_ship_index < alien.num_ships;
-             alien_ship_index++) {
-            ++alien_ship;
+        for alien_ship_index = 0; alien_ship_index < alien.num_ships; alien_ship_index++ {
+            alien_ship = ship_data[alien_index][alien_ship_index]
 
             if (alien_ship.status == UNDER_CONSTRUCTION) {
                 continue;
@@ -7316,7 +7261,7 @@ func do_TELESCOPE_command() {
             }
 
             found = false;
-            for (i = 0; i < num_obs_locs; i++) {
+            for i = 0; i < num_obs_locs; i++ {
                 if (alien_ship.x != obs_x[i]) {
                     continue;
                 }
@@ -7346,23 +7291,25 @@ func do_TELESCOPE_command() {
 
     /* Operate the gravitic telescope. */
     log_string("\n  Results of operation of gravitic telescope by ");
-    log_string(ship_name(starbase));  log_string(" (location = ");
-    log_int(starbase.x);  log_char(' ');
-    log_int(starbase.y);  log_char(' ');
+    log_string(ship_name(starbase));
+    log_string(" (location = ");
+    log_int(starbase.x);
+    log_char(' ');
+    log_int(starbase.y);
+    log_char(' ');
     log_int(starbase.z);
     log_string(", max range = ");
-    log_int(range_in_parsecs);  log_string(" parsecs):\n");
+    log_int(range_in_parsecs);
+    log_string(" parsecs):\n");
 
     something_found = false;
 
-    for (loc_index = 0; loc_index < num_obs_locs; loc_index++) {
-        x = obs_x[loc_index];
-        y = obs_y[loc_index];
-        z = obs_z[loc_index];
+    for loc_index = 0; loc_index < num_obs_locs; loc_index++ {
+        x, y, z := obs_x[loc_index], obs_y[loc_index], obs_z[loc_index];
 
         location_printed = false;
 
-        for (alien_index = 0; alien_index < galaxy.num_species; alien_index++) {
+        for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
             if (!data_in_memory[alien_index]) {
                 continue;
             }
@@ -7376,10 +7323,8 @@ func do_TELESCOPE_command() {
 
             alien_name_printed = false;
 
-            alien_nampla = namp_data[alien_index] - 1;
-            for (alien_nampla_index = 0; alien_nampla_index < alien.num_namplas;
-                 alien_nampla_index++) {
-                ++alien_nampla;
+            for alien_nampla_index = 0; alien_nampla_index < alien.num_namplas; alien_nampla_index++ {
+                alien_nampla = namp_data[alien_index][alien_nampla_index]
 
                 if ((alien_nampla.status & POPULATED) == 0) {
                     continue;
@@ -7433,14 +7378,11 @@ func do_TELESCOPE_command() {
                     alien_name_printed = true;
                 }
 
-                fprintf(log_file, "\t#%d: %s PL %s (%d)\n",
-                        alien_nampla.pn, planet_ttype, alien_nampla.name, industry);
+                fprintf(log_file, "\t#%d: %s PL %s (%d)\n", alien_nampla.pn, planet_ttype, alien_nampla.name, industry);
             }
 
-            alien_ship = ship_data[alien_index] - 1;
-            for (alien_ship_index = 0; alien_ship_index < alien.num_ships;
-                 alien_ship_index++) {
-                ++alien_ship;
+            for alien_ship_index = 0; alien_ship_index < alien.num_ships; alien_ship_index++ {
+                alien_ship = ship_data[alien_index][alien_ship_index]
 
                 if (alien_ship.x != x) {
                     continue;
@@ -7492,8 +7434,7 @@ func do_TELESCOPE_command() {
                 if (alien_ship.ttype == STARBASE) {
                     detection_chance = 2 * alien_ship.item_quantity[GT];
                     if (detection_chance > 0) {
-                        fprintf(log_file, " <- %d GTs installed!",
-                                alien_ship.item_quantity[GT]);
+                        fprintf(log_file, " <- %d GTs installed!", alien_ship.item_quantity[GT]);
                     }
                 }else {
                     detection_chance = 0;
@@ -7501,8 +7442,7 @@ func do_TELESCOPE_command() {
 
                 fprintf(log_file, "\n");
 
-                detection_chance += 2 *
-                                    (alien.tech_level[GV] - species.tech_level[GV]);
+                detection_chance += 2 * (alien.tech_level[GV] - species.tech_level[GV]);
 
                 if (rnd(100) > detection_chance) {
                     continue;
@@ -7531,8 +7471,6 @@ func do_TELESCOPE_command() {
         log_string("    No alien ships or planets were detected.\n\n");
     }
 }
-
-
 
 //*************************************************************************
 // do_terr.c
@@ -11005,11 +10943,11 @@ func ship_name(ship *ship_data_) string {
         }
     }else if (ship.class == TR) {
         sprintf(full_ship_id, "%s%d%s %s\0",
-                ship_abbr[ship.class], ship.tonnage, ship_ttype[ship.ttype],
+                ship_abbr[ship.class], ship.tonnage, ship_type[ship.ttype],
                 ship.name);
     }else {
         sprintf(full_ship_id, "%s%s %s\0",
-                ship_abbr[ship.class], ship_ttype[ship.ttype], ship.name);
+                ship_abbr[ship.class], ship_type[ship.ttype], ship.name);
     }
 
     if (truncate_name) {

@@ -202,9 +202,11 @@ var (
 		30, 35, 40, 45, 50, 55, 60,
 		65, 70, 1, 1,
 	}
-	ship_ttype = []string{ // warning: code assumes [3][2]byte
+	ship_type = []string{ // warning: code assumes [3][2]byte
 		"", "S", "S",
 	}
+	shipyard_built bool
+	shipyard_capacity int
 	size_char          []byte = []byte("0123456789")
 	sp_tech_level      [6]int
 	spec_data          [MAX_SPECIES]*species_data
@@ -420,7 +422,6 @@ extern struct ship_data *   ship;
 
 int last_planet_produced = false;
 
-int shipyard_built, shipyard_capacity;
 
 extern int nampla_index, doing_production, first_pass, next_nampla_index,
            planet_data_modified, species_number, num_transactions;
