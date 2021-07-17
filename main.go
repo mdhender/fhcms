@@ -18,10 +18,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
+import (
+    "fmt"
+    "io"
+)
+
+//*************************************************************************
 // TurnNumber Locations NoOrders Combat PreDeparture Jump Production PostArrival Strike Finish Report Stats
 
 
 
+//*************************************************************************
 // Finish.c
 /*
  * This program should be run immediately before running the Report program;
@@ -35,35 +42,29 @@ package main
 
 
 func FinishMain(argc int, argv []string) {
-    var i, j, n, rec, don, nampla_index, ship_index, ls_needed,
-        ls_actual, tech, turn_number, percent_increase, old_tech_level,
-        new_tech_level, experience_points, their_level, my_level,
-        new_level, orders_received, contact_bit_number,
-        contact_word_number, alien_number, galaxy_fd,
-        production_penalty, max_tech_level int
-
+    var i, j, n, rec, don, nampla_index, ship_index, ls_needed int
+    var ls_actual, tech, turn_number, percent_increase, old_tech_level int
+    var new_tech_level, experience_points, their_level, my_level int
+    var new_level, orders_received, contact_bit_number int
+    var contact_word_number, alien_number, galaxy_fd int
+    var production_penalty, max_tech_level int
     var ns int
-
-    var change, total_pop_units, contact_mask, salvage_EUs,
-         salvage_value, original_cost, ib, ab, increment, old_base,
-         max_cost, actual_cost, one_point_cost, working_pop_units,
-         ib_increment, ab_increment, md, growth_factor, denom,
-         fleet_maintenance_cost, balance, total_species_production,
-         RMs_produced, production_capacity, diff, total, eb int
-    var total_econ_base *int
-
+    var change, total_pop_units, contact_mask, salvage_EUs int
+    var salvage_value, original_cost, ib, ab, increment, old_base int
+    var max_cost, actual_cost, one_point_cost, working_pop_units int
+    var ib_increment, ab_increment, md, growth_factor, denom int
+    var fleet_maintenance_cost, balance, total_species_production int
+    var RMs_produced, production_capacity, diff, total, eb int
     var filename[32]byte
     var dest, src *byte
-
     var home_planet *planet_data
     var donor_species *species_data
     var home_nampla *nampla_data
 
-
     /* Check for options, if any. */
     test_mode    = false;
     verbose_mode = false;
-    for (i = 1; i < argc; i++) {
+    for i = 1; i < argc; i++ {
         if (strcmp(argv[i], "-t") == 0) {
             test_mode = true;
         }
@@ -73,9 +74,9 @@ func FinishMain(argc int, argv []string) {
     }
 
     /* Seed random number generator. */
-    last_random = time(NULL);
+    last_random = time(nil);
     n           = 907;
-    for (i = 0; i < n; i++) {
+    for i = 0; i < n; i++ {
         rnd(100);
     }
 
@@ -87,57 +88,54 @@ func FinishMain(argc int, argv []string) {
     num_locs = 0;
 
     /* Allocate memory for array "total_econ_base". */
-    total           = (long)num_planets * sizeof(long);
-    total_econ_base = (long *)malloc(total);
-    if (total_econ_base == NULL) {
+    total           = num_planets * sizeof("something?");
+    total_econ_base := make([]int, num_planets, num_planets) // warning: was (long *)malloc(total);
+    if (total_econ_base == nil) {
         fprintf(stderr, "\nCannot allocate enough memory for total_econ_base!\n\n");
         exit(-1);
     }
 
     /* Handle turn number. */
-    turn_number = ++galaxy.turn_number;
+    galaxy.turn_number++
+    turn_number = galaxy.turn_number;
     galaxy_fd   = creat("galaxy.dat", 0600);
     if (galaxy_fd < 0) {
         fprintf(stderr, "\n  Cannot create new version of file galaxy.dat!\n");
         exit(-1);
     }
 
-    n = write(galaxy_fd, &galaxy, sizeof(struct galaxy_data));
-    if (n != sizeof(struct galaxy_data)) {
+    n = write(galaxy_fd, &galaxy, sizeof("struct galaxy_data"));
+    if (n != sizeof("struct galaxy_data")) {
         fprintf(stderr, "\n\tCannot write data to file 'galaxy.dat'!\n\n");
         exit(-1);
     }
     close(galaxy_fd);
 
-    /* Do mining difficulty increases and initialize total economic base
-     *  for each planet. */
-    planet = planet_base;
-    for (i = 0; i < num_planets; i++) {
+    /* Do mining difficulty increases and initialize total economic base for each planet. */
+    for i = 0; i < num_planets; i++ {
+        planet = planet_base[i]
         planet.mining_difficulty += planet.md_increase;
         planet.md_increase        = 0;
-
         total_econ_base[i] = 0;
-
-        ++planet;
     }
 
     /* Main loop. For each species, take appropriate action. */
     if (verbose_mode) {
         printf("\nFinishing up for all species...\n");
     }
-    for (species_number = 1; species_number <= galaxy.num_species; species_number++) {
+    for species_number = 1; species_number <= galaxy.num_species; species_number++ {
         if (!data_in_memory[species_number - 1]) {
             continue;
         }
 
         data_modified[species_number - 1] = true;
 
-        species     = &spec_data[species_number - 1];
+        species     = spec_data[species_number - 1];
         nampla_base = namp_data[species_number - 1];
         ship_base   = ship_data[species_number - 1];
 
         /* Check if player submitted orders for this turn. */
-        sprintf(filename, "sp%02d.ord\0", species_number);
+        filename := fmt.Sprintf( "sp%02d.ord", species_number);
         i = open(filename, 0);
         if (i < 0) {
             orders_received = false;
@@ -159,9 +157,9 @@ func FinishMain(argc int, argv []string) {
         }
 
         /* Open log file for appending. */
-        sprintf(filename, "sp%02d.log\0", species_number);
+        filename := fmt.Sprintf("sp%02d.log", species_number);
         log_file = fopen(filename, "a");
-        if (log_file == NULL) {
+        if (log_file == nil) {
             fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
             exit(-1);
         }
@@ -173,7 +171,7 @@ func FinishMain(argc int, argv []string) {
         }
 
         /* Check if any ships of this species experienced mishaps. */
-        for (i = 0; i < num_transactions; i++) {
+        for i = 0; i < num_transactions; i++ {
             if (transaction[i].ttype == SHIP_MISHAP &&
                 transaction[i].number1 == species_number) {
                 if (!header_printed) {
@@ -198,10 +196,9 @@ func FinishMain(argc int, argv []string) {
         }
 
         /* Take care of any disbanded colonies. */
-        home_nampla = nampla_base;
-        nampla      = nampla_base - 1;
-        for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
-            ++nampla;
+        home_nampla = nampla_base[0];
+        for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
+            nampla      = nampla_base[nampla_index]
 
             if ((nampla.status & DISBANDED_COLONY) == 0) {
                 continue;
@@ -209,10 +206,8 @@ func FinishMain(argc int, argv []string) {
 
             /* Salvage ships on the surface and starbases in orbit. */
             salvage_EUs = 0;
-            ship        = ship_base - 1;
-            for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-                ++ship;
-
+            for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+                ship        = ship_base[ship_index]
                 if (nampla.x != ship.x) {
                     continue;
                 }
@@ -230,7 +225,7 @@ func FinishMain(argc int, argv []string) {
                 }
 
                 /* Transfer cargo to planet. */
-                for (i = 0; i < MAX_ITEMS; i++) {
+                for i = 0; i < MAX_ITEMS; i++ {
                     nampla.item_quantity[i] += ship.item_quantity[i];
                 }
 
@@ -247,10 +242,10 @@ func FinishMain(argc int, argv []string) {
 
                 if (ship.status == UNDER_CONSTRUCTION) {
                     salvage_value =
-                        (original_cost - (long)ship.remaining_cost) / 4;
+                        (original_cost - ship.remaining_cost) / 4;
                 }else{
                     salvage_value =
-                        (3 * original_cost * (60 - (long)ship.age)) / 400;
+                        (3 * original_cost * (60 - ship.age)) / 400;
                 }
 
                 salvage_EUs += salvage_value;
@@ -260,14 +255,14 @@ func FinishMain(argc int, argv []string) {
             }
 
             /* Salvage items on the planet. */
-            for (i = 0; i < MAX_ITEMS; i++) {
+            for i = 0; i < MAX_ITEMS; i++ {
                 if (i == RM) {
                     salvage_value = nampla.item_quantity[RM] / 10;
                 }else if (nampla.item_quantity[i] > 0) {
                     original_cost = nampla.item_quantity[i] * item_cost[i];
                     if (i == TP) {
                         if (species.tech_level[BI] > 0) {
-                            original_cost /= (long)species.tech_level[BI];
+                            original_cost /= species.tech_level[BI];
                         }else{
                             original_cost /= 100;
                         }
@@ -299,11 +294,8 @@ func FinishMain(argc int, argv []string) {
 
         /* Check if this species is the recipient of a transfer of economic
          *      units from another species. */
-        for (i = 0; i < num_transactions; i++) {
-            if (transaction[i].recipient == species_number &&
-                (transaction[i].ttype == EU_TRANSFER ||
-                 transaction[i].ttype == SIEGE_EU_TRANSFER ||
-                 transaction[i].ttype == LOOTING_EU_TRANSFER)) {
+        for i = 0; i < num_transactions; i++ {
+            if (transaction[i].recipient == species_number && (transaction[i].ttype == EU_TRANSFER || transaction[i].ttype == SIEGE_EU_TRANSFER || transaction[i].ttype == LOOTING_EU_TRANSFER)) {
                 /* Transfer EUs to attacker if this is a siege or looting
                  * transfer. If this is a normal transfer, then just log
                  * the result since the actual transfer was done when the
@@ -334,7 +326,7 @@ func FinishMain(argc int, argv []string) {
         }
 
         /* Check if any jump portals of this species were used by aliens. */
-        for (i = 0; i < num_transactions; i++) {
+        for i = 0; i < num_transactions; i++ {
             if (transaction[i].ttype == ALIEN_JUMP_PORTAL_USAGE &&
                 transaction[i].number1 == species_number) {
                 if (!header_printed) {
@@ -352,7 +344,7 @@ func FinishMain(argc int, argv []string) {
 
         /* Check if any starbases of this species detected the use of gravitic
          *      telescopes by aliens. */
-        for (i = 0; i < num_transactions; i++) {
+        for i = 0; i < num_transactions; i++ {
             if (transaction[i].ttype == TELESCOPE_DETECTION &&
                 transaction[i].number1 == species_number) {
                 if (!header_printed) {
@@ -362,15 +354,16 @@ func FinishMain(argc int, argv []string) {
                 log_string(transaction[i].name1);
                 log_string(" detected the operation of an alien gravitic telescope at x = ");
                 log_int(transaction[i].x);
-                log_string(", y = ");    log_int(transaction[i].y);
-                log_string(", z = ");    log_int(transaction[i].z);
+                log_string(", y = ");
+                log_int(transaction[i].y);
+                log_string(", z = ");
+                log_int(transaction[i].z);
                 log_string(".\n");
             }
         }
 
-        /* Check if this species is the recipient of a tech transfer from
-         *      another species. */
-        for (i = 0; i < num_transactions; i++) {
+        /* Check if this species is the recipient of a tech transfer from another species. */
+        for i = 0; i < num_transactions; i++ {
             if (transaction[i].ttype == TECH_TRANSFER &&
                 transaction[i].recipient == species_number) {
                 rec = transaction[i].recipient - 1;
@@ -396,21 +389,21 @@ func FinishMain(argc int, argv []string) {
 
                 new_level     = my_level;
                 max_cost      = transaction[i].number1;
-                donor_species = &spec_data[don];
+                donor_species = spec_data[don];
                 if (max_cost == 0) {
                     max_cost = donor_species.econ_units;
                 }else if (donor_species.econ_units < max_cost) {
                     max_cost = donor_species.econ_units;
                 }
                 actual_cost = 0;
-                for (;new_level < their_level;) {
+                for new_level < their_level {
                     one_point_cost  = new_level * new_level;
                     one_point_cost -= one_point_cost / 4;  /* 25% discount. */
                     if ((actual_cost + one_point_cost) > max_cost) {
                         break;
                     }
                     actual_cost += one_point_cost;
-                    ++new_level;
+                    new_level++
                 }
 
                 if (new_level == my_level) {
@@ -435,7 +428,7 @@ func FinishMain(argc int, argv []string) {
         }
 
         /* Calculate tech level increases. */
-        for (tech = MI; tech <= BI; tech++) {
+        for tech = MI; tech <= BI; tech++ {
             old_tech_level = species.tech_level[tech];
             new_tech_level = old_tech_level;
 
@@ -448,9 +441,9 @@ func FinishMain(argc int, argv []string) {
              *  process. */
             i = experience_points;
             j = old_tech_level;
-            for (;i >= j * j;) {
+            for i >= j * j {
                 i -= j * j;
-                ++j;
+                j++
             }
 
             /* When extremely large amounts are spent on research, tech
@@ -463,19 +456,17 @@ func FinishMain(argc int, argv []string) {
 
             /* Allocate half of the calculated increase NON-RANDOMLY. */
             n = (j - old_tech_level) / 2;
-            for (i = 0; i < n; i++) {
+            for i = 0; i < n; i++ {
                 experience_points -= new_tech_level * new_tech_level;
-                ++new_tech_level;
+                new_tech_level++
             }
 
             /* Allocate the rest randomly. */
-            for (;experience_points >= new_tech_level;) {
+            for experience_points >= new_tech_level {
                 experience_points -= new_tech_level;
                 n = new_tech_level;
 
-                /* The chance of success is 1 in n. At this point, n is
-                 * always at least 1. */
-
+                /* The chance of success is 1 in n. At this point, n is always at least 1. */
                 i = rnd(16 * n);
                 if (i >= 8 * n && i <= 8 * n + 15) {
                     new_tech_level = n + 1;
@@ -489,7 +480,7 @@ check_random:
 
             /* See if any random increase occurred. Odds are 1 in 6. */
             if (old_tech_level > 0 && rnd(6) == 6) {
-                ++new_tech_level;
+                new_tech_level++
             }
 
             if (new_tech_level > max_tech_level) {
@@ -504,7 +495,8 @@ check_random:
                 log_string("  ");
                 log_string(tech_name[tech]);
                 log_string(" tech level rose from ");
-                log_int(old_tech_level);  log_string(" to ");
+                log_int(old_tech_level);
+                log_string(" to ");
                 log_int(new_tech_level);
                 log_string(".\n");
 
@@ -513,7 +505,7 @@ check_random:
         }
 
         /* Notify of any new high tech items. */
-        for (tech = MI; tech <= BI; tech++) {
+        for tech = MI; tech <= BI; tech++ {
             old_tech_level = species.init_tech_level[tech];
             new_tech_level = species.tech_level[tech];
 
@@ -526,9 +518,8 @@ check_random:
 
         /* Check if this species is the recipient of a knowledge transfer
          *      from another species. */
-        for (i = 0; i < num_transactions; i++) {
-            if (transaction[i].ttype == KNOWLEDGE_TRANSFER &&
-                transaction[i].recipient == species_number) {
+        for i = 0; i < num_transactions; i++ {
+            if (transaction[i].ttype == KNOWLEDGE_TRANSFER && transaction[i].recipient == species_number) {
                 rec = transaction[i].recipient - 1;
                 don = transaction[i].donor - 1;
 
@@ -561,18 +552,17 @@ check_random:
         }
 
         /* Loop through each nampla for this species. */
-        home_nampla = nampla_base;
-        home_planet = planet_base + (long)home_nampla.planet_index;
-        nampla      = nampla_base - 1;
-        for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
-            ++nampla;
+        home_nampla = nampla_base[0];
+        home_planet = planet_base[home_nampla.planet_index]
+        for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
+            nampla      = nampla_base[nampla_index]
 
             if (nampla.pn == 99) {
                 continue;
             }
 
             /* Get planet pointer. */
-            planet = planet_base + (long)nampla.planet_index;
+            planet = planet_base[nampla.planet_index]
 
             /* Clear any amount spent on ambush. */
             nampla.use_on_ambush = 0;
@@ -594,13 +584,8 @@ check_random:
 
             /* Check if another species on the same planet has become
              *  assimilated. */
-            for (i = 0; i < num_transactions; i++) {
-                if (transaction[i].ttype == ASSIMILATION &&
-                    transaction[i].value == species_number &&
-                    transaction[i].x == nampla.x &&
-                    transaction[i].y == nampla.y &&
-                    transaction[i].z == nampla.z &&
-                    transaction[i].pn == nampla.pn) {
+            for i = 0; i < num_transactions; i++ {
+                if (transaction[i].ttype == ASSIMILATION && transaction[i].value == species_number && transaction[i].x == nampla.x && transaction[i].y == nampla.y && transaction[i].z == nampla.z && transaction[i].pn == nampla.pn) {
                     ib = transaction[i].number1;
                     ab = transaction[i].number2;
                     ns = transaction[i].number3;
@@ -621,9 +606,13 @@ check_random:
                     log_string(" PL ");
                     log_string(nampla.name);
                     log_string(" by ");
-                    log_long(ib / 10);  log_char('.');  log_long(ib % 10);
+                    log_long(ib / 10);
+                    log_char('.');
+                    log_long(ib % 10);
                     log_string(", and manufacturing base by ");
-                    log_long(ab / 10);  log_char('.');  log_long(ab % 10);
+                    log_long(ab / 10);
+                    log_char('.');
+                    log_long(ab % 10);
                     if (ns > 0) {
                         log_string(". Number of shipyards was also increased by ");
                         log_int(ns);
@@ -636,23 +625,20 @@ check_random:
             nampla.pop_units = 0;
 
             eb = nampla.mi_base + nampla.ma_base;
-            total_pop_units = eb + nampla.item_quantity[CU]
-                              + nampla.item_quantity[PD];
+            total_pop_units = eb + nampla.item_quantity[CU] + nampla.item_quantity[PD];
 
-            if (nampla.status & HOME_PLANET) {
-                if (nampla.status & POPULATED) {
+            if (nampla.status & HOME_PLANET) != 0 {
+                if (nampla.status & POPULATED) != 0 {
                     nampla.pop_units = HP_AVAILABLE_POP;
-
                     if (species.hp_original_base != 0) {  /* HP was bombed. */
                         if (eb >= species.hp_original_base) {
                             species.hp_original_base = 0; /* Fully recovered. */
                         }else {
-                            nampla.pop_units = (eb * HP_AVAILABLE_POP)
-                                                / species.hp_original_base;
+                            nampla.pop_units = (eb * HP_AVAILABLE_POP) / species.hp_original_base;
                         }
                     }
                 }
-            }else if (nampla.status & POPULATED) {
+            }else if (nampla.status & POPULATED) != 0 {
                 /* Get life support tech level needed. */
                 ls_needed = life_support_needed(species, home_planet, planet);
 
@@ -670,8 +656,7 @@ check_random:
                     log_string(nampla.name);
                     log_string(". Colony was destroyed.\n");
 
-                    nampla.status            = COLONY; /* No longer populated or
-                                                         * self-sufficient. */
+                    nampla.status            = COLONY; /* No longer populated or self-sufficient. */
                     nampla.mi_base           = 0;
                     nampla.ma_base           = 0;
                     nampla.pop_units         = 0;
@@ -682,11 +667,10 @@ check_random:
                     percent_increase /= 100;
 
                     /* Add a small random variation. */
-                    percent_increase +=
-                        rnd(percent_increase / 4) - rnd(percent_increase / 4);
+                    percent_increase += rnd(percent_increase / 4) - rnd(percent_increase / 4);
 
                     /* Add bonus for Biology technology. */
-                    percent_increase += (int)species.tech_level[BI] / 20;
+                    percent_increase += species.tech_level[BI] / 20;
 
                     /* Calculate and apply the change. */
                     change = (percent_increase * total_pop_units) / 100;
@@ -694,22 +678,18 @@ check_random:
                     if (nampla.mi_base > 0 && nampla.ma_base == 0) {
                         nampla.status |= MINING_COLONY;
                         change          = 0;
-                    }else if (nampla.status & MINING_COLONY) {
-                        /* A former mining colony has been converted to a
-                         *      normal colony. */
-                        nampla.status &= ~MINING_COLONY;
+                    }else if (nampla.status & MINING_COLONY) != 0 {
+                        /* A former mining colony has been converted to a normal colony. */
+                        nampla.status &= ^MINING_COLONY;
                         change          = 0;
                     }
 
-                    if (nampla.ma_base > 0 && nampla.mi_base == 0 &&
-                        ls_needed <= 6 &&
-                        planet.gravity <= home_planet.gravity) {
+                    if (nampla.ma_base > 0 && nampla.mi_base == 0 && ls_needed <= 6 && planet.gravity <= home_planet.gravity) {
                         nampla.status |= RESORT_COLONY;
                         change          = 0;
-                    }else if (nampla.status & RESORT_COLONY) {
-                        /* A former resort colony has been converted to a
-                         *      normal colony. */
-                        nampla.status &= ~RESORT_COLONY;
+                    }else if (nampla.status & RESORT_COLONY) != 0 {
+                        /* A former resort colony has been converted to a normal colony. */
+                        nampla.status &= ^RESORT_COLONY;
                         change          = 0;
                     }
 
@@ -722,17 +702,15 @@ check_random:
 
             /* Handle losses due to attrition and update location array if
              *  planet is still populated. */
-            if (nampla.status & POPULATED) {
-                total_pop_units = nampla.pop_units + nampla.mi_base
-                                  + nampla.ma_base + nampla.item_quantity[CU]
-                                  + nampla.item_quantity[PD];
+            if (nampla.status & POPULATED) != 0 {
+                total_pop_units = nampla.pop_units + nampla.mi_base + nampla.ma_base + nampla.item_quantity[CU] + nampla.item_quantity[PD];
 
                 if (total_pop_units > 0 && total_pop_units < 50) {
                     if (nampla.pop_units > 0) {
-                        --nampla.pop_units;
+                        nampla.pop_units--
                         goto do_auto_increases;
                     }else if (nampla.item_quantity[CU] > 0) {
-                        --nampla.item_quantity[CU];
+                        nampla.item_quantity[CU]--
                         if (!header_printed) {
                             print_header();
                         }
@@ -740,7 +718,7 @@ check_random:
                         log_string(nampla.name);
                         log_string(" was reduced by one unit due to normal attrition.");
                     }else if (nampla.item_quantity[PD] > 0) {
-                        --nampla.item_quantity[PD];
+                        nampla.item_quantity[PD]--
                         if (!header_printed) {
                             print_header();
                         }
@@ -748,7 +726,7 @@ check_random:
                         log_string(nampla.name);
                         log_string(" was reduced by one unit due to normal attrition.");
                     }else if (nampla.ma_base > 0) {
-                        --nampla.ma_base;
+                        nampla.ma_base--
                         if (!header_printed) {
                             print_header();
                         }
@@ -756,7 +734,7 @@ check_random:
                         log_string(nampla.name);
                         log_string(" was reduced by 0.1 due to normal attrition.");
                     }else {
-                        --nampla.mi_base;
+                        nampla.mi_base--
                         if (!header_printed) {
                             print_header();
                         }
@@ -778,10 +756,9 @@ check_random:
 
 do_auto_increases:
 
-            /* Apply automatic 2% increase to mining and manufacturing bases
-             *  of home planets. */
-            if (nampla.status & HOME_PLANET) {
-                growth_factor = 20L;
+            /* Apply automatic 2% increase to mining and manufacturing bases of home planets. */
+            if (nampla.status & HOME_PLANET) != 0 {
+                growth_factor = 20;
                 ib            = nampla.mi_base;
                 ab            = nampla.ma_base;
                 old_base      = ib + ab;
@@ -789,8 +766,7 @@ do_auto_increases:
                 md            = planet.mining_difficulty;
 
                 denom        = 100 + md;
-                ab_increment =
-                    (100 * (increment + ib) - (md * ab) + denom / 2) / denom;
+                ab_increment = (100 * (increment + ib) - (md * ab) + denom / 2) / denom;
                 ib_increment = increment - ab_increment;
 
                 if (ib_increment < 0) {
@@ -811,15 +787,13 @@ check_pop:
 
             /* Update total economic base for colonies. */
             if ((nampla.status & HOME_PLANET) == 0) {
-                total_econ_base[nampla.planet_index] +=
-                    nampla.mi_base + nampla.ma_base;
+                total_econ_base[nampla.planet_index] += nampla.mi_base + nampla.ma_base;
             }
         }
 
         /* Loop through all ships for this species. */
-        ship = ship_base - 1;
-        for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-            ++ship;
+        for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+            ship = ship_base[ship_index]
 
             if (ship.pn == 99) {
                 continue;
@@ -846,9 +820,8 @@ check_pop:
 
         /* Check if this species has a populated planet that another species
          *      tried to land on. */
-        for (i = 0; i < num_transactions; i++) {
-            if (transaction[i].ttype == LANDING_REQUEST &&
-                transaction[i].number1 == species_number) {
+        for i = 0; i < num_transactions; i++ {
+            if (transaction[i].ttype == LANDING_REQUEST && transaction[i].number1 == species_number) {
                 if (!header_printed) {
                     print_header();
                 }
@@ -869,16 +842,16 @@ check_pop:
 
         /* Check if this species is the recipient of interspecies
          *      construction. */
-        for (i = 0; i < num_transactions; i++) {
-            if (transaction[i].ttype == INTERSPECIES_CONSTRUCTION &&
-                transaction[i].recipient == species_number) {
+        for i = 0; i < num_transactions; i++ {
+            if (transaction[i].ttype == INTERSPECIES_CONSTRUCTION && transaction[i].recipient == species_number) {
                 /* Simply log the result. */
                 if (!header_printed) {
                     print_header();
                 }
                 log_string("  ");
                 if (transaction[i].value == 1) {
-                    log_long(transaction[i].number1);  log_char(' ');
+                    log_long(transaction[i].number1);
+                    log_char(' ');
                     log_string(item_name[transaction[i].number2]);
                     if (transaction[i].number1 == 1) {
                         log_string(" was");
@@ -898,11 +871,9 @@ check_pop:
             }
         }
 
-        /* Check if this species is besieging another species and detects
-         *      forbidden construction, landings, etc. */
-        for (i = 0; i < num_transactions; i++) {
-            if (transaction[i].ttype == DETECTION_DURING_SIEGE &&
-                transaction[i].number3 == species_number) {
+        /* Check if this species is besieging another species and detects forbidden construction, landings, etc. */
+        for i = 0; i < num_transactions; i++ {
+            if (transaction[i].ttype == DETECTION_DURING_SIEGE && transaction[i].number3 == species_number) {
                 /* Log what was detected and/or destroyed. */
                 if (!header_printed) {
                     print_header();
@@ -929,8 +900,7 @@ check_pop:
                     /* Enemy PD construction. */
                     log_string("construction of planetary defenses, but you");
                     log_string(" destroyed them before they could be completed.\n");
-                }else if (transaction[i].value == 4 ||
-                          transaction[i].value == 5) {
+                }else if (transaction[i].value == 4 || transaction[i].value == 5) {
                     /* Enemy item construction. */
                     log_string("transfer of ");
                     log_int(transaction[i].number1);
@@ -957,9 +927,8 @@ check_for_message:
 
         /* Check if this species is the recipient of a message from another
          *      species. */
-        for (i = 0; i < num_transactions; i++) {
-            if (transaction[i].ttype == MESSAGE_TO_SPECIES &&
-                transaction[i].number2 == species_number) {
+        for i = 0; i < num_transactions; i++ {
+            if (transaction[i].ttype == MESSAGE_TO_SPECIES && transaction[i].number2 == species_number) {
                 if (!header_printed) {
                     print_header();
                 }
@@ -967,7 +936,7 @@ check_for_message:
                 log_string(transaction[i].name1);
                 log_string(":\n\n");
 
-                sprintf(filename, "m%d.msg\0", (int)transaction[i].value);
+                filename := fmt.Sprintf("m%d.msg", transaction[i].value);
 
                 log_message(filename);
 
@@ -980,8 +949,8 @@ check_for_message:
     }
 
     /* Calculate economic efficiency for each planet. */
-    planet = planet_base;
-    for (i = 0; i < num_planets; i++) {
+    for i = 0; i < num_planets; i++ {
+        planet = planet_base[i]
         total = total_econ_base[i];
         diff  = total - 2000;
 
@@ -990,8 +959,6 @@ check_for_message:
         }else{
             planet.econ_efficiency = (100 * (diff / 20 + 2000)) / total;
         }
-
-        ++planet;
     }
 
     /* Create new locations array. */
@@ -1007,27 +974,26 @@ check_for_message:
     if (verbose_mode) {
         printf("\nNow updating contact masks et al.\n");
     }
-    for (species_index = 0; species_index < galaxy.num_species; species_index++) {
+    for species_index = 0; species_index < galaxy.num_species; species_index++ {
         if (!data_in_memory[species_index]) {
             continue;
         }
 
-        species        = &spec_data[species_index];
+        species        = spec_data[species_index];
         nampla_base    = namp_data[species_index];
         ship_base      = ship_data[species_index];
         species_number = species_index + 1;
 
-        home_nampla = nampla_base;
-        home_planet = planet_base + (long)home_nampla.planet_index;
+        home_nampla = nampla_base[0]
+        home_planet = planet_base[home_nampla.planet_index]
 
-        /* Update contact mask in species data if this species has met a
-         *      new alien. */
-        for (i = 0; i < num_locs; i++) {
+        /* Update contact mask in species data if this species has met a new alien. */
+        for i = 0; i < num_locs; i++ {
             if (loc[i].s != species_number) {
                 continue;
             }
 
-            for (j = 0; j < num_locs; j++) {
+            for j = 0; j < num_locs; j++ {
                 if (loc[j].s == species_number) {
                     continue;
                 }
@@ -1041,27 +1007,21 @@ check_for_message:
                     continue;
                 }
 
-                /* We are in contact with an alien. Make sure it is not
-                 *  hidden from us. */
+                /* We are in contact with an alien. Make sure it is not hidden from us. */
                 alien_number = loc[j].s;
-                if (alien_is_visible(loc[j].x, loc[j].y, loc[j].z,
-                                     species_number, alien_number)) {
-                    contact_word_number = (loc[j].s - 1) / 32;
-                    contact_bit_number  = (loc[j].s - 1) % 32;
-                    contact_mask        = 1 << contact_bit_number;
-                    species.contact[contact_word_number] |= contact_mask;
+                if (alien_is_visible(loc[j].x, loc[j].y, loc[j].z, species_number, alien_number)) {
+                    species.contact[loc[j].s] = true
                 }
             }
         }
 
         /* Report results of tech transfers to donor species. */
-        for (i = 0; i < num_transactions; i++) {
-            if (transaction[i].ttype == TECH_TRANSFER &&
-                transaction[i].donor == species_number) {
+        for i = 0; i < num_transactions; i++ {
+            if (transaction[i].ttype == TECH_TRANSFER && transaction[i].donor == species_number) {
                 /* Open log file for appending. */
-                sprintf(filename, "sp%02d.log\0", species_number);
+                filename := fmt.Sprintf("sp%02d.log", species_number);
                 log_file = fopen(filename, "a");
-                if (log_file == NULL) {
+                if (log_file == nil) {
                     fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
                     exit(-1);
                 }
@@ -1096,20 +1056,19 @@ check_for_message:
         /* Calculate fleet maintenance cost and its percentage of total
          * production. */
         fleet_maintenance_cost = 0;
-        ship = ship_base - 1;
-        for (i = 0; i < species.num_ships; i++) {
-            ++ship;
+        for i = 0; i < species.num_ships; i++ {
+            ship = ship_base[i]
 
             if (ship.pn == 99) {
                 continue;
             }
 
             if (ship.class == TR) {
-                n = 4 * (int)ship.tonnage;
+                n = 4 * ship.tonnage;
             }else if (ship.class == BA) {
-                n = 10 * (int)ship.tonnage;
+                n = 10 * ship.tonnage;
             }else{
-                n = 20 * (int)ship.tonnage;
+                n = 20 * ship.tonnage;
             }
 
             if (ship.ttype == SUB_LIGHT) {
@@ -1120,23 +1079,22 @@ check_for_message:
         }
 
         /* Subtract military discount. */
-        i = (int)species.tech_level[ML] / 2;
+        i = species.tech_level[ML] / 2;
         fleet_maintenance_cost -= (i * fleet_maintenance_cost) / 100;
 
         /* Calculate total production. */
         total_species_production = 0;
-        nampla = nampla_base - 1;
-        for (i = 0; i < species.num_namplas; i++) {
-            ++nampla;
+        for i = 0; i < species.num_namplas; i++ {
+            nampla = nampla_base[i]
 
             if (nampla.pn == 99) {
                 continue;
             }
-            if (nampla.status & DISBANDED_COLONY) {
+            if (nampla.status & DISBANDED_COLONY) != 0 {
                 continue;
             }
 
-            planet = planet_base + (long)nampla.planet_index;
+            planet = planet_base[nampla.planet_index]
 
             ls_needed = life_support_needed(species, home_planet, planet);
 
@@ -1146,34 +1104,31 @@ check_for_message:
                 production_penalty = (100 * ls_needed) / species.tech_level[LS];
             }
 
-            RMs_produced =
-                (10L * (long)species.tech_level[MI] * (long)nampla.mi_base)
-                / (long)planet.mining_difficulty;
-            RMs_produced
-                -= (production_penalty * RMs_produced) / 100;
+            RMs_produced = (10 * species.tech_level[MI] * nampla.mi_base) / planet.mining_difficulty;
+            RMs_produced -= (production_penalty * RMs_produced) / 100;
 
-            production_capacity =
-                ((long)species.tech_level[MA] * (long)nampla.ma_base) / 10L;
-            production_capacity
-                -= (production_penalty * production_capacity) / 100;
+            production_capacity = (species.tech_level[MA] * nampla.ma_base) / 10;
+            production_capacity -= (production_penalty * production_capacity) / 100;
 
-            if (nampla.status & MINING_COLONY) {
+            if (nampla.status & MINING_COLONY) != 0 {
                 balance = (2 * RMs_produced) / 3;
-            }else if (nampla.status & RESORT_COLONY) {
+            }else if (nampla.status & RESORT_COLONY) != 0 {
                 balance = (2 * production_capacity) / 3;
             }else{
                 RMs_produced += nampla.item_quantity[RM];
-                balance       = (RMs_produced > production_capacity)
-                                ? production_capacity : RMs_produced;
+                if RMs_produced > production_capacity {
+                    balance       = production_capacity
+                } else {
+                    balance       = RMs_produced;
+                }
             }
 
-            balance = (((long)planet.econ_efficiency * balance) + 50) / 100;
+            balance = ((planet.econ_efficiency * balance) + 50) / 100;
 
             total_species_production += balance;
         }
 
-        /* If cost is greater than production, take as much as possible
-         *      from EUs in treasury.*
+        /* If cost is greater than production, take as much as possible from EUs in treasury.
          * if (fleet_maintenance_cost > total_species_production)
          * {
          *  if (fleet_maintenance_cost > species.econ_units)
@@ -1187,12 +1142,12 @@ check_for_message:
          *      fleet_maintenance_cost = 0;
          *  }
          * }
-         *
-         * /* Save fleet maintenance results. */
+         */
+
+        /* Save fleet maintenance results. */
         species.fleet_cost = fleet_maintenance_cost;
         if (total_species_production > 0) {
-            species.fleet_percent_cost = (10000 * fleet_maintenance_cost)
-                                          / total_species_production;
+            species.fleet_percent_cost = (10000 * fleet_maintenance_cost) / total_species_production;
         }else{
             species.fleet_percent_cost = 10000;
         }
@@ -1210,35 +1165,21 @@ clean_up:
     exit(0);
 }
 
-
-
-print_header() {
+func print_header() {
     log_string("\nOther events:\n");
     header_printed = true;
 }
 
+func alien_is_visible(x, y, z, species_number, alien_number int) bool {
+    var i, j int
+    var species, alien *species_data
+    var nampla, alien_nampla *nampla_data
+    var alien_ship *ship_data
 
-
-alien_is_visible(x, y, z, species_number, alien_number)
-
-char x, y, z;
-int species_number, alien_number;
-
-{
-    int i, j;
-
-    struct species_data *species, *alien;
-    struct nampla_data * nampla, *alien_nampla;
-    struct ship_data *   alien_ship;
-
-
-    /* Check if the alien has a ship or starbase here that is in orbit or in
-     *  deep space. */
-    alien      = &spec_data[alien_number - 1];
-    alien_ship = ship_data[alien_number - 1] - 1;
-    for (i = 0; i < alien.num_ships; i++) {
-        ++alien_ship;
-
+    /* Check if the alien has a ship or starbase here that is in orbit or in deep space. */
+    alien      = spec_data[alien_number - 1];
+    for i = 0; i < alien.num_ships; i++ {
+        alien_ship = ship_data[alien_number - 1][i]
         if (alien_ship.x != x) {
             continue;
         }
@@ -1252,17 +1193,14 @@ int species_number, alien_number;
             continue;
         }
 
-        if (alien_ship.status == IN_ORBIT ||
-            alien_ship.status == IN_DEEP_SPACE) {
+        if (alien_ship.status == IN_ORBIT || alien_ship.status == IN_DEEP_SPACE) {
             return(true);
         }
     }
 
     /* Check if alien has a planet that is not hidden. */
-    alien_nampla = namp_data[alien_number - 1] - 1;
-    for (i = 0; i < alien.num_namplas; i++) {
-        ++alien_nampla;
-
+    for i = 0; i < alien.num_namplas; i++ {
+        alien_nampla = namp_data[alien_number - 1][i]
         if (alien_nampla.x != x) {
             continue;
         }
@@ -1280,13 +1218,10 @@ int species_number, alien_number;
             return(true);
         }
 
-        /* The colony is hidden. See if we have population on the same
-         *  planet. */
-        species = &spec_data[species_number - 1];
-        nampla  = namp_data[species_number - 1] - 1;
-        for (j = 0; j < species.num_namplas; j++) {
-            ++nampla;
-
+        /* The colony is hidden. See if we have population on the same planet. */
+        species = spec_data[species_number - 1];
+        for j = 0; j < species.num_namplas; j++ {
+            nampla  = namp_data[species_number - 1][j]
             if (nampla.x != x) {
                 continue;
             }
@@ -1303,8 +1238,7 @@ int species_number, alien_number;
                 continue;
             }
 
-            /* We have population on the same planet, so the alien
-             *  cannot hide. */
+            /* We have population on the same planet, so the alien cannot hide. */
             return(true);
         }
     }
@@ -1312,8 +1246,7 @@ int species_number, alien_number;
     return(false);
 }
 
-
-
+//*************************************************************************
 // Locations.c
 /* This program will create the file locations.dat and will update the
  * economic efficiencies of all planets.  These functions are also performed
@@ -1324,15 +1257,13 @@ int species_number, alien_number;
  * resulting planets.dat file. */
 
 func LocationsMain(argc int, argv []string) {
-    int i, nampla_index;
-
-    long diff, total, *total_econ_base;
-
+    var i, nampla_index, diff, total int
+    var total_econ_base []int
 
     /* Check for options, if any. */
     test_mode    = false;
     verbose_mode = false;
-    for (i = 1; i < argc; i++) {
+    for i = 1; i < argc; i++ {
         if (strcmp(argv[i], "-t") == 0) {
             test_mode = true;
         }
@@ -1347,35 +1278,32 @@ func LocationsMain(argc int, argv []string) {
     get_species_data();
 
     /* Allocate memory for array "total_econ_base". */
-    total           = (long)num_planets * sizeof(long);
-    total_econ_base = (long *)malloc(total);
-    if (total_econ_base == NULL) {
+    total           = num_planets * sizeof("something");
+    total_econ_base = make([]int, num_planets, num_planets) // warning: was (long *)malloc(total);
+    if (total_econ_base == nil) {
         fprintf(stderr, "\nCannot allocate enough memory for total_econ_base!\n\n");
         exit(-1);
     }
 
     /* Initialize total econ base for each planet. */
-    planet = planet_base;
-    for (i = 0; i < num_planets; i++) {
+    for i = 0; i < num_planets; i++ {
+        planet = planet_base[i] // TODO: why is this here?
         total_econ_base[i] = 0;
-
-        ++planet;
     }
 
     /* Get total economic base for each planet from nampla data. */
-    for (species_number = 1; species_number <= galaxy.num_species; species_number++) {
+    for species_number = 1; species_number <= galaxy.num_species; species_number++ {
         if (!data_in_memory[species_number - 1]) {
             continue;
         }
 
         data_modified[species_number - 1] = true;
 
-        species     = &spec_data[species_number - 1];
+        species     = spec_data[species_number - 1];
         nampla_base = namp_data[species_number - 1];
 
-        for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
-            nampla = nampla_base + nampla_index;
-
+        for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
+            nampla = nampla_base[nampla_index]
             if (nampla.pn == 99) {
                 continue;
             }
@@ -1388,8 +1316,8 @@ func LocationsMain(argc int, argv []string) {
     }
 
     /* Update economic efficiencies of all planets. */
-    planet = planet_base;
-    for (i = 0; i < num_planets; i++) {
+    for i = 0; i < num_planets; i++ {
+        planet = planet_base[i]
         total = total_econ_base[i];
         diff  = total - 2000;
 
@@ -1398,8 +1326,6 @@ func LocationsMain(argc int, argv []string) {
         }else{
             planet.econ_efficiency = (100 * (diff / 20 + 2000)) / total;
         }
-
-        ++planet;
     }
 
     /* Create new locations array. */
@@ -1413,21 +1339,21 @@ func LocationsMain(argc int, argv []string) {
     exit(0);
 }
 
-
-
+//*************************************************************************
 // Jump.c
 
 func JumpMain(argc int, argv []string) {
-    int i, n, found, num_species, sp_num[MAX_SPECIES], sp_index,
-        command, log_file_open, do_all_species;
-
-    char filename[32], species_jumped[MAX_SPECIES], keyword[4];
-
+    var i, n, found, num_species int
+    var sp_num[MAX_SPECIES]int
+    var sp_index, command, log_file_open, do_all_species int
+    var filename[32]byte
+    var species_jumped[MAX_SPECIES]byte
+    var keyword[4]byte
 
     /* Seed random number generator. */
-    last_random = time(NULL);
+    last_random = time(nil);
     n           = rnd(100) + rnd(200) + rnd(300);
-    for (i = 0; i < n; i++) {
+    for i = 0; i < n; i++ {
         rnd(10);
     }
 
@@ -1446,7 +1372,7 @@ func JumpMain(argc int, argv []string) {
     first_pass   = false;
     test_mode    = false;
     verbose_mode = false;
-    for (i = 1; i < argc; i++) {
+    for i = 1; i < argc; i++ {
         if (strcmp(argv[i], "-p") == 0) {
             first_pass = true;
         }else if (strcmp(argv[i], "-t") == 0) {
@@ -1456,17 +1382,17 @@ func JumpMain(argc int, argv []string) {
         }else{
             n = atoi(argv[i]);
             if (n < 1 || n > galaxy.num_species) {
-                fprintf(stderr,
-                        "\n    '%s' is not a valid argument!\n", argv[i]);
+                fprintf(stderr, "\n    '%s' is not a valid argument!\n", argv[i]);
                 exit(-1);
             }
-            sp_num[num_species++] = n;
+            sp_num[num_species] = n;
+            num_species++
         }
     }
 
     if (num_species == 0) {
         num_species = galaxy.num_species;
-        for (i = 0; i < num_species; i++) {
+        for i = 0; i < num_species; i++ {
             sp_num[i] = i + 1;
         }
         do_all_species = true;
@@ -1474,8 +1400,7 @@ func JumpMain(argc int, argv []string) {
         do_all_species = false;
     }
 
-    /* For these commands, do not display age or landed/orbital status
-     *  of ships. */
+    /* For these commands, do not display age or landed/orbital status of ships. */
     truncate_name = true;
     log_stdout    = false; /* We will control value of log_file from here. */
 
@@ -1484,7 +1409,7 @@ func JumpMain(argc int, argv []string) {
      *  and there were no jump orders for that species, then combat jumps
      *  will not take place. This array will allow us to handle them
      *  separately. */
-    for (i = 0; i < galaxy.num_species; i++) {
+    for i = 0; i < galaxy.num_species; i++ {
         species_jumped[i] = false;
     }
 
@@ -1503,7 +1428,7 @@ start_pass:
     get_planet_data();
 
     /* Main loop. For each species, take appropriate action. */
-    for (sp_index = 0; sp_index < num_species; sp_index++) {
+    for sp_index = 0; sp_index < num_species; sp_index++ {
         species_number = sp_num[sp_index];
 
         found = data_in_memory[species_number - 1];
@@ -1520,14 +1445,14 @@ start_pass:
             }
         }
 
-        species     = &spec_data[species_number - 1];
+        species     = spec_data[species_number - 1];
         nampla_base = namp_data[species_number - 1];
         ship_base   = ship_data[species_number - 1];
 
         /* Open orders file for this species. */
-        sprintf(filename, "sp%02d.ord\0", species_number);
+        filename := fmt.Sprintf("sp%02d.ord", species_number);
         input_file = fopen(filename, "r");
-        if (input_file == NULL) {
+        if (input_file == nil) {
             if (do_all_species) {
                 if (first_pass) {
                     printf("\n    No orders for species #%d.\n", species_number);
@@ -1544,9 +1469,9 @@ start_pass:
             log_file = stdout;
         }else {
             /* Open log file for appending. */
-            sprintf(filename, "sp%02d.log\0", species_number);
+            filename := fmt.Sprintf("sp%02d.log", species_number);
             log_file = fopen(filename, "a");
-            if (log_file == NULL) {
+            if (log_file == nil) {
                 fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
                 exit(-1);
             }
@@ -1554,23 +1479,19 @@ start_pass:
 
         end_of_file = false;
 
-        just_opened_file = true;        /* Tell parse.c to skip mail header,
-                                         *      if any. */
+        just_opened_file = true;        /* Tell parse.c to skip mail header, if any. */
 find_start:
 
         /* Search for START JUMPS order. */
         found = false;
-        for (;!found;) {
+        for !found {
             command = get_command();
             if (command == MESSAGE) {
-                /* Skip MESSAGE text. It may contain a line that starts
-                 *      with "start". */
+                /* Skip MESSAGE text. It may contain a line that starts with "start". */
                 for {
                     command = get_command();
                     if (command < 0) {
-                        fprintf(stderr,
-                                "WARNING: Unterminated MESSAGE command in file %s!\n",
-                                filename);
+                        fprintf(stderr, "WARNING: Unterminated MESSAGE command in file %s!\n", filename);
                         break;
                     }
 
@@ -1587,14 +1508,13 @@ find_start:
                 continue;
             }
 
-            /* Get the first three letters of the keyword and convert to
-             *  upper case. */
+            /* Get the first three letters of the keyword and convert to upper case. */
             skip_whitespace();
-            for (i = 0; i < 3; i++) {
+            for i = 0; i < 3; i++ {
                 keyword[i] = toupper(*input_line_pointer);
-                ++input_line_pointer;
+                input_line_pointer++
             }
-            keyword[3] = '\0';
+            keyword[3] = 0;
 
             if (strcmp(keyword, "JUM") == 0) {
                 found = true;
@@ -1603,8 +1523,7 @@ find_start:
 
         if (!found) {
             if (first_pass) {
-                printf("\nNo jump orders for species #%d, SP %s.\n",
-                       species_number, species.name);
+                printf("\nNo jump orders for species #%d, SP %s.\n", species_number, species.name);
             }
             goto done_orders;
         }
@@ -1619,15 +1538,12 @@ done_orders:
 
         fclose(input_file);
 
-        /* Take care of any ships that withdrew or were forced to jump during
-         *      combat. */
-        ship = ship_base;
-        for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-            if (ship.status == FORCED_JUMP ||
-                ship.status == JUMPED_IN_COMBAT) {
+        /* Take care of any ships that withdrew or were forced to jump during combat. */
+        for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+            ship = ship_base[ship_index]
+            if (ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT) {
                 do_JUMP_command(true, false);
             }
-            ++ship;
         }
 
         /* If this is the second pass, close the log file. */
@@ -1655,7 +1571,7 @@ no_jump_orders:
      *  handled above because no jump orders were received for species. */
     log_stdout    = true;
     log_file_open = false;
-    for (species_number = 1; species_number <= galaxy.num_species; species_number++) {
+    for species_number = 1; species_number <= galaxy.num_species; species_number++ {
         if (species_jumped[species_number - 1]) {
             continue;
         }
@@ -1664,17 +1580,17 @@ no_jump_orders:
             continue;
         }
 
-        species     = &spec_data[species_number - 1];
+        species     = spec_data[species_number - 1];
         nampla_base = namp_data[species_number - 1];
         ship_base   = ship_data[species_number - 1];
 
-        ship = ship_base;
-        for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
+        for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+            ship = ship_base[ship_index]
             if (ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT) {
                 if (!log_file_open) {
-                    sprintf(filename, "sp%02d.log\0", species_number);
+                    filename := fmt.Sprintf("sp%02d.log", species_number);
                     log_file = fopen(filename, "a");
-                    if (log_file == NULL) {
+                    if (log_file == nil) {
                         fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
                         exit(-1);
                     }
@@ -1684,7 +1600,6 @@ no_jump_orders:
 
                 do_JUMP_command(true, false);
             }
-            ++ship;
         }
 
         data_modified[species_number - 1] = log_file_open;
@@ -1709,15 +1624,11 @@ no_jump_orders:
     exit(0);
 }
 
-
-
-do_jump_orders() {
-    int i, command;
-
+func do_jump_orders() {
+    var i, command int
 
     if (first_pass) {
-        printf("\nStart of jump orders for species #%d, SP %s...\n",
-               species_number, species.name);
+        printf("\nStart of jump orders for species #%d, SP %s...\n", species_number, species.name);
     }
 
     for {
@@ -1732,8 +1643,7 @@ do_jump_orders() {
 
         if (end_of_file || command == END) {
             if (first_pass) {
-                printf("End of jump orders for species #%d, SP %s.\n",
-                       species_number, species.name);
+                printf("End of jump orders for species #%d, SP %s.\n", species_number, species.name);
             }
 
             if (first_pass) {
@@ -1772,31 +1682,22 @@ do_jump_orders() {
     }
 }
 
-
-
+//*************************************************************************
 // NoOrders.c
+
 /* This program will generate default orders for a species if no explicit
  *      orders have been provided. */
 
 func NoOrdersMain(argc int, argv []string) {
-    int i, j, k, ship_index, locations_fd, my_loc_index,
-        nampla_index, its_loc_index, tonnage, found, alien_number,
-        alien_index, array_index, bit_number, ls_needed,
-        production_penalty;
-
-    char filename[32], *random_name(), message_line[132];
-
-    long n, nn, raw_material_units, production_capacity, balance,
-         current_base, CUs_needed, IUs_needed, AUs_needed, EUs,
-         bit_mask;
-
-    FILE *message_file, *log_file;
-
-    struct species_data *alien;
-    struct nampla_data * nampla, *home_nampla, *temp_nampla;
-    struct ship_data *   ship;
-    struct sp_loc_data * locations_base, *my_loc, *its_loc;
-
+    var i, j, k, ship_index, locations_fd, my_loc_index, nampla_index, its_loc_index, tonnage, found, alien_number, alien_index, array_index, bit_number, ls_needed, production_penalty int
+    var filename[32]byte
+    var message_line[132]byte
+    var n, nn, raw_material_units, production_capacity, balance, current_base, CUs_needed, IUs_needed, AUs_needed, EUs, bit_mask int
+    var message_file, log_file io.Writer
+    var alien *species_data
+    var nampla, home_nampla, temp_nampla *nampla_data
+    var ship *ship_data_
+    var locations_base, my_loc, its_loc *sp_loc_data
 
     /* Check for valid command line. */
     if (argc != 1) {
@@ -1805,9 +1706,9 @@ func NoOrdersMain(argc int, argv []string) {
     }
 
     /* Seed random number generator. */
-    last_random = time(NULL);
+    last_random = time(nil);
     j           = 907;
-    for (i = 0; i < j; i++) {
+    for i = 0; i < j; i++ {
         rnd(100);
     }
 
@@ -1821,7 +1722,7 @@ func NoOrdersMain(argc int, argv []string) {
     truncate_name = true;
 
     /* Major loop. Check each species in the game. */
-    for (species_number = 1; species_number <= galaxy.num_species; species_number++) {
+    for species_number = 1; species_number <= galaxy.num_species; species_number++ {
         species_index = species_number - 1;
 
         /* Check if this species is still in the game. */
@@ -1830,46 +1731,45 @@ func NoOrdersMain(argc int, argv []string) {
         }
 
         /* Check if we have orders. */
-        sprintf(filename, "sp%02d.ord\0", species_number);
+        filename := fmt.Sprintf("sp%02d.ord", species_number);
         i = open(filename, 0);
         if (i >= 0) {
             close(i);
             continue;
         }
 
-        species     = &spec_data[species_index];
+        species     = spec_data[species_index];
         nampla_base = namp_data[species_index];
         ship_base   = ship_data[species_index];
-        home_nampla = nampla_base;
-        home_planet = planet_base + (int)home_nampla.planet_index;
+        home_nampla = nampla_base[0]
+        home_planet = planet_base[home_nampla.planet_index]
 
-        for (i = 0; i < species.num_ships; i++) {
-            ship          = ship_base + i;
+        for i = 0; i < species.num_ships; i++ {
+            ship          = ship_base[i]
             ship.special = 0;
         }
 
         /* Print message for gamemaster. */
-        printf("Generating orders for species #%02d, SP %s...\n",
-               species_number, species.name);
+        printf("Generating orders for species #%02d, SP %s...\n", species_number, species.name);
 
         /* Open message file. */
-        sprintf(filename, "noorders.txt\0");
+        filename := fmt.Sprintf("noorders.txt");
         message_file = fopen(filename, "r");
-        if (message_file == NULL) {
+        if (message_file == nil) {
             fprintf(stderr, "\n\tCannot open '%s' for reading!\n\n", filename);
             exit(-1);
         }
 
         /* Open log file. */
-        sprintf(filename, "sp%02d.log", species_number);
+        filename := fmt.Sprintf("sp%02d.log", species_number);
         log_file = fopen(filename, "a");
-        if (log_file == NULL) {
+        if (log_file == nil) {
             fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
             exit(-1);
         }
 
         /* Copy message to log file. */
-        for (;fgets(message_line, 131, message_file) != NULL;) {
+        for fgets(message_line, 131, message_file) != nil {
             fputs(message_line, log_file);
         }
 
@@ -1877,9 +1777,9 @@ func NoOrdersMain(argc int, argv []string) {
         fclose(log_file);
 
         /* Open orders file for writing. */
-        sprintf(filename, "sp%02d.ord", species_number);
+        filename := fmt.Sprintf("sp%02d.ord", species_number);
         orders_file = fopen(filename, "w");
-        if (orders_file == NULL) {
+        if (orders_file == nil) {
             fprintf(stderr, "\n\tCannot open '%s' for writing!\n\n", filename);
             exit(-1);
         }
@@ -1888,31 +1788,28 @@ func NoOrdersMain(argc int, argv []string) {
         fprintf(orders_file, "START PRE-DEPARTURE\n");
         fprintf(orders_file, "; Place pre-departure orders here.\n\n");
 
-        for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
-            nampla = nampla_base + nampla_index;
+        for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
+            nampla = nampla_base[nampla_index]
             if (nampla.pn == 99) {
                 continue;
             }
 
-            /* Generate auto-installs for colonies that were loaded via
-             *  the DEVELOP command. */
-            if (nampla.auto_IUs) {
-                fprintf(orders_file, "\tInstall\t%d IU\tPL %s\n",
-                        nampla.auto_IUs, nampla.name);
+            /* Generate auto-installs for colonies that were loaded via the DEVELOP command. */
+            if (nampla.auto_IUs!= 0) {
+                fprintf(orders_file, "\tInstall\t%d IU\tPL %s\n", nampla.auto_IUs, nampla.name);
             }
-            if (nampla.auto_AUs) {
-                fprintf(orders_file, "\tInstall\t%d AU\tPL %s\n",
-                        nampla.auto_AUs, nampla.name);
+            if (nampla.auto_AUs != 0) {
+                fprintf(orders_file, "\tInstall\t%d AU\tPL %s\n", nampla.auto_AUs, nampla.name);
             }
-            if (nampla.auto_IUs || nampla.auto_AUs) {
+            if (nampla.auto_IUs != 0 || nampla.auto_AUs != 0) {
                 fprintf(orders_file, "\n");
             }
 
             nampla.item_quantity[CU] -= nampla.auto_IUs + nampla.auto_AUs;
 
             /* Generate auto UNLOAD orders for transports at this nampla. */
-            for (j = 0; j < species.num_ships; j++) {
-                ship = ship_base + j;
+            for j = 0; j < species.num_ships; j++ {
+                ship = ship_base[j]
                 if (ship.pn == 99) {
                     continue;
                 }
@@ -1946,8 +1843,7 @@ func NoOrdersMain(argc int, argv []string) {
                 if (ship.loading_point != 0) {
                     /* Check if transport is at specified unloading point. */
                     n = ship.unloading_point;
-                    if (n == nampla_index ||
-                        (n == 9999 && nampla_index == 0)) {
+                    if (n == nampla_index || (n == 9999 && nampla_index == 0)) {
                         goto unload_ship;
                     }
                 }
@@ -1960,9 +1856,7 @@ func NoOrdersMain(argc int, argv []string) {
                     continue;
                 }
 
-                if (nampla.x == nampla_base.x &&
-                    nampla.y == nampla_base.y &&
-                    nampla.z == nampla_base.z) {
+                if (nampla.x == nampla_base.x && nampla.y == nampla_base.y && nampla.z == nampla_base.z) {
                     continue;                                  /* Home sector. */
                 }
 unload_ship:
@@ -1974,11 +1868,11 @@ unload_ship:
                 if (n == nampla_index) {
                     continue;   /* Ship was just loaded here. */
                 }
-                fprintf(orders_file, "\tUnload\tTR%d%s %s\n\n", ship.tonnage,
-                        ship_ttype[ship.ttype], ship.name);
+                fprintf(orders_file, "\tUnload\tTR%d%s %s\n\n", ship.tonnage, ship_type[ship.ttype], ship.name);
 
                 nampla.item_quantity[CU] = 0;
 
+                // TODO: fix this. it's trying to find the offset for the unloading point
                 ship.special = ship.loading_point;
                 n             = nampla - nampla_base;
                 if (n == 0) {
@@ -1987,7 +1881,7 @@ unload_ship:
                 ship.unloading_point = n;
             }
 
-            if (nampla.status & HOME_PLANET) {
+            if (nampla.status & HOME_PLANET) != 0 {
                 continue;
             }
             if (nampla.item_quantity[CU] == 0) {
@@ -2012,15 +1906,15 @@ unload_ship:
         fprintf(orders_file, "; Place jump orders here.\n\n");
 
         /* Initialize to make sure ships are not given more than one JUMP order. */
-        for (i = 0; i < species.num_ships; i++) {
-            ship = ship_base + i;
+        for i = 0; i < species.num_ships; i++ {
+            ship = ship_base[i]
             ship.just_jumped = false;
         }
 
         /* Generate auto-jumps for ships that were loaded via the DEVELOP
          * command or which were UNLOADed because of the AUTO command. */
-        for (i = 0; i < species.num_ships; i++) {
-            ship = ship_base + i;
+        for i = 0; i < species.num_ships; i++ {
+            ship = ship_base[i]
 
             if (ship.status == JUMPED_IN_COMBAT) {
                 continue;
@@ -2036,17 +1930,15 @@ unload_ship:
             }
 
             j = ship.special;
-            if (j) {
+            if j != 0 {
                 if (j == 9999) {
                     j = 0;              /* Home planet. */
                 }
-                temp_nampla = nampla_base + j;
+                temp_nampla = nampla_base[j];
 
-                fprintf(orders_file, "\tJump\t%s, PL %s\t; ", ship_name(ship),
-                        temp_nampla.name);
+                fprintf(orders_file, "\tJump\t%s, PL %s\t; ", ship_name(ship), temp_nampla.name);
 
-                print_mishap_chance(ship, temp_nampla.x, temp_nampla.y,
-                                    temp_nampla.z);
+                print_mishap_chance(ship, temp_nampla.x, temp_nampla.y, temp_nampla.z);
 
                 fprintf(orders_file, "\n\n");
 
@@ -2056,22 +1948,20 @@ unload_ship:
             }
 
             n = ship.unloading_point;
-            if (n) {
+            if n!=0 {
                 if (n == 9999) {
                     n = 0;              /* Home planet. */
                 }
-                temp_nampla = nampla_base + n;
+                temp_nampla = nampla_base[n];
 
                 if (temp_nampla.x == ship.x && temp_nampla.y == ship.y &&
                     temp_nampla.z == ship.z) {
                     continue;
                 }
 
-                fprintf(orders_file, "\tJump\t%s, PL %s\t; ", ship_name(ship),
-                        temp_nampla.name);
+                fprintf(orders_file, "\tJump\t%s, PL %s\t; ", ship_name(ship), temp_nampla.name);
 
-                print_mishap_chance(ship, temp_nampla.x, temp_nampla.y,
-                                    temp_nampla.z);
+                print_mishap_chance(ship, temp_nampla.x, temp_nampla.y, temp_nampla.z);
 
                 fprintf(orders_file, "\n\n");
 
@@ -2080,8 +1970,8 @@ unload_ship:
         }
 
         /* Generate JUMP orders for all TR1s. */
-        for (i = 0; i < species.num_ships; i++) {
-            ship = ship_base + i;
+        for i = 0; i < species.num_ships; i++ {
+            ship = ship_base[i];
             if (ship.pn == 99) {
                 continue;
             }
@@ -2102,10 +1992,7 @@ unload_ship:
                 ship.ttype == FTL) {
                 fprintf(orders_file, "\tJump\tTR1 %s, ", ship.name);
                 closest_unvisited_star(ship);
-                fprintf(orders_file,
-                        "\n\t\t\t; Age %d, now at %d %d %d, ",
-                        ship.age, ship.x, ship.y, ship.z);
-
+                fprintf(orders_file, "\n\t\t\t; Age %d, now at %d %d %d, ", ship.age, ship.x, ship.y, ship.z);
                 print_mishap_chance(ship, x, y, z);
 
                 ship.dest_x = x;
@@ -2123,9 +2010,8 @@ unload_ship:
         fprintf(orders_file, "START PRODUCTION\n");
 
         /* Generate a PRODUCTION order for each planet that can produce. */
-        for (nampla_index = species.num_namplas - 1; nampla_index >= 0;
-             nampla_index--) {
-            nampla = nampla_base + nampla_index;
+        for nampla_index = species.num_namplas - 1; nampla_index >= 0; nampla_index-- {
+            nampla = nampla_base[nampla_index];
             if (nampla.pn == 99) {
                 continue;
             }
@@ -2139,37 +2025,31 @@ unload_ship:
 
             fprintf(orders_file, "    PRODUCTION PL %s\n", nampla.name);
 
-            if (nampla.status & MINING_COLONY) {
-                fprintf(orders_file,
-                        "    ; The above PRODUCTION order is required for this mining colony, even\n");
-                fprintf(orders_file,
-                        "    ;  if no other production orders are given for it.\n");
-            }else if (nampla.status & RESORT_COLONY) {
-                fprintf(orders_file,
-                        "    ; The above PRODUCTION order is required for this resort colony, even\n");
-                fprintf(orders_file,
-                        "    ;  though no other production orders can be given for it.\n");
+            if (nampla.status & MINING_COLONY) != 0 {
+                fprintf(orders_file, "    ; The above PRODUCTION order is required for this mining colony, even\n");
+                fprintf(orders_file, "    ;  if no other production orders are given for it.\n");
+            }else if (nampla.status & RESORT_COLONY) != 0 {
+                fprintf(orders_file, "    ; The above PRODUCTION order is required for this resort colony, even\n");
+                fprintf(orders_file, "    ;  though no other production orders can be given for it.\n");
             }else {
-                fprintf(orders_file,
-                        "    ; Place production orders here for planet %s.\n\n",
-                        nampla.name);
+                fprintf(orders_file, "    ; Place production orders here for planet %s.\n\n", nampla.name);
             }
 
             /* Build IUs and AUs for incoming ships with CUs. */
-            if (nampla.IUs_needed) {
+            if nampla.IUs_needed != 0 {
                 fprintf(orders_file, "\tBuild\t%d IU\n", nampla.IUs_needed);
             }
-            if (nampla.AUs_needed) {
+            if nampla.AUs_needed != 0 {
                 fprintf(orders_file, "\tBuild\t%d AU\n", nampla.AUs_needed);
             }
-            if (nampla.IUs_needed || nampla.AUs_needed) {
+            if nampla.IUs_needed != 0 || nampla.AUs_needed != 0 {
                 fprintf(orders_file, "\n");
             }
 
-            if (nampla.status & MINING_COLONY) {
+            if (nampla.status & MINING_COLONY) != 0 {
                 continue;
             }
-            if (nampla.status & RESORT_COLONY) {
+            if (nampla.status & RESORT_COLONY) != 0 {
                 continue;
             }
 
@@ -2179,10 +2059,9 @@ unload_ship:
                 fprintf(orders_file, "\tRecycle\t%d RM\n\n", 5 * n);
             }
 
-            /* Generate DEVELOP commands for ships arriving here because of
-             *  AUTO command. */
-            for (i = 0; i < species.num_ships; i++) {
-                ship = ship_base + i;
+            /* Generate DEVELOP commands for ships arriving here because of AUTO command. */
+            for i = 0; i < species.num_ships; i++ {
+                ship = ship_base[i];
                 if (ship.pn == 99) {
                     continue;
                 }
@@ -2194,7 +2073,7 @@ unload_ship:
                 if (k == 9999) {
                     k = 0;              /* Home planet. */
                 }
-                if (nampla != nampla_base + k) {
+                if (nampla != nampla_base[k]) {
                     continue;
                 }
 
@@ -2202,21 +2081,17 @@ unload_ship:
                 if (k == 9999) {
                     k = 0;
                 }
-                temp_nampla = nampla_base + k;
+                temp_nampla = nampla_base[k];
 
-                fprintf(orders_file, "\tDevelop\tPL %s, TR%d%s %s\n\n",
-                        temp_nampla.name, ship.tonnage, ship_ttype[ship.ttype],
-                        ship.name);
+                fprintf(orders_file, "\tDevelop\tPL %s, TR%d%s %s\n\n", temp_nampla.name, ship.tonnage, ship_type[ship.ttype], ship.name);
             }
 
-            /* Give orders to continue construction of unfinished ships and
-             *  starbases. */
-            for (i = 0; i < species.num_ships; i++) {
-                ship = ship_base + i;
+            /* Give orders to continue construction of unfinished ships and starbases. */
+            for i = 0; i < species.num_ships; i++ {
+                ship = ship_base[i];
                 if (ship.pn == 99) {
                     continue;
                 }
-
                 if (ship.x != nampla.x) {
                     continue;
                 }
@@ -2231,11 +2106,7 @@ unload_ship:
                 }
 
                 if (ship.status == UNDER_CONSTRUCTION) {
-                    fprintf(orders_file,
-                            "\tContinue\t%s, %d\t; Left to pay = %d\n\n",
-                            ship_name(ship), ship.remaining_cost,
-                            ship.remaining_cost);
-
+                    fprintf(orders_file, "\tContinue\t%s, %d\t; Left to pay = %d\n\n", ship_name(ship), ship.remaining_cost, ship.remaining_cost);
                     continue;
                 }
 
@@ -2248,25 +2119,19 @@ unload_ship:
                     continue;
                 }
 
-                fprintf(orders_file,
-                        "\tContinue\tBAS %s, %d\t; Current tonnage = %s\n\n",
-                        ship.name, 100 * j, commas(10000 * (long)ship.tonnage));
+                fprintf(orders_file, "\tContinue\tBAS %s, %d\t; Current tonnage = %s\n\n", ship.name, 100 * j, commas(10000 * ship.tonnage));
             }
 
-            /* Generate DEVELOP command if this is a colony with an
-             *  economic base less than 200. */
-            n = nampla.mi_base + nampla.ma_base + nampla.IUs_needed
-                + nampla.AUs_needed;
-            if ((nampla.status & COLONY) && n < 2000 &&
-                nampla.pop_units > 0) {
-                if (nampla.pop_units > (2000L - n)) {
-                    nn = 2000L - n;
+            /* Generate DEVELOP command if this is a colony with an economic base less than 200. */
+            n = nampla.mi_base + nampla.ma_base + nampla.IUs_needed + nampla.AUs_needed;
+            if ((nampla.status & COLONY) != 0 && n < 2000 && nampla.pop_units > 0) {
+                if (nampla.pop_units > (2000 - n)) {
+                    nn = 2000 - n;
                 }else{
                     nn = nampla.pop_units;
                 }
 
-                fprintf(orders_file, "\tDevelop\t%ld\n\n",
-                        2L * nn);
+                fprintf(orders_file, "\tDevelop\t%d\n\n",2 * nn);
 
                 nampla.IUs_needed += nn;
             }
@@ -2275,13 +2140,13 @@ unload_ship:
              *  at least 200, check if there are other colonized planets in
              *  the same sector that are not self-sufficient.  If so, DEVELOP
              *  them. */
-            if (n >= 2000 || (nampla.status & HOME_PLANET)) {
-                for (i = 1; i < species.num_namplas; i++) { /* Skip HP. */
+            if (n >= 2000 || (nampla.status & HOME_PLANET) != 0) {
+                for i = 1; i < species.num_namplas; i++ { /* Skip HP. */
                     if (i == nampla_index) {
                         continue;
                     }
 
-                    temp_nampla = nampla_base + i;
+                    temp_nampla = nampla_base[i];
 
                     if (temp_nampla.pn == 99) {
                         continue;
@@ -2296,30 +2161,26 @@ unload_ship:
                         continue;
                     }
 
-                    n = temp_nampla.mi_base + temp_nampla.ma_base
-                        + temp_nampla.IUs_needed + temp_nampla.AUs_needed;
-
+                    n = temp_nampla.mi_base + temp_nampla.ma_base + temp_nampla.IUs_needed + temp_nampla.AUs_needed;
                     if (n == 0) {
                         continue;
                     }
 
-                    nn = temp_nampla.item_quantity[IU]
-                         + temp_nampla.item_quantity[AU];
+                    nn = temp_nampla.item_quantity[IU] + temp_nampla.item_quantity[AU];
                     if (nn > temp_nampla.item_quantity[CU]) {
                         nn = temp_nampla.item_quantity[CU];
                     }
                     n += nn;
-                    if (n >= 2000L) {
+                    if (n >= 2000) {
                         continue;
                     }
-                    nn = 2000L - n;
+                    nn = 2000 - n;
 
                     if (nn > nampla.pop_units) {
                         nn = nampla.pop_units;
                     }
 
-                    fprintf(orders_file, "\tDevelop\t%ld\tPL %s\n\n",
-                            2L * nn, temp_nampla.name);
+                    fprintf(orders_file, "\tDevelop\t%d\tPL %s\n\n", 2 * nn, temp_nampla.name);
 
                     temp_nampla.AUs_needed += nn;
                 }
@@ -2334,10 +2195,9 @@ unload_ship:
         /* Generate an AUTO command. */
         fprintf(orders_file, "\tAuto\n\n");
 
-        /* Generate SCAN orders for all TR1s in sectors that current species
-         * does not inhabit. */
-        for (i = 0; i < species.num_ships; i++) {
-            ship = ship_base + i;
+        /* Generate SCAN orders for all TR1s in sectors that current species does not inhabit. */
+        for i = 0; i < species.num_ships; i++ {
+            ship = ship_base[i];
 
             if (ship.pn == 99) {
                 continue;
@@ -2358,8 +2218,8 @@ unload_ship:
                 continue;                       /* Not jumping anywhere. */
             }
             found = false;
-            for (j = 1; j < species.num_namplas; j++) { /* Skip home sector. */
-                nampla = nampla_base + j;
+            for j = 1; j < species.num_namplas; j++ { /* Skip home sector. */
+                nampla = nampla_base[j];
                 if (nampla.pn == 99) {
                     continue;
                 }
@@ -2373,7 +2233,7 @@ unload_ship:
                     continue;
                 }
 
-                if (nampla.status & POPULATED) {
+                if (nampla.status & POPULATED) !=  0 {
                     found = true;
                     break;
                 }
@@ -2394,17 +2254,8 @@ unload_ship:
     exit(0);
 }
 
-
-print_mishap_chance(ship, destx, desty, destz)
-
-struct ship_data *ship;
-int destx, desty, destz;
-
-{
-    int mishap_GV, mishap_age;
-
-    long x, y, z, mishap_chance, success_chance;
-
+func print_mishap_chance(ship *ship_data_, destx, desty, destz int) {
+    var mishap_GV, mishap_age, mishap_chance, success_chance int
 
     if (destx == -1) {
         fprintf(orders_file, "Mishap chance = ???");
@@ -2414,78 +2265,49 @@ int destx, desty, destz;
     mishap_GV  = species.tech_level[GV];
     mishap_age = ship.age;
 
-    x             = destx;
-    y             = desty;
-    z             = destz;
-    mishap_chance = (100 * (
-                         ((x - ship.x) * (x - ship.x))
-                         + ((y - ship.y) * (y - ship.y))
-                         + ((z - ship.z) * (z - ship.z))
-                         )) / mishap_GV;
+    x, y, z             := destx, desty, destz;
+    mishap_chance = (100 * ( ((x - ship.x) * (x - ship.x)) + ((y - ship.y) * (y - ship.y)) + ((z - ship.z) * (z - ship.z)) )) / mishap_GV;
 
     if (mishap_age > 0 && mishap_chance < 10000) {
-        success_chance  = 10000L - mishap_chance;
-        success_chance -= (2L * (long)mishap_age * success_chance) / 100L;
-        mishap_chance   = 10000L - success_chance;
+        success_chance  = 10000 - mishap_chance;
+        success_chance -= (2 * mishap_age * success_chance) / 100;
+        mishap_chance   = 10000 - success_chance;
     }
 
     if (mishap_chance > 10000) {
         mishap_chance = 10000;
     }
 
-    fprintf(orders_file, "mishap chance = %ld.%02ld%%",
-            mishap_chance / 100L, mishap_chance % 100L);
+    fprintf(orders_file, "mishap chance = %d.%02d%%", mishap_chance / 100, mishap_chance % 100);
 }
 
-
-
-closest_unvisited_star(ship)
-
-struct ship_data *ship;
-
-{
-    int i, found, species_array_index, species_bit_number;
-
-    long shx, shy, shz, stx, sty, stz, closest_distance, temp_distance,
-         species_bit_mask;
-
-    struct star_data *star, *closest_star;
-
+func closest_unvisited_star(ship *ship_data_) {
+    var i, found, species_array_index, species_bit_number, stx, sty, stz, closest_distance, temp_distance, species_bit_mask int
+    var star, closest_star *star_data
 
     /* Get array index and bit mask. */
     species_array_index = (species_number - 1) / 32;
     species_bit_number  = (species_number - 1) % 32;
     species_bit_mask    = 1 << species_bit_number;
 
-    shx = ship.x;
-    shy = ship.y;
-    shz = ship.z;
+    shx, shy, shz := ship.x, ship.y, ship.z;
 
     x = -1;
     closest_distance = 999999;
 
     found = false;
-    for (i = 0; i < num_stars; i++) {
-        star = star_base + i;
+    for i = 0; i < num_stars; i++ {
+        star = star_base[i];
 
         /* Check if bit is already set. */
-        if (star.visited_by[species_array_index] & species_bit_mask) {
+        if star.visited_by[species_number] {
             continue;
         }
 
-        stx = star.x;
-        sty = star.y;
-        stz = star.z;
-
-        temp_distance =
-            ((shx - stx) * (shx - stx))
-            + ((shy - sty) * (shy - sty))
-            + ((shz - stz) * (shz - stz));
-
+        stx, sty, stz := star.x, star.y, star.z;
+        temp_distance = ((shx - stx) * (shx - stx)) + ((shy - sty) * (shy - sty)) + ((shz - stz) * (shz - stz));
         if (temp_distance < closest_distance) {
-            x = stx;
-            y = sty;
-            z = stz;
+            x, y, z = stx, sty, stz;
             closest_distance = temp_distance;
             closest_star     = star;
             found            = true;
@@ -2494,8 +2316,7 @@ struct ship_data *ship;
 
     if (found) {
         fprintf(orders_file, "%d %d %d", x, y, z);
-        closest_star.visited_by[species_array_index] |= species_bit_mask;
-        /* So that we don't send more than one ship to the same place. */
+        closest_star.visited_by[species_number] = true /* So that we don't send more than one ship to the same place. */
     }else {
         fprintf(orders_file, "???");
     }
@@ -2503,8 +2324,7 @@ struct ship_data *ship;
     return;
 }
 
-
-
+//*************************************************************************
 // PostArrival.c
 
 func PostArrivalMain(argc int, argv []string) {
@@ -2515,9 +2335,9 @@ func PostArrivalMain(argc int, argv []string) {
 
 
     /* Seed random number generator. */
-    last_random = time(NULL);
+    last_random = time(nil);
     n           = rnd(100) + rnd(200) + rnd(300);
-    for (i = 0; i < n; i++) {
+    for i = 0; i < n; i++ {
         rnd(10);
     }
 
@@ -2536,7 +2356,7 @@ func PostArrivalMain(argc int, argv []string) {
     first_pass   = false;
     test_mode    = false;
     verbose_mode = false;
-    for (i = 1; i < argc; i++) {
+    for i = 1; i < argc; i++ {
         if (strcmp(argv[i], "-p") == 0) {
             first_pass = true;
         }else if (strcmp(argv[i], "-t") == 0) {
@@ -2556,7 +2376,7 @@ func PostArrivalMain(argc int, argv []string) {
 
     if (num_species == 0) {
         num_species = galaxy.num_species;
-        for (i = 0; i < num_species; i++) {
+        for i = 0; i < num_species; i++ {
             sp_num[i] = i + 1;
         }
         do_all_species = true;
@@ -2579,7 +2399,7 @@ start_pass:
     get_species_data();
 
     /* Main loop. For each species, take appropriate action. */
-    for (sp_index = 0; sp_index < num_species; sp_index++) {
+    for sp_index = 0; sp_index < num_species; sp_index++ {
         species_number = sp_num[sp_index];
         species_index  = species_number - 1;
 
@@ -2605,9 +2425,9 @@ start_pass:
         species.auto_orders = false;
 
         /* Open orders file for this species. */
-        sprintf(filename, "sp%02d.ord\0", species_number);
+        filename := fmt.Sprintf("sp%02d.ord", species_number);
         input_file = fopen(filename, "r");
-        if (input_file == NULL) {
+        if (input_file == nil) {
             if (do_all_species) {
                 if (first_pass) {
                     printf("\n    No orders for species #%d.\n", species_number);
@@ -2627,7 +2447,7 @@ find_start:
 
         /* Search for START POST-ARRIVAL order. */
         found = false;
-        for (;!found;) {
+        for !found {
             command = get_command();
             if (command == MESSAGE) {
                 /* Skip MESSAGE text. It may contain a line that starts
@@ -2657,11 +2477,11 @@ find_start:
             /* Get the first three letters of the keyword and convert to
              *  upper case. */
             skip_whitespace();
-            for (i = 0; i < 3; i++) {
+            for i = 0; i < 3; i++ {
                 keyword[i] = toupper(*input_line_pointer);
-                ++input_line_pointer;
+                input_line_pointer++
             }
-            keyword[3] = '\0';
+            keyword[3] = 0;
 
             if (strcmp(keyword, "POS") == 0) {
                 found = true;
@@ -2682,9 +2502,9 @@ find_start:
             log_file = stdout;
         }else {
             /* Open log file for appending. */
-            sprintf(filename, "sp%02d.log\0", species_number);
+            filename := fmt.Sprintf("sp%02d.log", species_number);
             log_file = fopen(filename, "a");
-            if (log_file == NULL) {
+            if (log_file == nil) {
                 fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
                 exit(-1);
             }
@@ -2695,9 +2515,9 @@ find_start:
          *      gravitic telescope, it will be set to non-zero.  This will
          *      prevent more than one TELESCOPE order per turn per starbase. */
         ship = ship_base;
-        for (i = 0; i < species.num_ships; i++) {
+        for i = 0; i < species.num_ships; i++ {
             ship.dest_z = 0;
-            ++ship;
+            ship++
         }
 
         /* Handle post-arrival orders for this species. */
@@ -2863,6 +2683,7 @@ do_postarrival_orders() {
 
 
 
+//*************************************************************************
 // PreDeparture.c
 
 func PreDepartureMain(argc int, argv []string) {
@@ -2873,9 +2694,9 @@ func PreDepartureMain(argc int, argv []string) {
 
 
     /* Seed random number generator. */
-    last_random = time(NULL);
+    last_random = time(nil);
     n           = rnd(100) + rnd(200) + rnd(300);
-    for (i = 0; i < n; i++) {
+    for i = 0; i < n; i++ {
         rnd(10);
     }
 
@@ -2894,7 +2715,7 @@ func PreDepartureMain(argc int, argv []string) {
     first_pass   = false;
     test_mode    = false;
     verbose_mode = false;
-    for (i = 1; i < argc; i++) {
+    for i = 1; i < argc; i++ {
         if (strcmp(argv[i], "-p") == 0) {
             first_pass = true;
         }else if (strcmp(argv[i], "-t") == 0) {
@@ -2914,7 +2735,7 @@ func PreDepartureMain(argc int, argv []string) {
 
     if (num_species == 0) {
         num_species = galaxy.num_species;
-        for (i = 0; i < num_species; i++) {
+        for i = 0; i < num_species; i++ {
             sp_num[i] = i + 1;
         }
         do_all_species = true;
@@ -2937,7 +2758,7 @@ start_pass:
     get_planet_data();
 
     /* Main loop. For each species, take appropriate action. */
-    for (sp_index = 0; sp_index < num_species; sp_index++) {
+    for sp_index = 0; sp_index < num_species; sp_index++ {
         species_number = sp_num[sp_index];
         species_index  = species_number - 1;
 
@@ -2960,9 +2781,9 @@ start_pass:
         ship_base   = ship_data[species_index];
 
         /* Open orders file for this species. */
-        sprintf(filename, "sp%02d.ord\0", species_number);
+        filename := fmt.Sprintf("sp%02d.ord", species_number);
         input_file = fopen(filename, "r");
-        if (input_file == NULL) {
+        if (input_file == nil) {
             if (do_all_species) {
                 if (first_pass) {
                     printf("\n    No orders for species #%d.\n", species_number);
@@ -2982,7 +2803,7 @@ find_start:
 
         /* Search for START PRE-DEPARTURE order. */
         found = false;
-        for (;!found;) {
+        for !found {
             command = get_command();
             if (command == MESSAGE) {
                 /* Skip MESSAGE text. It may contain a line that starts
@@ -3012,11 +2833,11 @@ find_start:
             /* Get the first three letters of the keyword and convert to
              *  upper case. */
             skip_whitespace();
-            for (i = 0; i < 3; i++) {
+            for i = 0; i < 3; i++ {
                 keyword[i] = toupper(*input_line_pointer);
-                ++input_line_pointer;
+                input_line_pointer++
             }
-            keyword[3] = '\0';
+            keyword[3] = 0;
 
             if (strcmp(keyword, "PRE") == 0) {
                 found = true;
@@ -3037,9 +2858,9 @@ find_start:
             log_file = stdout;
         }else {
             /* Open log file for appending. */
-            sprintf(filename, "sp%02d.log\0", species_number);
+            filename := fmt.Sprintf("sp%02d.log", species_number);
             log_file = fopen(filename, "a");
-            if (log_file == NULL) {
+            if (log_file == nil) {
                 fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
                 exit(-1);
             }
@@ -3211,6 +3032,7 @@ do_predeparture_orders() {
 
 
 
+//*************************************************************************
 // Production.c
 func ProductionMain(argc int, argv []string) {
     int i, n, found, num_species, sp_num[MAX_SPECIES], sp_index,
@@ -3220,9 +3042,9 @@ func ProductionMain(argc int, argv []string) {
 
 
     /* Seed random number generator. */
-    last_random = time(NULL);
+    last_random = time(nil);
     n           = rnd(100) + rnd(200) + rnd(300);
-    for (i = 0; i < n; i++) {
+    for i = 0; i < n; i++ {
         rnd(10);
     }
 
@@ -3241,7 +3063,7 @@ func ProductionMain(argc int, argv []string) {
     first_pass   = false;
     test_mode    = false;
     verbose_mode = false;
-    for (i = 1; i < argc; i++) {
+    for i = 1; i < argc; i++ {
         if (strcmp(argv[i], "-p") == 0) {
             first_pass = true;
         }else if (strcmp(argv[i], "-t") == 0) {
@@ -3261,7 +3083,7 @@ func ProductionMain(argc int, argv []string) {
 
     if (num_species == 0) {
         num_species = galaxy.num_species;
-        for (i = 0; i < num_species; i++) {
+        for i = 0; i < num_species; i++ {
             sp_num[i] = i + 1;
         }
         do_all_species = true;
@@ -3284,7 +3106,7 @@ start_pass:
     get_planet_data();
 
     /* Main loop. For each species, take appropriate action. */
-    for (sp_index = 0; sp_index < num_species; sp_index++) {
+    for sp_index = 0; sp_index < num_species; sp_index++ {
         species_number = sp_num[sp_index];
         species_index  = species_number - 1;
 
@@ -3309,9 +3131,9 @@ start_pass:
         home_planet = planet_base + (int)nampla_base.planet_index;
 
         /* Open orders file for this species. */
-        sprintf(filename, "sp%02d.ord\0", species_number);
+        filename := fmt.Sprintf("sp%02d.ord", species_number);
         input_file = fopen(filename, "r");
-        if (input_file == NULL) {
+        if (input_file == nil) {
             if (do_all_species) {
                 if (first_pass) {
                     printf("\n    No orders for species #%d.\n", species_number);
@@ -3331,7 +3153,7 @@ find_start:
 
         /* Search for START PRODUCTION order. */
         found = false;
-        for (;!found;) {
+        for !found {
             command = get_command();
             if (command == MESSAGE) {
                 /* Skip MESSAGE text. It may contain a line that starts
@@ -3361,11 +3183,11 @@ find_start:
             /* Get the first three letters of the keyword and convert to
              *  upper case. */
             skip_whitespace();
-            for (i = 0; i < 3; i++) {
+            for i = 0; i < 3; i++ {
                 keyword[i] = toupper(*input_line_pointer);
-                ++input_line_pointer;
+                input_line_pointer++
             }
-            keyword[3] = '\0';
+            keyword[3] = 0;
 
             if (strcmp(keyword, "PRO") == 0) {
                 found = true;
@@ -3386,14 +3208,14 @@ find_start:
             log_file = stdout;
         }else {
             /* Open log file for appending. */
-            sprintf(filename, "sp%02d.log\0", species_number);
+            filename := fmt.Sprintf("sp%02d.log", species_number);
             log_file = fopen(filename, "a");
-            if (log_file == NULL) {
+            if (log_file == nil) {
                 fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename);
                 exit(-1);
             }
             fprintf(log_file, "\nProduction orders:\n");
-            fprintf(log_file, "\n  Number of economic units at start of production: %ld\n\n", species.econ_units);
+            fprintf(log_file, "\n  Number of economic units at start of production: %d\n\n", species.econ_units);
         }
 
         /* Initialize "done" arrays. They will be used to prevent more
@@ -3403,12 +3225,12 @@ find_start:
             exit(-1);
         }
 
-        for (i = 0; i < species.num_namplas; i++) {
+        for i = 0; i < species.num_namplas; i++ {
             production_done[i] = false;
         }
 
         /* Do other initializations. */
-        for (i = 0; i < species.num_namplas; i++) {
+        for i = 0; i < species.num_namplas; i++ {
             nampla             = nampla_base + i;
             nampla.auto_IUs   = 0;
             nampla.auto_AUs   = 0;
@@ -3418,15 +3240,15 @@ find_start:
 
         /* Handle production orders for this species. */
         num_intercepts = 0;
-        for (i = 0; i < 6; i++) {
+        for i = 0; i < 6; i++ {
             sp_tech_level[i] = species.tech_level[i];
         }
         do_production_orders();
-        for (i = 0; i < 6; i++) {
+        for i = 0; i < 6; i++ {
             species.tech_level[i] = sp_tech_level[i];
         }
 
-        for (i = 0; i < num_intercepts; i++) {
+        for i = 0; i < num_intercepts; i++ {
             handle_intercept(i);
         }
 
@@ -3495,8 +3317,8 @@ do_production_orders() {
         if (end_of_file || command == END) {
             /* Handle planets that were not given PRODUCTION orders. */
             next_nampla = nampla_base - 1;
-            for (i = 0; i < species.num_namplas; i++) {
-                ++next_nampla;
+            for i = 0; i < species.num_namplas; i++ {
+                next_nampla++
 
                 if (production_done[i]) {
                     continue;
@@ -3608,12 +3430,14 @@ do_production_orders() {
 
 
 
+//*************************************************************************
 // Report.c
+
+
 /* This program will generate reports for all species in the game and
  * write them to separate files. Each report will consist of a log of the
  * events of the previous turn, plus status information for the current
  * turn. */
-
 
 ReportMain(argc int, argv []string) {
     int i, j, k, ship_index, locations_fd, my_loc_index, its_loc_index,
@@ -3637,7 +3461,7 @@ ReportMain(argc int, argv []string) {
     /* Check for options, if any. */
     test_mode    = false;
     verbose_mode = false;
-    for (i = 1; i < argc; i++) {
+    for i = 1; i < argc; i++ {
         if (strcmp(argv[i], "-t") == 0) {
             test_mode = true;
         }
@@ -3657,13 +3481,13 @@ ReportMain(argc int, argv []string) {
 
     /* Generate a report for each species. */
     alien_number = 0;   /* Pointers to alien data not yet assigned. */
-    for (species_number = 1; species_number <= galaxy.num_species; species_number++) {
+    for species_number = 1; species_number <= galaxy.num_species; species_number++ {
         /* Check if we are doing all species, or just one or more specified
          *      ones. */
         do_this_species = true;
         if (argc > 1) {
             do_this_species = false;
-            for (i = 1; i < argc; i++) {
+            for i = 1; i < argc; i++ {
                 j = atoi(argv[i]);
                 if (species_number == j) {
                     do_this_species = true;
@@ -3691,7 +3515,7 @@ ReportMain(argc int, argv []string) {
         nampla1_base = nampla_base;
         ship_base    = ship_data[species_number - 1];
         ship1_base   = ship_base;
-        home_planet  = planet_base + (long)nampla1_base.planet_index;
+        home_planet  = planet_base + nampla1_base.planet_index;
 
         /* Print message for gamemaster. */
         if (verbose_mode) {
@@ -3700,23 +3524,23 @@ ReportMain(argc int, argv []string) {
         }
 
         /* Open report file for writing. */
-        sprintf(filename, "sp%02d.rpt.t%d", species_number, turn_number);
+        filename := fmt.Sprintf("sp%02d.rpt.t%d", species_number, turn_number);
         report_file = fopen(filename, "w");
-        if (report_file == NULL) {
+        if (report_file == nil) {
             fprintf(stderr, "\n\tCannot open '%s' for writing!\n\n", filename);
             exit(-1);
         }
 
         /* Copy log file, if any, to output file. */
-        sprintf(filename, "sp%02d.log", species_number);
+        filename := fmt.Sprintf("sp%02d.log", species_number);
         log_file = fopen(filename, "r");
-        if (log_file != NULL) {
+        if (log_file != nil) {
             if (turn_number > 1) {
                 fprintf(report_file, "\n\n\t\t\tEVENT LOG FOR TURN %d\n",
                         turn_number - 1);
             }
 
-            for (;fgets(log_line, 256, log_file) != NULL;) {
+            for fgets(log_line, 256, log_file) != nil {
                 fputs(log_line, report_file);
             }
 
@@ -3735,7 +3559,7 @@ ReportMain(argc int, argv []string) {
         fprintf(report_file, "Government ttype: %s\n", species.govt_ttype);
 
         fprintf(report_file, "\nTech Levels:\n");
-        for (i = 0; i < 6; i++) {
+        for i = 0; i < 6; i++ {
             fprintf(report_file, "   %s = %d", tech_name[i],
                     species.tech_level[i]);
             if (species.tech_knowledge[i] > species.tech_level[i]) {
@@ -3749,14 +3573,14 @@ ReportMain(argc int, argv []string) {
                 (int)species.required_gas_max,
                 gas_string[species.required_gas]);
         fprintf(report_file, "\nNeutral Gases:");
-        for (i = 0; i < 6; i++) {
+        for i = 0; i < 6; i++ {
             if (i != 0) {
                 fprintf(report_file, ",");
             }
             fprintf(report_file, " %s", gas_string[species.neutral_gas[i]]);
         }
         fprintf(report_file, "\nPoisonous Gases:");
-        for (i = 0; i < 6; i++) {
+        for i = 0; i < 6; i++ {
             if (i != 0) {
                 fprintf(report_file, ",");
             }
@@ -3769,7 +3593,7 @@ ReportMain(argc int, argv []string) {
         fleet_percent_cost = species.fleet_percent_cost;
 
         fprintf(report_file,
-                "\nFleet maintenance cost = %ld (%d.%02d%% of total production)\n",
+                "\nFleet maintenance cost = %d (%d.%02d%% of total production)\n",
                 species.fleet_cost, fleet_percent_cost / 100,
                 fleet_percent_cost % 100);
 
@@ -3782,7 +3606,7 @@ ReportMain(argc int, argv []string) {
         log_file       = report_file;   /* Use log utils for this. */
         log_stdout     = false;
         header_printed = false;
-        for (sp_index = 0; sp_index < galaxy.num_species; sp_index++) {
+        for sp_index = 0; sp_index < galaxy.num_species; sp_index++ {
             if (!data_in_memory[sp_index]) {
                 continue;
             }
@@ -3803,7 +3627,7 @@ ReportMain(argc int, argv []string) {
                 log_string(", ");
             }
             log_string("SP ");  log_string(spec_data[sp_index].name);
-            ++n;
+            n++
         }
         if (n > 0) {
             log_char('\n');
@@ -3812,7 +3636,7 @@ ReportMain(argc int, argv []string) {
         /* List declared allies. */
         n = 0;
         header_printed = false;
-        for (sp_index = 0; sp_index < galaxy.num_species; sp_index++) {
+        for sp_index = 0; sp_index < galaxy.num_species; sp_index++ {
             if (!data_in_memory[sp_index]) {
                 continue;
             }
@@ -3836,7 +3660,7 @@ ReportMain(argc int, argv []string) {
                 log_string(", ");
             }
             log_string("SP ");  log_string(spec_data[sp_index].name);
-            ++n;
+            n++
         }
         if (n > 0) {
             log_char('\n');
@@ -3845,7 +3669,7 @@ ReportMain(argc int, argv []string) {
         /* List declared enemies that have been met. */
         n = 0;
         header_printed = false;
-        for (sp_index = 0; sp_index < galaxy.num_species; sp_index++) {
+        for sp_index = 0; sp_index < galaxy.num_species; sp_index++ {
             if (!data_in_memory[sp_index]) {
                 continue;
             }
@@ -3869,23 +3693,23 @@ ReportMain(argc int, argv []string) {
                 log_string(", ");
             }
             log_string("SP ");  log_string(spec_data[sp_index].name);
-            ++n;
+            n++
         }
         if (n > 0) {
             log_char('\n');
         }
 
-        fprintf(report_file, "\nEconomic units = %ld\n", species.econ_units);
+        fprintf(report_file, "\nEconomic units = %d\n", species.econ_units);
 
         /* Initialize flag. */
-        for (i = 0; i < species.num_ships; i++) {
+        for i = 0; i < species.num_ships; i++ {
             ship_already_listed[i] = false;
         }
 
         /* Print report for each producing planet. */
         nampla = nampla1_base - 1;
-        for (i = 0; i < species.num_namplas; i++) {
-            ++nampla;
+        for i = 0; i < species.num_namplas; i++ {
+            nampla++
 
             if (nampla.pn == 99) {
                 continue;
@@ -3895,7 +3719,7 @@ ReportMain(argc int, argv []string) {
                 continue;
             }
 
-            planet = planet_base + (long)nampla.planet_index;
+            planet = planet_base + nampla.planet_index;
             fprintf(report_file,
                     "\n\n* * * * * * * * * * * * * * * * * * * * * * * * *\n");
             do_planet_report(nampla, ship1_base, species);
@@ -3905,8 +3729,8 @@ ReportMain(argc int, argv []string) {
         printing_alien = false;
         header_printed = false;
         nampla         = nampla1_base - 1;
-        for (i = 0; i < species.num_namplas; i++) {
-            ++nampla;
+        for i = 0; i < species.num_namplas; i++ {
+            nampla++
 
             if (nampla.pn == 99) {
                 continue;
@@ -3925,7 +3749,7 @@ ReportMain(argc int, argv []string) {
             fprintf(report_file, "%4d%3d%3d #%d\tPL %s", nampla.x,
                     nampla.y, nampla.z, nampla.pn, nampla.name);
 
-            for (j = 0; j < MAX_ITEMS; j++) {
+            for j = 0; j < MAX_ITEMS; j++ {
                 if (nampla.item_quantity[j] > 0) {
                     fprintf(report_file, ", %d %s",
                             nampla.item_quantity[j], item_abbr[j]);
@@ -3935,8 +3759,8 @@ ReportMain(argc int, argv []string) {
 
             /* Print any ships at this planet. */
             ship = ship1_base - 1;
-            for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-                ++ship;
+            for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+                ship++
 
                 if (ship_already_listed[ship_index]) {
                     continue;
@@ -3956,7 +3780,7 @@ ReportMain(argc int, argv []string) {
                 }
 
                 fprintf(report_file, "\t\t%s", ship_name(ship));
-                for (j = 0; j < MAX_ITEMS; j++) {
+                for j = 0; j < MAX_ITEMS; j++ {
                     if (ship.item_quantity[j] > 0) {
                         fprintf(report_file, ", %d %s",
                                 ship.item_quantity[j], item_abbr[j]);
@@ -3970,8 +3794,8 @@ ReportMain(argc int, argv []string) {
 
         /* Report ships that are not associated with a planet. */
         ship = ship1_base - 1;
-        for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-            ++ship;
+        for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+            ship++
 
             ship.special = 0;
 
@@ -4001,7 +3825,7 @@ ReportMain(argc int, argv []string) {
                         ship.x, ship.y, ship.z, ship_name(ship));
             }
 
-            for (i = 0; i < MAX_ITEMS; i++) {
+            for i = 0; i < MAX_ITEMS; i++ {
                 if (ship.item_quantity[i] > 0) {
                     fprintf(report_file, ", %d %s",
                             ship.item_quantity[i], item_abbr[i]);
@@ -4020,8 +3844,8 @@ ReportMain(argc int, argv []string) {
 
             /* Print other ships at the same location. */
             ship2 = ship;
-            for (i = ship_index + 1; i < species.num_ships; i++) {
-                ++ship2;
+            for i = ship_index + 1; i < species.num_ships; i++ {
+                ship2++
 
                 if (ship_already_listed[i]) {
                     continue;
@@ -4040,7 +3864,7 @@ ReportMain(argc int, argv []string) {
                 }
 
                 fprintf(report_file, "\t\t%s", ship_name(ship2));
-                for (j = 0; j < MAX_ITEMS; j++) {
+                for j = 0; j < MAX_ITEMS; j++ {
                     if (ship2.item_quantity[j] > 0) {
                         fprintf(report_file, ", %d %s",
                                 ship2.item_quantity[j], item_abbr[j]);
@@ -4060,16 +3884,16 @@ ReportMain(argc int, argv []string) {
         printing_alien = true;
         locations_base = &loc[0];
         my_loc         = locations_base - 1;
-        for (my_loc_index = 0; my_loc_index < num_locs; my_loc_index++) {
-            ++my_loc;
+        for my_loc_index = 0; my_loc_index < num_locs; my_loc_index++ {
+            my_loc++
             if (my_loc.s != species_number) {
                 continue;
             }
 
             header_printed = false;
             its_loc        = locations_base - 1;
-            for (its_loc_index = 0; its_loc_index < num_locs; its_loc_index++) {
-                ++its_loc;
+            for its_loc_index = 0; its_loc_index < num_locs; its_loc_index++ {
+                its_loc++
                 if (its_loc.s == species_number) {
                     continue;
                 }
@@ -4101,9 +3925,8 @@ ReportMain(argc int, argv []string) {
                  *      use it when you print the header. */
                 we_have_planet_here = false;
                 nampla = nampla1_base - 1;
-                for (i = 0; i < species.num_namplas; i++) {
-                    ++nampla;
-
+                for i = 0; i < species.num_namplas; i++ {
+                    nampla++
                     if (nampla.x != my_loc.x) {
                         continue;
                     }
@@ -4125,8 +3948,8 @@ ReportMain(argc int, argv []string) {
 
                 /* Print all inhabited alien namplas at this location. */
                 alien_nampla = nampla2_base - 1;
-                for (i = 0; i < alien.num_namplas; i++) {
-                    ++alien_nampla;
+                for i = 0; i < alien.num_namplas; i++ {
+                    alien_nampla++
 
                     if (my_loc.x != alien_nampla.x) {
                         continue;
@@ -4145,8 +3968,8 @@ ReportMain(argc int, argv []string) {
                      *  planet. */
                     we_have_colony_here = false;
                     nampla = nampla1_base - 1;
-                    for (j = 0; j < species.num_namplas; j++) {
-                        ++nampla;
+                    for j = 0; j < species.num_namplas; j++ {
+                        nampla++
 
                         if (alien_nampla.x != nampla.x) {
                             continue;
@@ -4190,21 +4013,20 @@ ReportMain(argc int, argv []string) {
                     industry = alien_nampla.mi_base + alien_nampla.ma_base;
 
                     if (alien_nampla.status & MINING_COLONY) {
-                        sprintf(temp1, "%s", "Mining colony");
+                        temp1 = fmt.Sprintf("%s", "Mining colony");
                     }else if (alien_nampla.status & RESORT_COLONY) {
-                        sprintf(temp1, "%s", "Resort colony");
+                        temp1 = fmt.Sprintf("%s", "Resort colony");
                     }else if (alien_nampla.status & HOME_PLANET) {
-                        sprintf(temp1, "%s", "Home planet");
+                        temp1 = fmt.Sprintf("%s", "Home planet");
                     }else if (industry > 0) {
-                        sprintf(temp1, "%s", "Colony planet");
+                        temp1 = fmt.Sprintf("%s", "Colony planet");
                     }else{
-                        sprintf(temp1, "%s", "Uncolonized planet");
+                        temp1 = fmt.Sprintf("%s", "Uncolonized planet");
                     }
 
-                    sprintf(temp2, "  %s PL %s (pl #%d)", temp1,
-                            alien_nampla.name, alien_nampla.pn);
+                    temp2 = fmt.Sprintf("  %s PL %s (pl #%d)", temp1, alien_nampla.name, alien_nampla.pn);
                     n = 53 - strlen(temp2);
-                    for (j = 0; j < n; j++) {
+                    for j = 0; j < n; j++ {
                         strcat(temp2, " ");
                     }
                     fprintf(report_file, "%sSP %s\n", temp2, alien.name);
@@ -4234,7 +4056,7 @@ ReportMain(argc int, argv []string) {
                                     item_name[PD]);
                         }else if (alien_nampla.item_quantity[PD] > 1) {
                             fprintf(report_file,
-                                    "      (There are %ld %ss on the planet.)\n",
+                                    "      (There are %d %ss on the planet.)\n",
                                     alien_nampla.item_quantity[PD],
                                     item_name[PD]);
                         }
@@ -4258,8 +4080,8 @@ ReportMain(argc int, argv []string) {
 
                 /* Print all alien ships at this location. */
                 alien_ship = ship2_base - 1;
-                for (i = 0; i < alien.num_ships; i++) {
-                    ++alien_ship;
+                for i = 0; i < alien.num_ships; i++ {
+                    alien_ship++
 
                     if (alien_ship.pn == 99) {
                         continue;
@@ -4279,8 +4101,8 @@ ReportMain(argc int, argv []string) {
                      *  species. */
                     alien_can_hide = true;
                     nampla         = nampla1_base - 1;
-                    for (j = 0; j < species.num_namplas; j++) {
-                        ++nampla;
+                    for j = 0; j < species.num_namplas; j++ {
+                        nampla++
 
                         if (alien_ship.x != nampla.x) {
                             continue;
@@ -4352,7 +4174,7 @@ ReportMain(argc int, argv []string) {
         fprintf(report_file, "START PRE-DEPARTURE\n");
         fprintf(report_file, "; Place pre-departure orders here.\n\n");
 
-        for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
+        for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
             nampla = nampla_base + nampla_index;
             if (nampla.pn == 99) {
                 continue;
@@ -4377,7 +4199,7 @@ ReportMain(argc int, argv []string) {
             }
 
             /* Generate auto UNLOAD orders for transports at this nampla. */
-            for (j = 0; j < species.num_ships; j++) {
+            for j = 0; j < species.num_ships; j++ {
                 ship = ship_base + j;
                 if (ship.pn == 99) {
                     continue;
@@ -4459,7 +4281,7 @@ unload_ship:
 
         /* Generate auto-jumps for ships that were loaded via the DEVELOP
          * command or which were UNLOADed because of the AUTO command. */
-        for (i = 0; i < species.num_ships; i++) {
+        for i = 0; i < species.num_ships; i++ {
             ship = ship_base + i;
 
             ship.just_jumped = false;
@@ -4519,7 +4341,7 @@ unload_ship:
 
         /* Generate JUMP orders for all ships that have not yet been
          *      given orders. */
-        for (i = 0; i < species.num_ships; i++) {
+        for i = 0; i < species.num_ships; i++ {
             ship = ship_base + i;
             if (ship.pn == 99) {
                 continue;
@@ -4589,12 +4411,11 @@ jump_end:
 
         fprintf(report_file, "START PRODUCTION\n\n");
 
-        fprintf(report_file, ";   Economic units at start of turn = %ld\n\n",
+        fprintf(report_file, ";   Economic units at start of turn = %d\n\n",
                 species.econ_units);
 
         /* Generate a PRODUCTION order for each planet that can produce. */
-        for (nampla_index = species.num_namplas - 1; nampla_index >= 0;
-             nampla_index--) {
+        for nampla_index = species.num_namplas - 1; nampla_index >= 0;             nampla_index-- {
             nampla = nampla1_base + nampla_index;
             if (nampla.pn == 99) {
                 continue;
@@ -4615,14 +4436,14 @@ jump_end:
                 fprintf(report_file,
                         "    ;  if no other production orders are given for it. This mining colony\n");
                 fprintf(report_file,
-                        "    ;  will generate %ld economic units this turn.\n", nampla.use_on_ambush);
+                        "    ;  will generate %d economic units this turn.\n", nampla.use_on_ambush);
             }else if (nampla.status & RESORT_COLONY) {
                 fprintf(report_file,
                         "    ; The above PRODUCTION order is required for this resort colony, even\n");
                 fprintf(report_file,
                         "    ;  though no other production orders can be given for it.  This resort\n");
                 fprintf(report_file,
-                        "    ;  colony will generate %ld economic units this turn.\n", nampla.use_on_ambush);
+                        "    ;  colony will generate %d economic units this turn.\n", nampla.use_on_ambush);
             }else {
                 fprintf(report_file,
                         "    ; Place production orders here for planet %s",
@@ -4630,18 +4451,18 @@ jump_end:
                 fprintf(report_file, " (sector %d %d %d #%d).\n", nampla.x,
                         nampla.y, nampla.z, nampla.pn);
                 fprintf(report_file,
-                        "    ;  Avail pop = %ld, shipyards = %d, to spend = %ld",
+                        "    ;  Avail pop = %d, shipyards = %d, to spend = %d",
                         nampla.pop_units, nampla.shipyards, nampla.use_on_ambush);
 
                 n = nampla.use_on_ambush;
                 if (nampla.status & HOME_PLANET) {
                     if (species.hp_original_base != 0) {
-                        fprintf(report_file, " (max = %ld)", 5 * n);
+                        fprintf(report_file, " (max = %d)", 5 * n);
                     }else{
                         fprintf(report_file, " (max = no limit)");
                     }
                 }else {
-                    fprintf(report_file, " (max = %ld)", 2 * n);
+                    fprintf(report_file, " (max = %d)", 2 * n);
                 }
 
                 fprintf(report_file, ".\n\n");
@@ -4676,7 +4497,7 @@ jump_end:
 
             /* Generate DEVELOP commands for ships arriving here because of
              *  AUTO command. */
-            for (i = 0; i < species.num_ships; i++) {
+            for i = 0; i < species.num_ships; i++ {
                 ship = ship_base + i;
                 if (ship.pn == 99) {
                     continue;
@@ -4706,7 +4527,7 @@ jump_end:
 
             /* Give orders to continue construction of unfinished ships and
              *  starbases. */
-            for (i = 0; i < species.num_ships; i++) {
+            for i = 0; i < species.num_ships; i++ {
                 ship = ship_base + i;
                 if (ship.pn == 99) {
                     continue;
@@ -4745,7 +4566,7 @@ jump_end:
 
                 fprintf(report_file,
                         "\tContinue\tBAS %s, %d\t; Current tonnage = %s\n\n",
-                        ship.name, 100 * j, commas(10000 * (long)ship.tonnage));
+                        ship.name, 100 * j, commas(10000 * ship.tonnage));
             }
 
             /* Generate DEVELOP command if this is a colony with an economic
@@ -4753,7 +4574,7 @@ jump_end:
             n = nampla.mi_base + nampla.ma_base + nampla.IUs_needed
                 + nampla.AUs_needed;
             nn = nampla.item_quantity[CU];
-            for (i = 0; i < species.num_ships; i++) {
+            for i = 0; i < species.num_ships; i++ {
                 /* Get CUs on transports at planet. */
                 ship = ship_base + i;
                 if (ship.x != nampla.x) {
@@ -4771,15 +4592,15 @@ jump_end:
                 nn += ship.item_quantity[CU];
             }
             n += nn;
-            if ((nampla.status & COLONY) && n < 2000L &&
+            if ((nampla.status & COLONY) && n < 2000 &&
                 nampla.pop_units > 0) {
-                if (nampla.pop_units > (2000L - n)) {
-                    nn = 2000L - n;
+                if (nampla.pop_units > (2000 - n)) {
+                    nn = 2000 - n;
                 }else{
                     nn = nampla.pop_units;
                 }
 
-                fprintf(report_file, "\tDevelop\t%ld\n\n", 2L * nn);
+                fprintf(report_file, "\tDevelop\t%d\n\n", 2 * nn);
 
                 nampla.IUs_needed += nn;
             }
@@ -4788,9 +4609,9 @@ jump_end:
              *  at least 200, check if there are other colonized planets in
              *  the same sector that are not self-sufficient.  If so, DEVELOP
              *  them. */
-            if (n >= 2000L || (nampla.status & HOME_PLANET)) {
+            if (n >= 2000 || (nampla.status & HOME_PLANET)) {
                 /* Skip home planet. */
-                for (i = 1; i < species.num_namplas; i++) {
+                for i = 1; i < species.num_namplas; i++ {
                     if (i == nampla_index) {
                         continue;
                     }
@@ -4823,17 +4644,17 @@ jump_end:
                         nn = temp_nampla.item_quantity[CU];
                     }
                     n += nn;
-                    if (n >= 2000L) {
+                    if (n >= 2000) {
                         continue;
                     }
-                    nn = 2000L - n;
+                    nn = 2000 - n;
 
                     if (nn > nampla.pop_units) {
                         nn = nampla.pop_units;
                     }
 
-                    fprintf(report_file, "\tDevelop\t%ld\tPL %s\n\n",
-                            2L * nn, temp_nampla.name);
+                    fprintf(report_file, "\tDevelop\t%d\tPL %s\n\n",
+                            2 * nn, temp_nampla.name);
 
                     temp_nampla.AUs_needed += nn;
                 }
@@ -4854,7 +4675,7 @@ jump_end:
 
         /* Generate SCAN orders for all TR1s that are jumping to
          * sectors which current species does not inhabit. */
-        for (i = 0; i < species.num_ships; i++) {
+        for i = 0; i < species.num_ships; i++ {
             ship = ship_base + i;
             if (ship.pn == 99) {
                 continue;
@@ -4873,7 +4694,7 @@ jump_end:
             }
 
             found = false;
-            for (j = 0; j < species.num_namplas; j++) {
+            for j = 0; j < species.num_namplas; j++ {
                 if (ship.dest_x == -1) {
                     break;
                 }
@@ -4999,7 +4820,7 @@ struct ship_data *   s_base;
     if (nampla.status & (MINING_COLONY | RESORT_COLONY)) {
         ;
     }else{
-        fprintf(report_file, "\nAvailable population units = %ld\n",
+        fprintf(report_file, "\nAvailable population units = %d\n",
                 nampla.pop_units);
     }
 
@@ -5022,10 +4843,10 @@ struct ship_data *   s_base;
 
     /* Print what will be produced this turn. */
     raw_material_units =
-        (10L * (long)species.tech_level[MI] * (long)nampla.mi_base)
-        / (long)planet.mining_difficulty;
+        (10 * species.tech_level[MI] * nampla.mi_base)
+        / planet.mining_difficulty;
     production_capacity =
-        ((long)species.tech_level[MA] * (long)nampla.ma_base) / 10L;
+        (species.tech_level[MA] * nampla.ma_base) / 10;
 
     ls_needed = life_support_needed(species, home_planet, planet);
 
@@ -5045,13 +4866,13 @@ struct ship_data *   s_base;
         -= (production_penalty * raw_material_units) / 100;
 
     raw_material_units
-        = (((long)planet.econ_efficiency * raw_material_units) + 50) / 100;
+        = ((planet.econ_efficiency * raw_material_units) + 50) / 100;
 
     production_capacity
         -= (production_penalty * production_capacity) / 100;
 
     production_capacity
-        = (((long)planet.econ_efficiency * production_capacity) + 50) / 100;
+        = ((planet.econ_efficiency * production_capacity) + 50) / 100;
 
     if (nampla.mi_base > 0) {
         fprintf(report_file, "\nMining base = %d.%d", nampla.mi_base / 10,
@@ -5066,13 +4887,13 @@ struct ship_data *   s_base;
             n2 = ((fleet_percent_cost * n1) + 5000) / 10000;
             n3 = n1 - n2;
             fprintf(report_file,
-                    "   This mining colony will generate %ld - %ld = %ld economic units this turn.\n",
+                    "   This mining colony will generate %d - %d = %d economic units this turn.\n",
                     n1, n2, n3);
 
             nampla.use_on_ambush = n3;         /* Temporary use only. */
         }else {
             fprintf(report_file,
-                    "   %ld raw material units will be produced this turn.\n",
+                    "   %d raw material units will be produced this turn.\n",
                     raw_material_units);
         }
     }
@@ -5092,19 +4913,19 @@ struct ship_data *   s_base;
             n2 = ((fleet_percent_cost * n1) + 5000) / 10000;
             n3 = n1 - n2;
             fprintf(report_file,
-                    "   This resort colony will generate %ld - %ld = %ld economic units this turn.\n",
+                    "   This resort colony will generate %d - %d = %d economic units this turn.\n",
                     n1, n2, n3);
 
             nampla.use_on_ambush = n3;         /* Temporary use only. */
         }else {
             fprintf(report_file,
-                    "   Production capacity this turn will be %ld.\n",
+                    "   Production capacity this turn will be %d.\n",
                     production_capacity);
         }
     }
 
     if (nampla.item_quantity[RM] > 0) {
-        fprintf(report_file, "\n%ss (%s,C%d) carried over from last turn = %ld\n",
+        fprintf(report_file, "\n%ss (%s,C%d) carried over from last turn = %d\n",
                 item_name[RM], item_abbr[RM], item_carry_capacity[RM],
                 nampla.item_quantity[RM]);
     }
@@ -5127,7 +4948,7 @@ struct ship_data *   s_base;
     if (!(nampla.status & MINING_COLONY) &&
         !(nampla.status & RESORT_COLONY)) {
         fprintf(report_file,
-                "\nTotal available for spending this turn = %ld - %ld = %ld\n",
+                "\nTotal available for spending this turn = %d - %d = %d\n",
                 n1, n2, n3);
         nampla.use_on_ambush = n3;     /* Temporary use only. */
 
@@ -5139,7 +4960,7 @@ do_inventory:
 
     header_printed = false;
 
-    for (i = 0; i < MAX_ITEMS; i++) {
+    for i = 0; i < MAX_ITEMS; i++ {
         if (nampla.item_quantity[i] > 0 && i != RM) {
             if (!header_printed) {
                 header_printed = true;
@@ -5150,7 +4971,7 @@ do_inventory:
                     item_name[i], item_abbr[i],
                     item_carry_capacity[i], nampla.item_quantity[i]);
             if (i == PD) {
-                fprintf(report_file, " (warship equivalence = %ld tons)",
+                fprintf(report_file, " (warship equivalence = %d tons)",
                         50 * nampla.item_quantity[PD]);
             }
             fprintf(report_file, "\n");
@@ -5161,7 +4982,7 @@ do_inventory:
      *  or in orbit around this planet. */
     printing_alien = false;
     header_printed = false;
-    for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
+    for ship_index = 0; ship_index < species.num_ships; ship_index++ {
         ship = s_base + ship_index;
 
         if (nampla.x != ship.x) {
@@ -5191,7 +5012,7 @@ do_inventory:
         ship_already_listed[ship_index] = true;
     }
 
-    for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
+    for ship_index = 0; ship_index < species.num_ships; ship_index++ {
         ship = s_base + ship_index;
 
         if (nampla.x != ship.x) {
@@ -5221,7 +5042,7 @@ do_inventory:
         ship_already_listed[ship_index] = true;
     }
 
-    for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
+    for ship_index = 0; ship_index < species.num_ships; ship_index++ {
         ship = s_base + ship_index;
 
         if (nampla.x != ship.x) {
@@ -5293,7 +5114,7 @@ int species_number;
         n = 46;
     }
 
-    for (i = 0; i < (n - length); i++) {
+    for i = 0; i < (n - length); i++ {
         putc(' ', report_file);
     }
 
@@ -5324,7 +5145,7 @@ int species_number;
         }
     }else {
         need_comma = false;
-        for (i = 0; i < MAX_ITEMS; i++) {
+        for i = 0; i < MAX_ITEMS; i++ {
             if (ship.item_quantity[i] > 0) {
                 if (need_comma) {
                     putc(',', report_file);
@@ -5369,17 +5190,17 @@ int destx, desty, destz;
                          )) / mishap_GV;
 
     if (mishap_age > 0 && mishap_chance < 10000) {
-        success_chance  = 10000L - mishap_chance;
-        success_chance -= (2L * (long)mishap_age * success_chance) / 100L;
-        mishap_chance   = 10000L - success_chance;
+        success_chance  = 10000 - mishap_chance;
+        success_chance -= (2 * mishap_age * success_chance) / 100;
+        mishap_chance   = 10000 - success_chance;
     }
 
     if (mishap_chance > 10000) {
         mishap_chance = 10000;
     }
 
-    fprintf(report_file, "mishap chance = %ld.%02ld%%",
-            mishap_chance / 100L, mishap_chance % 100L);
+    fprintf(report_file, "mishap chance = %d.%02d%%",
+            mishap_chance / 100, mishap_chance % 100);
 }
 
 
@@ -5409,7 +5230,7 @@ struct ship_data *ship;
     closest_distance = 999999;
 
     found = false;
-    for (i = 0; i < num_stars; i++) {
+    for i = 0; i < num_stars; i++ {
         star = star_base + i;
 
         /* Check if bit is already set. */
@@ -5447,6 +5268,7 @@ struct ship_data *ship;
 
 
 
+//*************************************************************************
 // Stats.c
 
 func StatsMain(argc int, argv []string) {
@@ -5503,7 +5325,7 @@ func StatsMain(argc int, argv []string) {
     n_yards            = 0;
     min_yards          = 32000;
     max_yards          = 0;
-    for (i = 0; i < 6; i++) {
+    for i = 0; i < 6; i++ {
         all_tech_level[i] = 0;
         min_tech_level[i] = 32000;
         max_tech_level[i] = 0;
@@ -5515,12 +5337,12 @@ func StatsMain(argc int, argv []string) {
     printf("-------------------------------------------------------------------------------\n");
 
     /* Main loop. For each species, take appropriate action. */
-    for (species_number = 1; species_number <= galaxy.num_species; species_number++) {
+    for species_number = 1; species_number <= galaxy.num_species; species_number++ {
         if (!data_in_memory[species_number - 1]) {
             continue;
         }
 
-        ++n_species;
+        n_species++
 
         species     = &spec_data[species_number - 1];
         nampla_base = namp_data[species_number - 1];
@@ -5537,7 +5359,7 @@ func StatsMain(argc int, argv []string) {
         printf("%2d", species_number);
         printf(" %-15.15s", species.name);
 
-        for (i = 0; i < 6; i++) {
+        for i = 0; i < 6; i++ {
             printf("%4d", species.tech_level[i]);
             all_tech_level[i] += (int)species.tech_level[i];
             if (species.tech_level[i] < min_tech_level[i]) {
@@ -5555,8 +5377,8 @@ func StatsMain(argc int, argv []string) {
         num_pop_planets       = 0;
         home_planet           = planet_base + (int)nampla_base.planet_index;
         nampla = nampla_base - 1;
-        for (nampla_index = 0; nampla_index < species.num_namplas; nampla_index++) {
-            ++nampla;
+        for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
+            nampla++
 
             if (nampla.pn == 99) {
                 continue;
@@ -5568,11 +5390,11 @@ func StatsMain(argc int, argv []string) {
             planet = planet_base + (int)nampla.planet_index;
 
             raw_material_units =
-                (10L * (long)species.tech_level[MI] * (long)nampla.mi_base)
-                / (long)planet.mining_difficulty;
+                (10 * species.tech_level[MI] * nampla.mi_base)
+                / planet.mining_difficulty;
 
             production_capacity =
-                ((long)species.tech_level[MA] * (long)nampla.ma_base) / 10L;
+                (species.tech_level[MA] * nampla.ma_base) / 10;
 
             ls_needed = life_support_needed(species, home_planet, planet);
 
@@ -5586,13 +5408,13 @@ func StatsMain(argc int, argv []string) {
                 -= (production_penalty * raw_material_units) / 100;
 
             raw_material_units
-                = (((long)planet.econ_efficiency * raw_material_units) + 50) / 100;
+                = ((planet.econ_efficiency * raw_material_units) + 50) / 100;
 
             production_capacity
                 -= (production_penalty * production_capacity) / 100;
 
             production_capacity
-                = (((long)planet.econ_efficiency * production_capacity) + 50) / 100;
+                = ((planet.econ_efficiency * production_capacity) + 50) / 100;
 
             if (nampla.status & MINING_COLONY) {
                 n1 = (2 * raw_material_units) / 3;
@@ -5614,8 +5436,8 @@ func StatsMain(argc int, argv []string) {
             total_defensive_power += power(tons);
 
             if (nampla.status & POPULATED) {
-                ++n_pop_pl;
-                ++num_pop_planets;
+                n_pop_pl++
+                num_pop_planets++
             }
         }
 
@@ -5650,8 +5472,8 @@ func StatsMain(argc int, argv []string) {
         total_tonnage         = 0;
         total_offensive_power = 0;
         ship                  = ship_base - 1;
-        for (ship_index = 0; ship_index < species.num_ships; ship_index++) {
-            ++ship;
+        for ship_index = 0; ship_index < species.num_ships; ship_index++ {
+            ship++
 
             if (ship.pn == 99) {
                 continue;
@@ -5661,24 +5483,27 @@ func StatsMain(argc int, argv []string) {
                 continue;
             }
 
-            ++num_ships;
-            total_tonnage += (long)ship.tonnage;
+            num_ships++
+            total_tonnage += ship.tonnage;
 
             if (ship.ttype == STARBASE) {
                 total_defensive_power += power(ship.tonnage);
-                all_starbase_tons     += (long)ship.tonnage;
-                ++n_starbases;  ++nba;
+                all_starbase_tons     += ship.tonnage;
+                n_starbases++
+                nba++
             }else if (ship.class == TR) {
-                all_transport_tons += (long)ship.tonnage;
-                ++n_transports;  ++ntr;
+                all_transport_tons += ship.tonnage;
+                n_transports++
+                ntr++
             }else {
                 if (ship.ttype == SUB_LIGHT) {
                     total_defensive_power += power(ship.tonnage);
                 }else{
                     total_offensive_power += power(ship.tonnage);
                 }
-                all_warship_tons += (long)ship.tonnage;
-                ++n_warships;  ++nwa;
+                all_warship_tons += ship.tonnage;
+                n_warships++
+                nwa++
             }
         }
 
@@ -5704,10 +5529,10 @@ func StatsMain(argc int, argv []string) {
         }
 
         total_offensive_power +=
-            ((long)species.tech_level[ML] * total_offensive_power) / 50;
+            (species.tech_level[ML] * total_offensive_power) / 50;
 
         total_defensive_power +=
-            ((long)species.tech_level[ML] * total_defensive_power) / 50;
+            (species.tech_level[ML] * total_defensive_power) / 50;
 
         if (species.tech_level[ML] == 0) {
             total_defensive_power = 0;
@@ -5724,7 +5549,7 @@ func StatsMain(argc int, argv []string) {
 
     m = n_species / 2;
     printf("\n");
-    for (i = 0; i < 6; i++) {
+    for i = 0; i < 6; i++ {
         avg_tech_level = (all_tech_level[i] + m) / n_species;
         printf("Average %s tech level = %d (min = %d, max = %d)\n",
                tech_name[i], avg_tech_level, min_tech_level[i], max_tech_level[i]);
@@ -5737,12 +5562,12 @@ func StatsMain(argc int, argv []string) {
     if (n_warships == 0) {
         n_warships = 1;
     }
-    avg_warship_tons = (10000L * all_warship_tons) / n_warships;
-    avg_warship_tons = 1000L * ((avg_warship_tons + 500L) / 1000L);
+    avg_warship_tons = (10000 * all_warship_tons) / n_warships;
+    avg_warship_tons = 1000 * ((avg_warship_tons + 500) / 1000);
     printf("Average warship size = %s tons\n", commas(avg_warship_tons));
 
-    avg_warship_tons = (10000L * all_warship_tons) / n_species;
-    avg_warship_tons = 1000L * ((avg_warship_tons + 500L) / 1000L);
+    avg_warship_tons = (10000 * all_warship_tons) / n_species;
+    avg_warship_tons = 1000 * ((avg_warship_tons + 500) / 1000);
     printf("Average total warship tonnage per species = %s tons\n",
            commas(avg_warship_tons));
 
@@ -5753,12 +5578,12 @@ func StatsMain(argc int, argv []string) {
     if (n_starbases == 0) {
         n_starbases = 1;
     }
-    avg_starbase_tons = (10000L * all_starbase_tons) / n_starbases;
-    avg_starbase_tons = 1000L * ((avg_starbase_tons + 500L) / 1000L);
+    avg_starbase_tons = (10000 * all_starbase_tons) / n_starbases;
+    avg_starbase_tons = 1000 * ((avg_starbase_tons + 500) / 1000);
     printf("Average starbase size = %s tons\n", commas(avg_starbase_tons));
 
-    avg_starbase_tons = (10000L * all_starbase_tons) / n_species;
-    avg_starbase_tons = 1000L * ((avg_starbase_tons + 500L) / 1000L);
+    avg_starbase_tons = (10000 * all_starbase_tons) / n_species;
+    avg_starbase_tons = 1000 * ((avg_starbase_tons + 500) / 1000);
     printf("Average total starbase tonnage per species = %s tons\n",
            commas(avg_starbase_tons));
 
@@ -5769,12 +5594,12 @@ func StatsMain(argc int, argv []string) {
     if (n_transports == 0) {
         n_transports = 1;
     }
-    avg_transport_tons = (10000L * all_transport_tons) / n_transports;
-    avg_transport_tons = 1000L * ((avg_transport_tons + 500L) / 1000L);
+    avg_transport_tons = (10000 * all_transport_tons) / n_transports;
+    avg_transport_tons = 1000 * ((avg_transport_tons + 500) / 1000);
     printf("Average transport size = %s tons\n", commas(avg_transport_tons));
 
-    avg_transport_tons = (10000L * all_transport_tons) / n_species;
-    avg_transport_tons = 1000L * ((avg_transport_tons + 500L) / 1000L);
+    avg_transport_tons = (10000 * all_transport_tons) / n_species;
+    avg_transport_tons = 1000 * ((avg_transport_tons + 500) / 1000);
     printf("Average total transport tonnage per species = %s tons\n",
            commas(avg_transport_tons));
 
@@ -5787,12 +5612,13 @@ func StatsMain(argc int, argv []string) {
            avg_pop_pl / 10, avg_pop_pl % 10, min_pop_pl, max_pop_pl);
 
     avg_production = (all_production + m) / n_species;
-    printf("Average total production per species = %ld (min = %ld, max = %ld)\n",
+    printf("Average total production per species = %d (min = %d, max = %d)\n",
            avg_production, min_production, max_production);
 }
 
 
 
+//*************************************************************************
 // TurnNumber.c
 
 func TurnNumberMain(argc int, argv []string) {

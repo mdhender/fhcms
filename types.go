@@ -160,8 +160,8 @@ type star_data struct {
 	home_system            int /* true if this is a good potential home system. */
 	worm_here              int /* true if wormhole entry/exit. */
 	worm_x, worm_y, worm_z int
-	planet_index           int                    /* Index (starting at zero) into the file "planets.dat" of the first planet in the star system. */
-	message                int                    /* Message associated with this star system, if any. */
+	planet_index           int               /* Index (starting at zero) into the file "planets.dat" of the first planet in the star system. */
+	message                int               /* Message associated with this star system, if any. */
 	visited_by             [MAX_SPECIES]bool /* A bit is set if corresponding species has  been here. */ // warning: was [NUM_CONTACT_WORDS]int
 }
 

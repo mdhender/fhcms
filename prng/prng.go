@@ -84,4 +84,3 @@ func Seed(seed string) {
 func SeedFromTime() {
 	defaultPRNG.SeedFromTime()
 }
-
