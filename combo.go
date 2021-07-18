@@ -26,6 +26,15 @@ import (
 )
 
 //*************************************************************************
+// hacks
+func isclear(set int, mask int) bool {
+	return (set & mask) == 0
+}
+func isset(set int, mask int) bool {
+	return (set & mask) != 0
+}
+
+//*************************************************************************
 // combat_utils.c
 
 func power(tonnage int) int {
@@ -108,7 +117,7 @@ func disbanded_ship(ship *ship_data_) bool {
 	for _, nampla := range species.namplas {
 		if nampla.x != ship.x || nampla.y != ship.y || nampla.z != ship.z || nampla.pn != ship.pn {
 			continue
-		} else if (nampla.status & DISBANDED_COLONY) == 0 {
+		} else if isclear(nampla.status, DISBANDED_COLONY) {
 			continue
 		} else if ship.ttype != STARBASE && ship.status == IN_ORBIT {
 			continue
@@ -556,7 +565,7 @@ func do_battle(bat *battle_data) {
 				continue
 			}
 
-			if namp.status & POPULATED {
+			if isset(namp.status, POPULATED) {
 				identifiable_units[species_index]++
 			}
 		}
@@ -679,11 +688,7 @@ func do_battle(bat *battle_data) {
 				continue
 			}
 
-			if (c_species[i].ally[array_index] & bit_mask) != 0 {
-				betrayal = true
-			} else {
-				betrayal = false
-			}
+			betrayal = c_species[i].ally[species_index] 
 
 			if betrayal {
 				/* Someone is being attacked by an ALLY. */
@@ -729,7 +734,7 @@ func do_battle(bat *battle_data) {
 					continue
 				}
 
-				if (c_species[k].ally[array_index] & bit_mask) != 0 {
+				if isset(c_species[k].ally[species_index], bit_mask) {
 					/* Make sure it's not already set (it may already be set
 					 *  for HIJACK and we don't want to accidentally change
 					 *  it to ATTACK). */
@@ -1427,7 +1432,7 @@ func do_bombardment(unit_index int, act *action_data) {
 	}
 
 	defending_species = act.fighting_species_index[unit_index]
-	if (attacked_nampla.status & HOME_PLANET) != 0 {
+	if isset(attacked_nampla.status, HOME_PLANET) {
 		n = attacked_nampla.mi_base + attacked_nampla.ma_base
 		if c_species[defending_species].hp_original_base < n {
 			c_species[defending_species].hp_original_base = n
@@ -1447,7 +1452,7 @@ func do_bombardment(unit_index int, act *action_data) {
 		attacked_nampla.use_on_ambush = 0
 
 		/* Reset status. */
-		if (attacked_nampla.status & HOME_PLANET) != 0 {
+		if isset(attacked_nampla.status, HOME_PLANET) {
 			attacked_nampla.status = HOME_PLANET
 		} else {
 			attacked_nampla.status = COLONY
@@ -2744,7 +2749,7 @@ func do_DEVELOP_command() {
 
 	if !more_args {
 		/* Make sure planet is not a healthy home planet. */
-		if (nampla.status & HOME_PLANET) != 0 {
+		if isset(nampla.status, HOME_PLANET) {
 			reb = species.hp_original_base - (nampla.mi_base + nampla.ma_base)
 			if reb > 0 {
 				/* Home planet is recovering from bombing. */
@@ -2831,7 +2836,7 @@ func do_DEVELOP_command() {
 	}
 
 	/* Make sure planet is not a healthy home planet. */
-	if colony_nampla.status & HOME_PLANET {
+	if isset(colony_nampla.status, HOME_PLANET) {
 		reb = species.hp_original_base - (colony_nampla.mi_base + colony_nampla.ma_base)
 		if reb > 0 {
 			/* Home planet is recovering from bombing. */
@@ -3168,7 +3173,7 @@ func do_DISBAND_command() {
 	}
 
 	/* Make sure planet is not the home planet. */
-	if (nampla.status & HOME_PLANET) != 0 {
+	if isset(nampla.status, HOME_PLANET) {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! You cannot disband your home planet!\n")
@@ -3264,10 +3269,7 @@ func do_ESTIMATE_command() {
 	}
 
 	/* Check if we've met this species. */
-	contact_word_number = (g_spec_number - 1) / 32
-	contact_bit_number = (g_spec_number - 1) % 32
-	contact_mask = 1 << contact_bit_number
-	if (species.contact[contact_word_number] & contact_mask) == 0 {
+	if !species.contact[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! You can't do an estimate of a species you haven't met.\n")
@@ -3396,7 +3398,7 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
 	/* Take care of looting. */
 	econ_units_from_looting = attacked_nampla.mi_base + attacked_nampla.ma_base
 
-	if attacked_nampla.status & HOME_PLANET {
+	if isset(attacked_nampla.status, HOME_PLANET) {
 		if c_species[defending_species].hp_original_base < econ_units_from_looting {
 			c_species[defending_species].hp_original_base = econ_units_from_looting
 		}
@@ -3440,7 +3442,7 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
 	}
 
 	/* Reset status word. */
-	if (attacked_nampla.status & HOME_PLANET) != 0 {
+	if isset(attacked_nampla.status, HOME_PLANET) {
 		attacked_nampla.status = HOME_PLANET
 	} else {
 		attacked_nampla.status = COLONY
@@ -3480,13 +3482,13 @@ func do_HIDE_command() {
 	}
 
 	/* Make sure this is not a mining colony or home planet. */
-	if (nampla.status & HOME_PLANET) != 0 {
+	if isset(nampla.status, HOME_PLANET) {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! You may not HIDE a home planet.\n")
 		return
 	}
-	if (nampla.status & RESORT_COLONY) != 0 {
+	if isset(nampla.status, RESORT_COLONY) {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! You may not HIDE a resort colony.\n")
@@ -3503,7 +3505,7 @@ func do_HIDE_command() {
 
 	/* Check if sufficient funds are available. */
 	cost := (nampla.mi_base + nampla.ma_base) / 10
-	if (nampla.status & MINING_COLONY) != 0 {
+	if isset(nampla.status, MINING_COLONY) {
 		if cost > species.econ_units {
 			fprintf(log_file, "!!! Order ignored:\n")
 			fprintf(log_file, "!!! %s", input_line)
@@ -3608,7 +3610,7 @@ get_planet:
 		if alien_home_nampla.pn != nampla.pn {
 			continue
 		}
-		if (alien_home_nampla.status & POPULATED) == 0 {
+		if isclear(alien_home_nampla.status, POPULATED) {
 			continue
 		}
 
@@ -3621,7 +3623,7 @@ get_planet:
 
 	/* Make sure it's not a healthy home planet. */
 	recovering_home_planet = false
-	if (nampla.status & HOME_PLANET) != 0 {
+	if isset(nampla.status, HOME_PLANET) {
 		n = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install + nampla.AUs_to_install
 		reb = species.hp_original_base - n
 
@@ -4067,7 +4069,7 @@ get_planet:
 				if alien_pn != alien_nampla.pn {
 					continue
 				}
-				if (alien_nampla.status & POPULATED) == 0 {
+				if isclear(alien_nampla.status, POPULATED) {
 					continue
 				}
 
@@ -4082,7 +4084,7 @@ get_planet:
 
 				alien_here = true
 
-				if (alien.ally[array_index] & bit_mask) == 0 {
+				if alien.ally[array_index] {
 					continue
 				}
 
@@ -4128,11 +4130,11 @@ finish_up:
 				if alien_pn != alien_nampla.pn {
 					continue
 				}
-				if (alien_nampla.status & POPULATED) == 0 {
+				if isclear(alien_nampla.status, POPULATED) {
 					continue
 				}
 
-				if (alien.ally[array_index] & bit_mask) != 0 {
+				if alien.ally[array_index] {
 					found = true
 				} else {
 					found = false
@@ -4219,7 +4221,7 @@ finish_up:
 	}
 
 	/* Make sure planet is populated. */
-	if (nampla.status & POPULATED) == 0 {
+	if !isset(nampla.status, POPULATED) {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", original_line)
 		fprintf(log_file, "!!! Planet in LAND command is not populated.\n")
@@ -4345,7 +4347,7 @@ func do_locations() {
 				continue
 			}
 
-			if nampla.status & POPULATED {
+			if isset(nampla.status, POPULATED) {
 				add_location(nampla.x, nampla.y, nampla.z)
 			}
 		}
@@ -4940,7 +4942,7 @@ func do_PRODUCTION_command(missing_production_order bool) {
 	production_done[nampla_index] = true
 
 	/* Check if this colony was disbanded. */
-	if (nampla.status & DISBANDED_COLONY) != 0 {
+	if isset(nampla.status, DISBANDED_COLONY) {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! Production orders cannot be given for a disbanded colony!\n")
@@ -4954,16 +4956,9 @@ got_nampla:
 	shipyard_capacity = nampla.shipyards
 
 	/* See if this is a mining or resort colony. */
-	mining_colony = false
-	resort_colony = false
-	special_colony = false
-	if (nampla.status & MINING_COLONY) != 0 {
-		mining_colony = true
-		special_colony = true
-	} else if (nampla.status & RESORT_COLONY) != 0 {
-		resort_colony = true
-		special_colony = true
-	}
+	mining_colony = isset(nampla.status, MINING_COLONY)
+	resort_colony = isset(nampla.status, RESORT_COLONY)
+	special_colony = isset(nampla.status, MINING_COLONY | RESORT_COLONY)
 
 	/* Get planet data for this nampla. */
 	planet = planet_base + nampla.planet_index
@@ -5045,7 +5040,7 @@ got_nampla:
 		raw_material_units = balance
 		production_capacity = balance
 		EUs_available_for_siege = balance
-		if (nampla.status & HOME_PLANET) != 0 {
+		if isset(nampla.status, HOME_PLANET) {
 			if species.hp_original_base != 0 { /* HP was bombed. */
 				EU_spending_limit = 4 * balance /* Factor = 4 + 1 = 5. */
 			} else {
@@ -5400,7 +5395,7 @@ got_nampla:
 	}
 
 	/* Check for assimilation. */
-	if (nampla.status & HOME_PLANET) != 0 {
+	if isset(nampla.status, HOME_PLANET) {
 		return
 	}
 	if total_alien_pop_here < 1 {
@@ -5565,7 +5560,7 @@ func do_RECYCLE_command() {
 		nampla.pop_units += value
 	}
 	species.econ_units += recycle_value
-	if (nampla.status & HOME_PLANET) != 0 {
+	if isset(nampla.status, HOME_PLANET) {
 		EU_spending_limit += recycle_value
 	}
 
@@ -5632,7 +5627,7 @@ recycle_ship:
 	}
 
 	species.econ_units += recycle_value
-	if (nampla.status & HOME_PLANET) != 0 {
+	if isset(nampla.status, HOME_PLANET) {
 		EU_spending_limit += recycle_value
 	}
 
@@ -7200,7 +7195,7 @@ func do_TELESCOPE_command() {
 		for alien_nampla_index = 0; alien_nampla_index < alien.num_namplas; alien_nampla_index++ {
 			alien_nampla = namp_data[alien_index][alien_nampla_index]
 
-			if (alien_nampla.status & POPULATED) == 0 {
+			if isclear(alien_nampla.status, POPULATED) {
 				continue
 			}
 
@@ -7336,7 +7331,7 @@ func do_TELESCOPE_command() {
 			for alien_nampla_index = 0; alien_nampla_index < alien.num_namplas; alien_nampla_index++ {
 				alien_nampla = namp_data[alien_index][alien_nampla_index]
 
-				if (alien_nampla.status & POPULATED) == 0 {
+				if isclear(alien_nampla.status, POPULATED) {
 					continue
 				}
 				if alien_nampla.x != x {
@@ -7368,11 +7363,11 @@ func do_TELESCOPE_command() {
 					industry = ((industry + 50) / 100) * 10
 				}
 
-				if alien_nampla.status & HOME_PLANET {
+				if isset(alien_nampla.status, HOME_PLANET) {
 					strcpy(planet_ttype, "Home planet")
-				} else if alien_nampla.status & RESORT_COLONY {
+				} else if isset(alien_nampla.status, RESORT_COLONY) {
 					strcpy(planet_ttype, "Resort colony")
-				} else if alien_nampla.status & MINING_COLONY {
+				} else if isset(alien_nampla.status, MINING_COLONY) {
 					strcpy(planet_ttype, "Mining colony")
 				} else {
 					strcpy(planet_ttype, "Colony")
@@ -7506,7 +7501,7 @@ func do_TERRAFORM_command() {
 	}
 
 	/* Make sure planet is not a home planet. */
-	if (nampla.status & HOME_PLANET) != 0 {
+	if isset(nampla.status, HOME_PLANET) {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! Terraforming may not be done on a home planet.\n")
@@ -8067,7 +8062,7 @@ get_destination:
 
 		/* If this is the post-arrival phase, then make sure the planet
 		 *      is populated. */
-		if post_arrival_phase && ((nampla2.status & POPULATED) == 0) {
+		if post_arrival_phase && !isset(nampla2.status, POPULATED) {
 			fprintf(log_file, "!!! Order ignored:\n")
 			fprintf(log_file, "!!! %s", original_line)
 			fprintf(log_file, "!!! Destination planet must be populated for post-arrival TRANSFERs.\n")
@@ -8347,7 +8342,7 @@ func do_UNLOAD_command() {
 		if alien_home_nampla.pn != nampla.pn {
 			continue
 		}
-		if (alien_home_nampla.status & POPULATED) == 0 {
+		if isclear(alien_home_nampla.status, POPULATED) {
 			continue
 		}
 
@@ -8360,7 +8355,7 @@ func do_UNLOAD_command() {
 
 	/* Make sure it's not a healthy home planet. */
 	recovering_home_planet = false
-	if (nampla.status & HOME_PLANET) != 0 {
+	if isset(nampla.status, HOME_PLANET) {
 		n = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install +
 			nampla.AUs_to_install
 		reb = species.hp_original_base - n
@@ -8778,7 +8773,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) i
 							if nam.z != z {
 								continue
 							}
-							if (nam.status & POPULATED) == 0 {
+							if isclear(nam.status, POPULATED) {
 								continue
 							}
 
@@ -8838,10 +8833,10 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) i
 			if nam.pn != location {
 				continue
 			}
-			if (nam.status & POPULATED) == 0 {
+			if isclear(nam.status, POPULATED) {
 				continue
 			}
-			if nam.status & DISBANDED_COLONY {
+			if isset(nam.status, DISBANDED_COLONY) {
 				continue
 			}
 
@@ -9061,7 +9056,7 @@ func disbanded_ship(species_index int, sh *ship_data_) bool {
 		nam := c_nampla[species_index][nampla_index]
 		if nam.x != sh.x || nam.y != sh.y || nam.z != sh.z || nam.pn != sh.pn {
 			continue
-		} else if (nam.status & DISBANDED_COLONY) == 0 {
+		} else if isclear(nam.status, DISBANDED_COLONY) {
 			continue
 		} else if sh.ttype != STARBASE && sh.status == IN_ORBIT {
 			continue
@@ -9788,7 +9783,7 @@ func transfer_balance() {
 	/* Log end of production. Do not print ending balance for mining or resort colonies. */
 	limiting_amount := 0
 	fprintf(log_file, "  End of production on PL %s.", nampla.name)
-	if (nampla.status & (MINING_COLONY | RESORT_COLONY)) != 0 {
+	if isset(nampla.status, MINING_COLONY | RESORT_COLONY) {
 		if raw_material_units > production_capacity {
 			limiting_balance = production_capacity
 		} else {
@@ -10697,7 +10692,7 @@ func undistorted(distorted_species_number int) int {
 func check_population(nampla *nampla_data) bool {
 	var is_now_populated bool
 
-	was_already_populated := (nampla.status & POPULATED) != 0
+	was_already_populated := isset(nampla.status, POPULATED)
 	total_pop := nampla.mi_base + nampla.ma_base + nampla.IUs_to_install + nampla.AUs_to_install + nampla.item_quantity[PD] + nampla.item_quantity[CU] + nampla.pop_units
 	if total_pop > 0 {
 		nampla.status |= POPULATED
