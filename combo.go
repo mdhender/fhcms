@@ -180,7 +180,7 @@ func do_AMBUSH_command() {
 	}
 
 	/* Get amount to spend. */
-	status := get_value()
+	value, status := get_value()
 	if !status || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
@@ -224,31 +224,31 @@ func do_AMBUSH_command() {
 // do_base.c
 
 func do_BASE_command() {
-	var n                                                 int
-	var found                                             bool
-	var su_count, original_count, item_class, name_length int
-	var unused_ship_available                             bool
-	var new_tonnage, max_tonnage                          int
-	var new_starbase                                      bool
-	var source_is_a_planet                                bool
-	var age_new                                           int
-	var x, y, z, pn           int
-	var upper_ship_name       [32]byte
+	//var n                                                 int
+	//var item_class, name_length int
+	//var age_new                                           int
+	var found bool
+	var unused_ship_available bool
+	var new_tonnage, max_tonnage int
+	var new_starbase bool
+	var source_is_a_planet bool
+	var x, y, z, pn int
+	var upper_ship_name string
 	var original_line_pointer *cstring
-	var source_nampla                      *nampla_data
+	var source_nampla *nampla_data
 	var source_ship, starbase, unused_ship *ship_data_
 
 	/* Get number of starbase units to use. */
-	if i := get_value(); !i {
-		value = 0
-	} else if value < 0 { /* Make sure value is meaningful. */
+	su_count, ok := get_value()
+	if !ok {
+		su_count = 0
+	} else if su_count < 0 { /* Make sure value is meaningful. */
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", original_line)
 		fprintf(log_file, "!!! Invalid SU count in BASE command.\n")
 		return
 	}
-	su_count = value
-	original_count = su_count
+	original_count := su_count
 
 	/* Get source of starbase units. */
 	original_line_pointer = input_line_pointer
@@ -688,7 +688,7 @@ func do_battle(bat *battle_data) {
 				continue
 			}
 
-			betrayal = c_species[i].ally[species_index] 
+			betrayal = c_species[i].ally[species_index]
 
 			if betrayal {
 				/* Someone is being attacked by an ALLY. */
@@ -1551,26 +1551,24 @@ func do_bombardment(unit_index int, act *action_data) {
 // do_build.c
 
 func do_BUILD_command(continuing_construction, interspecies_construction bool) {
-	var (
-		i, n, class, critical_tech, found, name_length            int
-		siege_effectiveness, cost_given, new_ship, max_tonnage    int
-		tonnage_increase, alien_number, cargo_on_board            int
-		unused_nampla_available, unused_ship_available, capacity  int
-		pop_check_needed, contact_word_number, contact_bit_number int
-		already_notified                                          [MAX_SPECIES]int
-
-		upper_ship_name       [32]byte
-		src, dest             *byte
-		original_line_pointer *cstring
-
-		cost, cost_argument, unit_cost, num_items, pop_reduction int
-		premium, total_cost, original_num_items, contact_mask    int
-		max_funds_available                                      int
-
-		recipient_species                                                *species_data
-		recipient_nampla, unused_nampla, destination_nampla, temp_nampla *nampla_data
-		recipient_ship, unused_ship                                      *ship_data_
-	)
+	var i, n, class, critical_tech, found, name_length int
+	var siege_effectiveness int
+	var cost_given bool
+	var new_ship, max_tonnage int
+	var tonnage_increase, alien_number, cargo_on_board int
+	var unused_nampla_available, unused_ship_available, capacity int
+	var pop_check_needed, contact_word_number, contact_bit_number int
+	var already_notified [MAX_SPECIES]int
+	var upper_ship_name string
+	var src, dest *byte
+	var original_line_pointer *cstring
+	var cost, cost_argument, unit_cost, num_items, pop_reduction int
+	var premium, total_cost, original_num_items, contact_mask int
+	var max_funds_available int
+	var recipient_species *species_data
+	var recipient_nampla, unused_nampla, destination_nampla, temp_nampla *nampla_data
+	var recipient_ship, unused_ship *ship_data_
+	var ok bool // mdhender: added
 
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
@@ -1627,11 +1625,11 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 	}
 
 	/* Get number of items to build. */
-	if i = get_value(); i == 0 {
+	num_items, ok = get_value()
+	if !ok {
 		goto build_ship /* Not an item. */
 	}
-	num_items = value
-	original_num_items = value
+	original_num_items = num_items
 
 	/* Get class of item. */
 	class = get_class_abbr()
@@ -2166,9 +2164,8 @@ check_ship:
 	}
 
 	/* Check if amount to spend was specified. */
-	cost_given = get_value()
-	cost = value
-	cost_argument = value
+	cost, cost_given = get_value()
+	cost_argument = cost
 
 	if cost_given {
 		if interspecies_construction && (ship.ttype != STARBASE) {
@@ -2704,7 +2701,7 @@ func do_DEVELOP_command() {
 
 	/* Get specified spending limit, if any. */
 	specified_max = -1
-	if get_value() {
+	if value, ok := get_value(); ok {
 		if value == 0 {
 			max_funds_available = balance
 		} else if value > 0 {
@@ -2713,9 +2710,7 @@ func do_DEVELOP_command() {
 				max_funds_available = value
 			} else {
 				fprintf(log_file, "! WARNING: %s", input_line)
-				fprintf(log_file,
-					"! Insufficient funds. Substituting %ld for %ld.\n",
-					max_funds_available, value)
+				fprintf(log_file, "! Insufficient funds. Substituting %ld for %ld.\n", max_funds_available, value)
 				if max_funds_available == 0 {
 					return
 				}
@@ -3209,11 +3204,12 @@ func do_DISBAND_command() {
 func do_ENEMY_command() {
 	/* See if declaration is for all species. */
 	var allEnemies bool
-	if get_value() {
+	if _, ok := get_value(); ok {
 		allEnemies = true
+		// set all enememy bits and clear all ally bits
 		for i := 0; i < MAX_SPECIES; i++ {
-			species.enemy[i] = true /* Set all enemy bits. */
-			species.ally[i] = false /* Clear all ally bits. */
+			species.enemy[i] = true
+			species.ally[i] = false
 		}
 	} else {
 		/* Get name of species that is being declared an enemy. */
@@ -3534,14 +3530,14 @@ func do_HIDE_command() {
 // do_inst.c
 
 func do_INSTALL_command() {
-	var (
-		i, item_class, item_count, num_available, do_all_units, recovering_home_planet, alien_index int
-		n, current_pop, reb                                                                         int
-		alien_home_nampla                                                                           *nampla_data
-	)
+	var i, item_class, item_count, num_available int
+	var do_all_units bool
+	var recovering_home_planet, alien_index int
+	var n, current_pop, reb int
+	var alien_home_nampla *nampla_data
 
 	/* Get number of items to install. */
-	if get_value() {
+	if _, ok := get_value(); ok {
 		do_all_units = false
 	} else {
 		do_all_units = true
@@ -3732,8 +3728,8 @@ func do_INTERCEPT_command() {
 	}
 
 	/* Get amount to spend. */
-	status := get_value()
-	if status == 0 || value < 0 {
+	_, ok := get_value()
+	if !ok || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! Invalid or missing amount.\n")
@@ -4026,7 +4022,7 @@ func do_LAND_command() {
 	}
 
 	/* Get the planet number, if specified. */
-	found = get_value()
+	_, found = get_value()
 
 get_planet:
 
@@ -4643,7 +4639,7 @@ func do_NAME_command() {
 func do_NEUTRAL_command() {
 	/* See if declaration is for all species. */
 	var allSpecies bool
-	if get_value() {
+	if _, ok := get_value(); ok {
 		allSpecies = true
 		for i := 0; i < MAX_SPECIES; i++ {
 			species.enemy[i] = false /* Clear all enemy bits. */
@@ -4727,7 +4723,7 @@ func do_ORBIT_command() {
 	}
 
 	/* Get the planet. */
-	specified_planet_number = get_value()
+	_, specified_planet_number = get_value()
 
 get_planet:
 
@@ -4958,7 +4954,7 @@ got_nampla:
 	/* See if this is a mining or resort colony. */
 	mining_colony = isset(nampla.status, MINING_COLONY)
 	resort_colony = isset(nampla.status, RESORT_COLONY)
-	special_colony = isset(nampla.status, MINING_COLONY | RESORT_COLONY)
+	special_colony = isset(nampla.status, MINING_COLONY|RESORT_COLONY)
 
 	/* Get planet data for this nampla. */
 	planet = planet_base + nampla.planet_index
@@ -5495,7 +5491,7 @@ got_nampla:
 // do_recy.c
 
 func do_RECYCLE_command() {
-	var i, class, recycle_value, original_cost, units_available int
+	var class, recycle_value, original_cost, units_available int
 
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
@@ -5506,9 +5502,7 @@ func do_RECYCLE_command() {
 	}
 
 	/* Get number of items to recycle. */
-	i = get_value()
-
-	if i == 0 {
+	if _, ok := get_value(); !ok {
 		goto recycle_ship /* Not an item. */
 	}
 	/* Get class of item. */
@@ -5664,20 +5658,18 @@ recycle_ship:
 // do_rep.c
 
 func do_REPAIR_command() {
-	var i, j, n, x, y, z, age_reduction, num_dr_units int
+	var n, x, y, z, age_reduction, num_dr_units int
 	var total_dr_units, dr_units_used, max_age, desired_age int
 	var original_line_pointer *cstring
 	var damaged_ship *ship_data_
 
 	/* See if this is a "pool" repair. */
-	if get_value() {
+	if _, ok := get_value(); ok {
 		x = value
-		get_value()
-		y = value
-		get_value()
-		z = value
+		y, _ = get_value()
+		z, _ = get_value()
 
-		if get_value() {
+		if _, ok := get_value(); ok {
 			desired_age = value
 		} else {
 			desired_age = 0
@@ -5715,7 +5707,7 @@ func do_REPAIR_command() {
 	}
 
 	/* Get number of damage repair units to use. */
-	if get_value() {
+	if _, ok := get_value(); ok {
 		if value == 0 {
 			num_dr_units = ship.item_quantity[DR]
 		} else {
@@ -5926,7 +5918,7 @@ pool_repair:
 // do_res.c
 
 func do_RESEARCH_command() {
-	var n, status, tech, initial_level, current_level int
+	var n, tech, initial_level, current_level int
 	var cost, amount_spent, cost_for_one_level, funds_remaining, max_funds_available int
 
 	/* Check if this order was preceded by a PRODUCTION order. */
@@ -5938,9 +5930,8 @@ func do_RESEARCH_command() {
 	}
 
 	/* Get amount to spend. */
-	status = get_value()
-	need_amount_to_spend := (status == 0) /* Sometimes players reverse
-	 * the arguments. */
+	_, status := get_value()
+	need_amount_to_spend := (status == false) /* Sometimes players reverse the arguments. */
 	/* Get technology. */
 	if get_class_abbr() != TECH_ID {
 		fprintf(log_file, "!!! Order ignored:\n")
@@ -5959,10 +5950,10 @@ func do_RESEARCH_command() {
 
 	/* Get amount to spend if it was not obtained above. */
 	if need_amount_to_spend {
-		status = get_value()
+		_, status = get_value()
 	}
 
-	if status == 0 || value < 0 {
+	if status == false || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! Invalid or missing amount to spend!\n")
@@ -6711,15 +6702,15 @@ func do_SCAN_command() {
 // do_send.c
 
 func do_SEND_command() {
-	var i, n, contact_word_number, contact_bit_number int
+	var n, contact_word_number, contact_bit_number int
 	var num_available, contact_mask, item_count int
 	var nampla1, nampla2 *nampla_data
 
 	/* Get number of EUs to transfer. */
-	i = get_value()
+	_, ok := get_value()
 
 	/* Make sure value is meaningful. */
-	if i == 0 || value < 0 {
+	if !ok || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
 		fprintf(log_file, "!!! Invalid item count in SEND command.\n")
@@ -6916,7 +6907,8 @@ func do_siege(bat *battle_data, act *action_data) {
 // do_teach.c
 
 func do_TEACH_command() {
-	var tech, contact_word_number, contact_bit_number, max_level_specified, need_technology, max_tech_level, contact_mask int
+	var tech int
+	var need_technology bool
 
 	/* Get technology. */
 	temp_ptr := input_line_pointer
@@ -6929,9 +6921,8 @@ func do_TEACH_command() {
 	}
 
 	/* See if a maximum tech level was specified. */
-	max_level_specified = get_value()
+	max_tech_level, max_level_specified := get_value()
 	if max_level_specified {
-		max_tech_level = value
 		if max_tech_level > species.tech_level[tech] {
 			max_tech_level = species.tech_level[tech]
 		}
@@ -6997,16 +6988,12 @@ func do_TEACH_command() {
 // do_tech.c
 
 func do_TECH_command() {
-	var tech, contact_word_number, contact_bit_number int
-	var max_level_specified, max_tech_level, max_cost_specified int
-	var need_technology int
-	var contact_mask, max_cost int
+	var tech int
+	var need_technology bool
 
 	/* See if a maximum cost was specified. */
-	max_cost_specified = get_value()
-	if max_cost_specified {
-		max_cost = value
-	} else {
+	max_cost, max_cost_specified := get_value()
+	if !max_cost_specified {
 		max_cost = 0
 	}
 
@@ -7019,8 +7006,7 @@ func do_TECH_command() {
 	}
 
 	/* See if a maximum tech level was specified. */
-	max_level_specified = get_value()
-	max_tech_level = value
+	max_tech_level, max_level_specified := get_value()
 
 	/* Get species to transfer tech to. */
 	if !get_species_name() {
@@ -7482,13 +7468,12 @@ func do_TELESCOPE_command() {
 // do_terr.c
 
 func do_TERRAFORM_command() {
-	var i, j, ls_needed, num_plants int
+	var i, j, ls_needed int
 	var home_planet, colony_planet *planet_data
 
 	/* Get number of TPs to use. */
-	if get_value() {
-		num_plants = value
-	} else {
+	num_plants, ok := get_value()
+	if !ok {
 		num_plants = 0
 	}
 
@@ -7744,10 +7729,10 @@ func do_TRANSFER_command() {
 	var ship1, ship2 *ship_data_
 
 	/* Get number of items to transfer. */
-	i = get_value()
+	_, ok := get_value()
 
 	/* Make sure value is meaningful. */
-	if i == 0 || value < 0 {
+	if !ok || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", original_line)
 		fprintf(log_file, "!!! Invalid item count in TRANSFER command.\n")
@@ -8467,7 +8452,7 @@ func do_UNLOAD_command() {
 // do_upg.c
 
 func do_UPGRADE_command() {
-	var age_reduction, value_specified int
+	var age_reduction int
 	var amount_to_spend, original_cost, max_funds_available int
 
 	/* Check if this order was preceded by a PRODUCTION order. */
@@ -8535,7 +8520,8 @@ func do_UPGRADE_command() {
 	}
 
 	/* Get amount to be spent. */
-	if value_specified = get_value(); value_specified {
+	_, value_specified := get_value()
+	if value_specified {
 		if value == 0 {
 			amount_to_spend = balance
 		} else {
@@ -8675,7 +8661,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) i
 				option != GERM_WARFARE {
 				continue
 			}
-			if disbanded_ship(species_index, sh) {
+			if disbanded_ship_(species_index, sh) {
 				continue
 			}
 			if option == SIEGE || option == PLANET_BOMBARDMENT {
@@ -9051,7 +9037,7 @@ next_step:
 	return (true) /* There will be a fight here. */
 }
 
-func disbanded_ship(species_index int, sh *ship_data_) bool {
+func disbanded_ship_(species_index int, sh *ship_data_) bool {
 	for nampla_index := 0; nampla_index < c_species[species_index].num_namplas; nampla_index++ {
 		nam := c_nampla[species_index][nampla_index]
 		if nam.x != sh.x || nam.y != sh.y || nam.z != sh.z || nam.pn != sh.pn {
@@ -9226,32 +9212,33 @@ func gamemaster_abort_option() {
  * location is valid, true will be returned, otherwise false will be
  * returned. */
 
-func get_location() int {
-	var i, n, found, temp_nampla_index, first_try, name_length, best_score, next_best_score, best_nampla_index, minimum_score int
+func get_location() bool {
+	var i, n, temp_nampla_index, first_try, name_length, best_score, next_best_score, best_nampla_index, minimum_score int
 	var upper_nampla_name [32]byte
 	var temp1_ptr, temp2_ptr *byte
 	var temp_nampla *nampla_data
+	var found bool
 
 	/* Check first if x, y, z are specified. */
 	nampla = nil
 	skip_whitespace()
 
-	if get_value() == 0 {
+	if _, ok := get_value(); !ok {
 		goto get_planet
 	}
 	x = value
 
-	if get_value() == 0 {
+	if _, ok := get_value(); !ok {
 		return (false)
 	}
 	y = value
 
-	if get_value() == 0 {
+	if _, ok := get_value(); !ok {
 		return (false)
 	}
 	z = value
 
-	if get_value() == 0 {
+	if _, ok := get_value(); !ok {
 		pn = 0
 	} else {
 		pn = value
@@ -9277,13 +9264,13 @@ func get_location() int {
 		}
 
 		if pn > star.num_planets {
-			return (false)
+			return false
 		} else {
-			return (true)
+			return true
 		}
 	}
 
-	return (false)
+	return false
 
 get_planet:
 
@@ -9783,7 +9770,7 @@ func transfer_balance() {
 	/* Log end of production. Do not print ending balance for mining or resort colonies. */
 	limiting_amount := 0
 	fprintf(log_file, "  End of production on PL %s.", nampla.name)
-	if isset(nampla.status, MINING_COLONY | RESORT_COLONY) {
+	if isset(nampla.status, MINING_COLONY|RESORT_COLONY) {
 		if raw_material_units > production_capacity {
 			limiting_balance = production_capacity
 		} else {
@@ -10087,12 +10074,12 @@ func get_name() int {
 }
 
 /* Read a long decimal and place its value in 'value'. */
-func get_value() bool {
+func get_value() (int, bool) {
 	skip_whitespace()
 
 	n := sscanf(input_line_pointer, "%ld", &value)
 	if n != 1 {
-		return false /* Not a numeric value. */
+		return 0, false /* Not a numeric value. */
 	}
 	/* Skip numeric string. */
 	input_line_pointer++ /* Skip first sign or digit. */
@@ -10100,7 +10087,7 @@ func get_value() bool {
 		input_line_pointer++
 	}
 
-	return true
+	return value, true
 }
 
 /* The following routine will check that the next argument in the current
