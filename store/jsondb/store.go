@@ -27,7 +27,7 @@ type Store struct {
 		TurnNumber  int `json:"turn_number"`
 	} `json:"galaxy"`
 	Locations []Location `json:"locations"`
-	Planets []struct {
+	Planets   []struct {
 		Id               int    `json:"id"`
 		Diameter         int    `json:"diameter"`
 		EconEfficiency   int    `json:"econ_efficiency"`
@@ -140,7 +140,7 @@ type Store struct {
 	} `json:"stars"`
 }
 
-type Location struct	{
+type Location struct {
 	S int `json:"s"` // species number
 	X int `json:"x"`
 	Y int `json:"y"`

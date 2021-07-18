@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
+import "github.com/mdhender/fhcms/orders"
+
 type action_data struct {
 	bomb_damage            [MAX_SHIPS]int
 	fighting_species_index [MAX_SHIPS]int
@@ -75,7 +77,7 @@ type gas_data struct {
 }
 
 type nampla_data struct {
-	name           string       /* Name of planet. */ // warning: code expects [32]byte
+	name           string         /* Name of planet. */ // warning: code expects [32]byte
 	x, y, z, pn    int            /* Coordinates. */
 	AUs_needed     int            /* Incoming ship with only CUs on board. */
 	auto_AUs       int            /* Number of AUs to be automatically installed. */
@@ -115,7 +117,7 @@ type planet_data struct {
 }
 
 type ship_data_ struct {
-	name                   string       /* Name of ship. */ // warning: code expects [32]byte
+	name                   string         /* Name of ship. */ // warning: code expects [32]byte
 	x, y, z, pn            int            /* Current coordinates. */
 	age                    int            /* Ship age. */
 	arrived_via_wormhole   bool           /* Ship arrived via wormhole in the PREVIOUS turn. */
@@ -162,7 +164,12 @@ type species_data struct {
 	contact [MAX_SPECIES]bool /* A bit is set if corresponding species has been met. */
 	enemy   [MAX_SPECIES]bool /* A bit is set if corresponding species is considered an enemy. */
 	// mdhender: added the following for convenience
+	id      int
 	namplas []*nampla_data
+	orders  struct {
+		data     *orders.Orders
+		filename string
+	}
 	ships []*ship_data_
 }
 

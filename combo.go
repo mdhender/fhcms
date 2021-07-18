@@ -21,8 +21,11 @@ package main
 import (
 	"fmt"
 	"github.com/mdhender/fhcms/agrep"
+	"github.com/mdhender/fhcms/config"
+	"github.com/mdhender/fhcms/orders"
 	"io"
 	"log"
+	"path/filepath"
 )
 
 //*************************************************************************
@@ -10926,4 +10929,39 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 	}
 
 	truncate_name = old_trunc
+}
+
+//*************************************************************************
+// mdhender: created
+
+func get_order_data() (errors []error) {
+	for species_number := 1; species_number <= num_species; species_number++ {
+		if ee := spec_data[species_number-1].getOrders(); ee != nil {
+			errors = append(errors, ee...)
+		}
+	}
+	return errors
+}
+
+func (s *species_data) getOrders() []error {
+	if verbose_mode {
+		log.Printf("orders: loading %q\n", s.orders.filename)
+	}
+	s.orders.data = orders.Parse(s.orders.filename)
+	if verbose_mode && s.orders.data.Errors == nil {
+		fmt.Printf(";; SP%02d TURN %3d\n", s.id, __jdb.Galaxy.TurnNumber)
+		for _, section := range []*orders.Section{s.orders.data.Combat, s.orders.data.PreDeparture, s.orders.data.Jumps, s.orders.data.Production, s.orders.data.PostArrival, s.orders.data.Strikes} {
+			if section != nil {
+				fmt.Printf("START %q\n", section.Name)
+				for _, command := range section.Commands {
+					fmt.Printf("    %-18s", command.Name)
+					for _, arg := range command.Args {
+						fmt.Printf(" %q", arg)
+					}
+					fmt.Printf("\n")
+				}
+			}
+		}
+	}
+	return s.orders.data.Errors
 }

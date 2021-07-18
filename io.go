@@ -70,6 +70,7 @@ func get_species_data() {
 	num_species = len(__jdb.Species)
 	for id, species := range __jdb.Species {
 		s := &species_data{
+			id:                 species.Id,
 			x:                  species.X,
 			y:                  species.Y,
 			z:                  species.Z,

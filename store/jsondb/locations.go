@@ -30,7 +30,7 @@ func (ds *Store) SetLocations() {
 
 		for i := 0; i < species.NumNamplas; i++ {
 			nampla := nampla_base[i]
-			if nampla.Pn == 99 || (nampla.Status & POPULATED) == 0{
+			if nampla.Pn == 99 || (nampla.Status&POPULATED) == 0 {
 				continue
 			}
 			ds.addLocation(species_number, nampla.X, nampla.Y, nampla.Z)
@@ -48,7 +48,7 @@ func (ds *Store) SetLocations() {
 	}
 }
 
-func (ds *Store) addLocation(s, x,y,z int) {
+func (ds *Store) addLocation(s, x, y, z int) {
 	for i := 0; i < len(ds.Locations); i++ {
 		if ds.Locations[i].X != x || ds.Locations[i].Y != y || ds.Locations[i].Z != z || ds.Locations[i].S != s {
 			continue
@@ -57,6 +57,5 @@ func (ds *Store) addLocation(s, x,y,z int) {
 	}
 
 	/* Add new location to the list. */
-	ds.Locations = append(ds.Locations, Location{S:s,X:x,Y:y,Z:z})
+	ds.Locations = append(ds.Locations, Location{S: s, X: x, Y: y, Z: z})
 }
-

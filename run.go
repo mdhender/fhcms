@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"fmt"
 	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/store/jsondb"
 	"log"
@@ -32,11 +33,20 @@ func run(cfg *config.Config) (errors []error) {
 	}
 	// globals. argh.
 	__jdb = jdb
-	num_locs = len(__jdb.Locations)
+	__jdb.SetLocations()
 
 	verbose_mode = cfg.Log.Verbose
-	// locations
-	__jdb.SetLocations()
+
+	/* Get commonly used data. */
+	get_galaxy_data()
+	get_planet_data()
+	get_species_data()
+	for species_number := 1; species_number <= num_species; species_number++ {
+		spec_data[species_number-1].orders.filename = filepath.Join(cfg.Data.Orders, fmt.Sprintf("sp%02d.ord", spec_data[species_number-1].id))
+	}
+	get_transaction_data()
+	get_order_data()
+	num_locs = len(__jdb.Locations)
 
 	// no-orders if not the first turn
 	log.Printf("[orders] skipping NoOrders\n")
@@ -52,33 +62,5 @@ func run(cfg *config.Config) (errors []error) {
 	log.Printf("[orders] skipping Reports\n")
 	log.Printf("[orders] skipping Stats\n") //	Stats(ds)
 
-	//for i := 1; i <= numSpecies; i++ {
-	//	turnData.Species[i] = &SpeciesTurnData{Id: i}
-	//	td := turnData.Species[i]
-	//	td.Species = jdb.Species[fmt.Sprintf("SP%02d", td.Id)]
-	//	td.OrderFile = filepath.Join(cfg.Data.Orders, fmt.Sprintf("sp%02d.ord", i))
-	//
-	//	log.Printf("orders: loading %q\n", td.OrderFile)
-	//	o := orders.Parse(td.OrderFile)
-	//	if o.Errors == nil {
-	//		if verbose {
-	//			fmt.Printf(";; SP%02d TURN %3d\n", i, jdb.Galaxy.TurnNumber)
-	//			for _, section := range []*orders.Section{o.Combat, o.PreDeparture, o.Jumps, o.Production, o.PostArrival, o.Strikes} {
-	//				if section != nil {
-	//					fmt.Printf("START %q\n", section.Name)
-	//					for _, command := range section.Commands {
-	//						fmt.Printf("    %-18s", command.Name)
-	//						for _, arg := range command.Args {
-	//							fmt.Printf(" %q", arg)
-	//						}
-	//						fmt.Printf("\n")
-	//					}
-	//				}
-	//			}
-	//		}
-	//	} else {
-	//		errors = append(errors, o.Errors...)
-	//	}
-	//}
 	return errors
 }
