@@ -24,3 +24,21 @@ func byte4_to_byte(k [4]byte) (b []byte) {
 	}
 	return b
 }
+
+func gas_abbr_to_code(abbr string) *gas_code {
+	for _, code := range gas_codes {
+		if abbr == code.abbr {
+			return code
+		}
+	}
+	return nil
+}
+
+func star_color_to_code(color string) *star_color_code {
+	for _, code := range star_color_codes {
+		if color == code.name {
+			return code
+		}
+	}
+	return nil
+}

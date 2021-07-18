@@ -22,8 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strconv"
-	"strings"
 )
 
 func Read(filename string) (*Store, error) {
@@ -34,95 +32,6 @@ func Read(filename string) (*Store, error) {
 	} else if err = json.Unmarshal(b, &ds); err != nil {
 		return nil, err
 	}
-	if ds.Locations == nil {
-		ds.Locations = make(map[string][]string)
-	}
-
-	// validate planet data
-	for _, planet := range ds.Planets {
-		if planet.Id < 1 { // ignore the zero-th planet
-			continue
-		}
-		var total int
-		for gas, percentage := range planet.Gases {
-			switch gas {
-			case "NH3": // Ammonia
-			case "CO2": // Carbon Dioxide
-			case "Cl2": // Chlorine
-			case "F2": // Fluorine
-			case "He": // Helium
-			case "H2": // Hydrogen
-			case "HCl": // Hydrogen Chloride
-			case "H2S": // Hydrogen Sulfide
-			case "CH4": // Methane
-			case "N2": // Nitrogen
-			case "O2": // Oxygen
-			case "SO2": // Sulfur Dioxide
-			case "H2O": // Water or Steam
-			default:
-				return nil, fmt.Errorf("unknown gas %q on planet %d", gas, planet.Id)
-			}
-			if percentage < 1 || percentage > 100 {
-				return nil, fmt.Errorf("invalid percentage %d for gas %q on planet %d", percentage, gas, planet.Id)
-			}
-			total += percentage
-		}
-		if total > 0 && total != 100 {
-			return nil, fmt.Errorf("invalid percentage %d for gases on planet %d", total, planet.Id)
-		}
-	}
-
-	// validate and normalize species data
-	for key, sp := range ds.Species {
-		if sp.Id < 1 {
-			return nil, fmt.Errorf("invalid species id %d", sp.Id)
-		}
-		if key != fmt.Sprintf("SP%02d", sp.Id) {
-			return nil, fmt.Errorf("invalid key %q for species %d", key, sp.Id)
-		}
-		sp.Key = key
-		sp.Aliens = make(map[int]string)
-
-		// parse Contact, then Ally, then Neutral, then Enemy on the off-chance
-		// that someone edits the JSON and assigns the species to multiple categories.
-		for _, a := range sp.Contacts {
-			if !strings.HasPrefix(a, "SP") {
-				continue
-			}
-			id, err := strconv.Atoi(a[2:])
-			if err != nil {
-				continue
-			} else if id < 1 || MAX_SPECIES < id {
-				continue
-			}
-			sp.Aliens[id] = "neutral"
-		}
-		for _, a := range sp.Allies {
-			if !strings.HasPrefix(a, "SP") {
-				continue
-			}
-			id, err := strconv.Atoi(a[2:])
-			if err != nil {
-				continue
-			} else if id < 1 || MAX_SPECIES < id {
-				continue
-			}
-			sp.Aliens[id] = "ally"
-		}
-		for _, a := range sp.Enemies {
-			if !strings.HasPrefix(a, "SP") {
-				continue
-			}
-			id, err := strconv.Atoi(a[2:])
-			if err != nil {
-				continue
-			} else if id < 1 || MAX_SPECIES < id {
-				continue
-			}
-			sp.Aliens[id] = "enemy"
-		}
-	}
-
 	return &ds, nil
 }
 

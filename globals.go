@@ -73,8 +73,22 @@ var (
 	first_pass                bool
 	fleet_percent_cost        int
 	full_ship_id              string
-	galaxy                    galaxy_data
-	gas_string                = []string{ // warning: code assumes [14][4]byte
+	gas_codes                 = []*gas_code{
+		&gas_code{code: CH4, abbr: "CH4", name: "Methane"},
+		&gas_code{code: CL2, abbr: "Cl2", name: "Chlorine"},
+		&gas_code{code: CO2, abbr: "CO2", name: "Carbon Dioxide"},
+		&gas_code{code: F2, abbr: "F2", name: "Fluorine"},
+		&gas_code{code: H2, abbr: "H2", name: "Hydrogen"},
+		&gas_code{code: H2O, abbr: "H2O", name: "Steam"},
+		&gas_code{code: H2S, abbr: "H2S", name: "Hydrogen Sulfide"},
+		&gas_code{code: HCL, abbr: "HCl", name: "Hydrogen Chloride"},
+		&gas_code{code: HE, abbr: "He", name: "Helium"},
+		&gas_code{code: N2, abbr: "N2", name: "Nitrogen"},
+		&gas_code{code: NH3, abbr: "NH3", name: "Ammonia"},
+		&gas_code{code: O2, abbr: "O2", name: "Oxygen"},
+		&gas_code{code: SO2, abbr: "SO2", name: "Sulfur Dioxide"},
+	}
+	gas_string = []string{ // warning: code assumes [14][4]byte
 		"   ", "H2", "CH4", "He", "NH3", "N2", "CO2", "O2", "HCl", "Cl2", "F2", "H2O", "SO2", "H2S",
 	}
 	g_spec_name             string // warning: code assumes [32]byte
@@ -159,12 +173,12 @@ var (
 	num_new_namplas      [MAX_SPECIES]int
 	num_new_ships        [MAX_SPECIES]int
 	num_planets          int
+	num_species          int
 	num_stars            int
 	num_transactions     int
 	orders_file          io.Writer
 	original_line        [256]byte
 	planet               *planet_data
-	planet_base          []*planet_data // warning: code assumes *planet_data
 	planet_data_modified bool
 	pn                   int
 	post_arrival_phase   bool // warning: must be initialized to true for PostArrivalMain
@@ -213,15 +227,26 @@ var (
 	ship_type = []string{ // warning: code assumes [3][2]byte
 		"", "S", "S",
 	}
-	shipyard_built     bool
-	shipyard_capacity  int
-	size_char          []byte = []byte("0123456789")
-	sp_tech_level      [6]int
-	spec_data          [MAX_SPECIES]*species_data
-	species            *species_data
-	species_index      int
-	species_number     int
-	star_base          []*star_data // warning: code assumes *star_data
+	shipyard_built    bool
+	shipyard_capacity int
+	size_char         = []byte("0123456789")
+	sp_tech_level     [6]int
+	spec_data         [MAX_SPECIES]*species_data
+	species           *species_data
+	species_index     int
+	species_number    int
+	star_base         []*star_data // warning: code assumes *star_data
+	star_color_codes  = []*star_color_code{
+		{code: BLUE, abbr: "O", name: "BLUE"},
+		{code: BLUE_WHITE, abbr: "B", name: "BLUE_WHITE"},
+		{code: WHITE, abbr: "A", name: "WHITE"},
+		{code: YELLOW_WHITE, abbr: "F", name: "YELLOW_WHITE"},
+		{code: YELLOW, abbr: "G", name: "YELLOW"},
+		{code: ORANGE, abbr: "K", name: "ORANGE"},
+		{code: RED, abbr: "M", name: "RED"},
+	}
+	//char color_char[] = " OBAFGKM";
+	//char size_char[]  = "0123456789";
 	star_data_modified bool
 	star               *star_data
 	strike_phase       bool
@@ -235,7 +260,7 @@ var (
 	test_mode     bool
 	transaction   [MAX_TRANSACTIONS]trans_data
 	truncate_name bool
-	ttype_char    []byte = []byte(" dD g")
+	type_char     = []byte(" dD g")
 	upper_name    []byte
 	value         int
 	verbose_mode  bool

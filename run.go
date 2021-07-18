@@ -32,6 +32,8 @@ func run(cfg *config.Config) (errors []error) {
 	if err != nil {
 		return []error{err}
 	}
+	// globals. argh.
+	__jdb = jdb
 
 	for i := 1; i <= numSpecies; i++ {
 		turnData.Species[i] = &SpeciesTurnData{Id: i}

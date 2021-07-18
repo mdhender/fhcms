@@ -105,32 +105,17 @@ func consolidate_option(option, location int) {
 // dis_ship.c
 
 func disbanded_ship(ship *ship_data_) bool {
-	for nampla_index := 0; nampla_index < species.num_namplas; nampla_index++ {
-		nampla := nampla_base[nampla_index]
-
-		if nampla.x != ship.x {
+	for _, nampla := range species.namplas {
+		if nampla.x != ship.x || nampla.y != ship.y || nampla.z != ship.z || nampla.pn != ship.pn {
+			continue
+		} else if (nampla.status & DISBANDED_COLONY) == 0 {
+			continue
+		} else if ship.ttype != STARBASE && ship.status == IN_ORBIT {
 			continue
 		}
-		if nampla.y != ship.y {
-			continue
-		}
-		if nampla.z != ship.z {
-			continue
-		}
-		if nampla.pn != ship.pn {
-			continue
-		}
-		if (nampla.status & DISBANDED_COLONY) == 0 {
-			continue
-		}
-		if ship.ttype != STARBASE && ship.status == IN_ORBIT {
-			continue
-		}
-
 		/* This ship is either on the surface of a disbanded colony or is a starbase orbiting a disbanded colony. */
 		return true
 	}
-
 	return false
 }
 
@@ -177,9 +162,6 @@ func do_ALLY_command() {
 // do_amb.c
 
 func do_AMBUSH_command() {
-	var n int
-	var cost int
-
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
@@ -202,7 +184,7 @@ func do_AMBUSH_command() {
 	if value == 0 {
 		return
 	}
-	cost = value
+	cost := value
 
 	/* Check if planet is under siege. */
 	if nampla.siege_eff != 0 {
@@ -233,23 +215,19 @@ func do_AMBUSH_command() {
 // do_base.c
 
 func do_BASE_command() {
-	var (
-		n                                                 int
-		found                                             bool
-		su_count, original_count, item_class, name_length int
-		unused_ship_available                             bool
-		new_tonnage, max_tonnage                          int
-		new_starbase                                      bool
-		source_is_a_planet                                bool
-		age_new                                           int
-
-		x, y, z, pn           int
-		upper_ship_name       [32]byte
-		original_line_pointer *cstring
-
-		source_nampla                      *nampla_data
-		source_ship, starbase, unused_ship *ship_data_
-	)
+	var n                                                 int
+	var found                                             bool
+	var su_count, original_count, item_class, name_length int
+	var unused_ship_available                             bool
+	var new_tonnage, max_tonnage                          int
+	var new_starbase                                      bool
+	var source_is_a_planet                                bool
+	var age_new                                           int
+	var x, y, z, pn           int
+	var upper_ship_name       [32]byte
+	var original_line_pointer *cstring
+	var source_nampla                      *nampla_data
+	var source_ship, starbase, unused_ship *ship_data_
 
 	/* Get number of starbase units to use. */
 	if i := get_value(); !i {
@@ -9078,35 +9056,20 @@ next_step:
 	return (true) /* There will be a fight here. */
 }
 
-func disbanded_ship(species_index int, sh *ship_data_) {
+func disbanded_ship(species_index int, sh *ship_data_) bool {
 	for nampla_index := 0; nampla_index < c_species[species_index].num_namplas; nampla_index++ {
 		nam := c_nampla[species_index][nampla_index]
-
-		if nam.x != sh.x {
+		if nam.x != sh.x || nam.y != sh.y || nam.z != sh.z || nam.pn != sh.pn {
+			continue
+		} else if (nam.status & DISBANDED_COLONY) == 0 {
+			continue
+		} else if sh.ttype != STARBASE && sh.status == IN_ORBIT {
 			continue
 		}
-		if nam.y != sh.y {
-			continue
-		}
-		if nam.z != sh.z {
-			continue
-		}
-		if nam.pn != sh.pn {
-			continue
-		}
-		if (nam.status & DISBANDED_COLONY) == 0 {
-			continue
-		}
-		if sh.ttype != STARBASE && sh.status == IN_ORBIT {
-			continue
-		}
-
-		/* This ship is either on the surface of a disbanded colony or is
-		 *      a starbase orbiting a disbanded colony. */
-		return (true)
+		/* This ship is either on the surface of a disbanded colony or is a starbase orbiting a disbanded colony. */
+		return true
 	}
-
-	return (false)
+	return false
 }
 
 //*************************************************************************
@@ -9257,30 +9220,6 @@ func gamemaster_abort_option() {
 	if answer[0] == 'q' || answer[0] == 'Q' {
 		exit(0)
 	}
-}
-
-//*************************************************************************
-// get_gal.c
-
-func get_galaxy_data() {
-	var galaxy_fd, n, num_bytes, byte_size int
-
-	/* Open galaxy file. */
-	galaxy_fd = open("galaxy.dat", 0)
-	if galaxy_fd < 0 {
-		fprintf(stderr, "\n\tCannot open file galaxy.dat!\n")
-		exit(-1)
-	}
-
-	/* Read data. */
-	byte_size = sizeof("struct galaxy_data")
-	num_bytes = read(galaxy_fd, &galaxy, byte_size)
-	if num_bytes != byte_size {
-		fprintf(stderr, "\n\tCannot read data in file 'galaxy.dat'!\n\n")
-		exit(-1)
-	}
-
-	close(galaxy_fd)
 }
 
 //*************************************************************************
@@ -9465,44 +9404,6 @@ done:
 	nampla = temp_nampla
 
 	return (true)
-}
-
-//*************************************************************************
-// get_plan.c
-
-func get_planet_data() {
-	var planet_fd, n, data_size int
-
-	/* Open planet file. */
-	planet_fd = open("planets.dat", 0)
-	if planet_fd < 0 {
-		fprintf(stderr, "\n\tCannot open file planets.dat!\n")
-		exit(-1)
-	}
-
-	/* Read header data. */
-	data_size = read(planet_fd, &num_planets, sizeof("num_planets"))
-	if data_size != sizeof("num_planets") {
-		fprintf(stderr, "\n\tCannot read num_planets in file 'planets.dat'!\n\n")
-		exit(-1)
-	}
-
-	/* Allocate enough memory for all planets. */
-	planet_base = make([]*planet_data, num_planets, num_planets) // warning: was num_planets + NUM_EXTRA_PLANETS
-	if planet_base == nil {
-		fprintf(stderr, "\nCannot allocate enough memory for planet file!\n\n")
-		exit(-1)
-	}
-
-	/* Read it all into memory. */
-	n = read(planet_fd, planet_base, data_size)
-	if n != data_size {
-		fprintf(stderr, "\nCannot read planet file into memory!\n\n")
-		exit(-1)
-	}
-	close(planet_fd)
-
-	planet_data_modified = false
 }
 
 //*************************************************************************
@@ -9767,45 +9668,6 @@ yet_again:
 	g_spec_number = best_species_index + 1
 	abbr_type = SPECIES_ID
 	return (true)
-}
-
-//*************************************************************************
-// get_star.c
-
-func get_star_data() {
-	var star_fd, byte_size, star_data_size, mem_size int
-
-	/* Open star file. */
-	star_fd = open("stars.dat", 0)
-	if star_fd < 0 {
-		fprintf(stderr, "\n\tCannot open file stars.dat!\n")
-		exit(999)
-	}
-
-	byte_size = read(star_fd, &num_stars, sizeof("num_stars"))
-	if byte_size != sizeof("num_stars") {
-		fprintf(stderr, "\n\tCannot read num_stars in file 'stars.dat'!\n\n")
-		exit(999)
-	}
-
-	/* Allocate enough memory for all stars. */
-	mem_size = (num_stars + NUM_EXTRA_STARS) * sizeof("struct star_data")
-	star_data_size = num_stars * sizeof("struct star_data")
-	star_base = make([]*star_data, num_stars, num_stars) // warning: was num_stars + NUM_EXTRA_STARS
-	if star_base == nil {
-		fprintf(stderr, "\nCannot allocate enough memory for star file!\n\n")
-		exit(-1)
-	}
-
-	/* Read it all into memory. */
-	byte_size = read(star_fd, star_base, star_data_size)
-	if byte_size != star_data_size {
-		fprintf(stderr, "\nCannot read star file into memory!\n\n")
-		exit(-1)
-	}
-	close(star_fd)
-
-	star_data_modified = false
 }
 
 //*************************************************************************
@@ -10573,79 +10435,10 @@ func rnd(max int) int {
 	return __defaultPRNG.Roll(max)
 }
 
-/* Routine "get_species_data" will read in data files for all species,
- *      "save_species_data" will write all data that has been modified, and
- *      "free_species_data" will free memory used for all species data. */
-
-/* Additional memory must be allocated for routines that build ships or
- * name planets. Here are the default 'extras', which may be changed, if
- * necessary, by the main program. */
-
-func get_species_data() {
-	var species_fd, species_index, n, num_bytes int
-	var filename [16]byte
-	var sp *species_data
-
-	for species_index = 0; species_index < galaxy.num_species; species_index++ {
-		data_modified[species_index] = false
-
-		sp = spec_data[species_index]
-
-		/* Open the species data file. */
-		filename := fmt.Sprintf("sp%02d.dat", species_index+1)
-		species_fd = open(filename, 0)
-		if species_fd < 0 {
-			sp.pn = 0 /* Extinct! */
-			data_in_memory[species_index] = false
-			continue
-		}
-
-		/* Read in species data. */
-		num_bytes = read(species_fd, sp, sizeof("struct species_data"))
-		if num_bytes != sizeof("struct species_data") {
-			fprintf(stderr, "\n\tCannot read species record in file '%s'!\n\n", filename)
-			exit(-1)
-		}
-
-		/* Allocate enough memory for all namplas. */
-		namp_data[species_index] = make([]*nampla_data, sp.num_namplas, sp.num_namplas) // warning: was sp.num_namplas + extra_namplas
-		if namp_data[species_index] == nil {
-			fprintf(stderr, "\nCannot allocate enough memory for nampla data!\n\n")
-			exit(-1)
-		}
-
-		/* Read it all into memory. */
-		num_bytes = sp.num_namplas * sizeof("struct nampla_data")
-		n = read(species_fd, namp_data[species_index], num_bytes)
-		if n != num_bytes {
-			fprintf(stderr, "\nCannot read nampla data into memory!\n\n")
-			exit(-1)
-		}
-
-		/* Allocate enough memory for all ships. */
-		ship_data[species_index] = make([]*ship_data_, sp.num_ships, sp.num_ships) // warning: was sp.num_ships + extra_ships
-		if ship_data[species_index] == nil {
-			fprintf(stderr, "\nCannot allocate enough memory for ship data!\n\n")
-			exit(-1)
-		}
-
-		if sp.num_ships > 0 {
-			/* Read it all into memory. */
-			num_bytes = sp.num_ships * sizeof("struct ship_data")
-			n = read(species_fd, ship_data[species_index], num_bytes)
-			if n != num_bytes {
-				fprintf(stderr, "\nCannot read ship data into memory!\n\n")
-				exit(-1)
-			}
-		}
-
-		close(species_fd)
-
-		data_in_memory[species_index] = true
-		num_new_namplas[species_index] = 0
-		num_new_ships[species_index] = 0
-	}
-}
+// *      "save_species_data" will write all data that has been modified, and
+// *      "free_species_data" will free memory used for all species data. */
+// Here are the default 'extras', which may be changed, if
+// * necessary, by the main program. */
 
 func save_species_data() {
 	var species_fd, species_index, n, num_bytes int

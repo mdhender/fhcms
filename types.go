@@ -63,61 +63,73 @@ type galaxy_data struct {
 	turn_number   int /* Current turn number. */
 }
 
+type gas_code struct {
+	code int
+	abbr string
+	name string
+}
+
+type gas_data struct {
+	code       *gas_code
+	percentage int
+}
+
 type nampla_data struct {
-	name           [32]byte       /* Name of planet. */
+	name           string       /* Name of planet. */ // warning: code expects [32]byte
 	x, y, z, pn    int            /* Coordinates. */
-	status         int            /* Status of planet. */
-	hiding         bool           /* HIDE order given. */
-	hidden         bool           /* Colony is hidden. */
-	planet_index   int            /* Index (starting at zero) into the file "planets.dat" of this planet. */
-	siege_eff      int            /* Siege effectiveness - a percentage between  0 and 99. */
-	shipyards      int            /* Number of shipyards on planet. */
-	IUs_needed     int            /* Incoming ship with only CUs on board. */
 	AUs_needed     int            /* Incoming ship with only CUs on board. */
-	auto_IUs       int            /* Number of IUs to be automatically installed. */
 	auto_AUs       int            /* Number of AUs to be automatically installed. */
-	IUs_to_install int            /* Colonial mining units to be installed. */
+	auto_IUs       int            /* Number of IUs to be automatically installed. */
+	hidden         bool           /* Colony is hidden. */
+	hiding         bool           /* HIDE order given. */
 	AUs_to_install int            /* Colonial manufacturing units to be installed. */
-	mi_base        int            /* Mining base times 10. */
-	ma_base        int            /* Manufacturing base times 10. */
-	pop_units      int            /* Number of available population units. */
+	IUs_to_install int            /* Colonial mining units to be installed. */
+	IUs_needed     int            /* Incoming ship with only CUs on board. */
 	item_quantity  [MAX_ITEMS]int /* Quantity of each item available. */
-	use_on_ambush  int            /* Amount to use on ambush. */
+	ma_base        int            /* Manufacturing base times 10. */
 	message        int            /* Message associated with this planet, if any. */
+	mi_base        int            /* Mining base times 10. */
+	planet_index   int            /* Index (starting at zero) into the file "planets.dat" of this planet. */
+	pop_units      int            /* Number of available population units. */
+	shipyards      int            /* Number of shipyards on planet. */
+	siege_eff      int            /* Siege effectiveness - a percentage between  0 and 99. */
 	special        int            /* Different for each application. */
+	status         int            /* Status of planet. */
+	use_on_ambush  int            /* Amount to use on ambush. */
 }
 
 type planet_data struct {
-	temperature_class int    /* Temperature class, 1-30. */
-	pressure_class    int    /* Pressure class, 0-29. */
-	special           int    /* 0 = not special, 1 = ideal home planet, 2 = ideal colony planet, 3 = radioactive hellhole. */
+	diameter          int    /* Diameter in thousands of kilometers. */
 	gas               [4]int /* Gas in atmosphere. Zero if none. */
 	gas_percent       [4]int /* Percentage of gas in atmosphere. */
-	diameter          int    /* Diameter in thousands of kilometers. */
 	gravity           int    /* Surface gravity. Multiple of Earth gravity times 100. */
-	mining_difficulty int    /* Mining difficulty times 100. */
 	econ_efficiency   int    /* Economic efficiency. Always 100 for a  home planet. */
 	md_increase       int    /* Increase in mining difficulty. */
 	message           int    /* Message associated with this planet,  if any. */
+	mining_difficulty int    /* Mining difficulty times 100. */
+	pressure_class    int    /* Pressure class, 0-29. */
+	special           int    /* 0 = not special, 1 = ideal home planet, 2 = ideal colony planet, 3 = radioactive hellhole. */
+	temperature_class int    /* Temperature class, 1-30. */
+	// mdhender: added the following for convenience
+	atmosphere []*gas_data // atmospheric gases sorted by percentage descending
 }
 
 type ship_data_ struct {
-	name                   [32]byte       /* Name of ship. */
+	name                   string       /* Name of ship. */ // warning: code expects [32]byte
 	x, y, z, pn            int            /* Current coordinates. */
-	status                 int            /* Current status of ship. */
-	ttype                  int            /* Ship type. */
-	dest_x, dest_y, dest_z int            /* Destination if ship was forced to jump from combat.  Also used by TELESCOPE command. And for SHIELDS in combat. */
-	just_jumped            bool           /* Set if ship jumped this turn. */
+	age                    int            /* Ship age. */
 	arrived_via_wormhole   bool           /* Ship arrived via wormhole in the PREVIOUS turn. */
 	class                  int            /* Ship class. */
-	tonnage                int            /* Ship tonnage divided by 10,000. */
+	dest_x, dest_y, dest_z int            /* Destination if ship was forced to jump from combat.  Also used by TELESCOPE command. And for SHIELDS in combat. */
 	item_quantity          [MAX_ITEMS]int /* Quantity of each item carried. */
-	age                    int            /* Ship age. */
-	remaining_cost         int            /* The cost needed to complete the ship if still under construction. */
-	reserved4              int            /* Unused. Zero for now. */
+	just_jumped            bool           /* Set if ship jumped this turn. */
 	loading_point          int            /* Nampla index for planet where ship was last loaded with CUs. Zero = none. Use 9999 for home planet. */
-	unloading_point        int            /* Nampla index for planet that ship should be given orders to jump to where it will unload. Zero = none. Use 9999 for home planet. */
+	remaining_cost         int            /* The cost needed to complete the ship if still under construction. */
 	special                int            /* Different for each application. */
+	status                 int            /* Current status of ship. */
+	tonnage                int            /* Ship tonnage divided by 10,000. */
+	ttype                  int            /* Ship type. */
+	unloading_point        int            /* Nampla index for planet that ship should be given orders to jump to where it will unload. Zero = none. Use 9999 for home planet. */
 }
 
 type sp_loc_data struct {
@@ -125,44 +137,59 @@ type sp_loc_data struct {
 }
 
 type species_data struct {
-	x, y, z, pn        int      /* Coordinates of home planet. */
-	auto_orders        bool     /* AUTO command was issued. */
-	econ_units         int      /* Number of economic units. */
-	fleet_cost         int      /* Total fleet maintenance cost. */
-	fleet_percent_cost int      /* Fleet maintenance cost as a percentage times one hundred. */
-	govt_name          [32]byte /* Name of government. */
-	govt_type          [32]byte /* Type of government. */
-	init_tech_level    [6]int   /* Tech levels at start of turn. */
-	name               [32]byte /* Name of species. */
-	neutral_gas        [6]int   /* Gases neutral to species. */
-	num_namplas        int      /* Number of named planets, including home planet and colonies. */
-	num_ships          int      /* Number of ships. */
-	poison_gas         [6]int   /* Gases poisonous to species. */
-	required_gas       int      /* Gas required by species. */
-	required_gas_max   int      /* Maximum allowed percentage. */
-	required_gas_min   int      /* Minimum needed percentage. */
-	tech_eps           [6]int   /* Experience points for tech levels. */
-	tech_knowledge     [6]int   /* Unapplied tech level knowledge. */
-	tech_level         [6]int   /* Actual tech levels. */
-	hp_original_base   int      /* If non-zero, home planet was bombed either by bombardment or germ warfare and has not yet fully recovered. Value is total economic base before bombing. */
+	name               string /* Name of species. */ // warning: code expects [32]byte
+	x, y, z, pn        int    /* Coordinates of home planet. */
+	auto_orders        bool   /* AUTO command was issued. */
+	econ_units         int    /* Number of economic units. */
+	fleet_cost         int    /* Total fleet maintenance cost. */
+	fleet_percent_cost int    /* Fleet maintenance cost as a percentage times one hundred. */
+	govt_name          string /* Name of government. */ // warning: code expects [32]byte
+	govt_type          string /* Type of government. */ // warning: code expects [32]byte
+	hp_original_base   int    /* If non-zero, home planet was bombed either by bombardment or germ warfare and has not yet fully recovered. Value is total economic base before bombing. */
+	init_tech_level    [6]int /* Tech levels at start of turn. */
+	neutral_gas        [6]int /* Gases neutral to species. */
+	num_namplas        int    /* Number of named planets, including home planet and colonies. */
+	num_ships          int    /* Number of ships. */
+	poison_gas         [6]int /* Gases poisonous to species. */
+	required_gas       int    /* Gas required by species. */
+	required_gas_max   int    /* Maximum allowed percentage. */
+	required_gas_min   int    /* Minimum needed percentage. */
+	tech_eps           [6]int /* Experience points for tech levels. */
+	tech_knowledge     [6]int /* Unapplied tech level knowledge. */
+	tech_level         [6]int /* Actual tech levels. */
 	// warning: code expects [NUM_CONTACT_WORDS]int for ally, contact, and enemy
 	ally    [MAX_SPECIES]bool /* A bit is set if corresponding species is considered an ally. */
 	contact [MAX_SPECIES]bool /* A bit is set if corresponding species has been met. */
 	enemy   [MAX_SPECIES]bool /* A bit is set if corresponding species is considered an enemy. */
+	// mdhender: added the following for convenience
+	namplas []*nampla_data
+	ships []*ship_data_
+}
+
+type star_color_code struct {
+	code int
+	abbr string
+	name string
 }
 
 type star_data struct {
-	x, y, z                int /* Coordinates. */
-	ttype                  int /* Dwarf, degenerate, main sequence or giant. */
-	color                  int /* Star color. Blue, blue-white, etc. */
-	size                   int /* Star size, from 0 thru 9 inclusive. */
-	num_planets            int /* Number of usable planets in star system. */
-	home_system            int /* true if this is a good potential home system. */
-	worm_here              int /* true if wormhole entry/exit. */
-	worm_x, worm_y, worm_z int
-	planet_index           int               /* Index (starting at zero) into the file "planets.dat" of the first planet in the star system. */
+	x, y, z                int               /* Coordinates. */
+	color                  int               /* Star color. Blue, blue-white, etc. */ // TODO: this should be a *star_color_code
+	home_system            bool              /* true if this is a good potential home system. */
 	message                int               /* Message associated with this star system, if any. */
+	num_planets            int               /* Number of usable planets in star system. */
+	planet_index           int               /* Index (starting at zero) into the file "planets.dat" of the first planet in the star system. */
+	size                   int               /* Star size, from 0 thru 9 inclusive. */
+	ttype                  int               /* Dwarf, degenerate, main sequence or giant. */
 	visited_by             [MAX_SPECIES]bool /* A bit is set if corresponding species has  been here. */ // warning: was [NUM_CONTACT_WORDS]int
+	worm_here              bool              /* true if wormhole entry/exit. */
+	worm_x, worm_y, worm_z int
+}
+
+type star_type_code struct {
+	code int
+	abbr string
+	name string
 }
 
 type trans_data struct {
