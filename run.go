@@ -19,9 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
-	"fmt"
 	"github.com/mdhender/fhcms/config"
-	"github.com/mdhender/fhcms/orders"
 	"github.com/mdhender/fhcms/store/jsondb"
 	"log"
 	"path/filepath"
@@ -34,34 +32,53 @@ func run(cfg *config.Config) (errors []error) {
 	}
 	// globals. argh.
 	__jdb = jdb
+	num_locs = len(__jdb.Locations)
 
-	for i := 1; i <= numSpecies; i++ {
-		turnData.Species[i] = &SpeciesTurnData{Id: i}
-		td := turnData.Species[i]
-		td.Species = jdb.Species[fmt.Sprintf("SP%02d", td.Id)]
-		td.OrderFile = filepath.Join(cfg.Data.Orders, fmt.Sprintf("sp%02d.ord", i))
+	verbose_mode = cfg.Log.Verbose
+	// locations
+	__jdb.SetLocations()
 
-		log.Printf("orders: loading %q\n", td.OrderFile)
-		o := orders.Parse(td.OrderFile)
-		if o.Errors == nil {
-			if verbose {
-				fmt.Printf(";; SP%02d TURN %3d\n", i, jdb.Galaxy.TurnNumber)
-				for _, section := range []*orders.Section{o.Combat, o.PreDeparture, o.Jumps, o.Production, o.PostArrival, o.Strikes} {
-					if section != nil {
-						fmt.Printf("START %q\n", section.Name)
-						for _, command := range section.Commands {
-							fmt.Printf("    %-18s", command.Name)
-							for _, arg := range command.Args {
-								fmt.Printf(" %q", arg)
-							}
-							fmt.Printf("\n")
-						}
-					}
-				}
-			}
-		} else {
-			errors = append(errors, o.Errors...)
-		}
-	}
+	// no-orders if not the first turn
+	log.Printf("[orders] skipping NoOrders\n")
+
+	log.Printf("[orders] skipping Combat\n")
+	log.Printf("[orders] skipping PreDeparture\n")
+	log.Printf("[orders] skipping Jumps\n")
+	log.Printf("[orders] skipping Production\n")
+	log.Printf("[orders] skipping PostArrival\n")
+	__jdb.SetLocations()
+	log.Printf("[orders] skipping Strike\n")
+	log.Printf("[orders] skipping Finish\n")
+	log.Printf("[orders] skipping Reports\n")
+	log.Printf("[orders] skipping Stats\n") //	Stats(ds)
+
+	//for i := 1; i <= numSpecies; i++ {
+	//	turnData.Species[i] = &SpeciesTurnData{Id: i}
+	//	td := turnData.Species[i]
+	//	td.Species = jdb.Species[fmt.Sprintf("SP%02d", td.Id)]
+	//	td.OrderFile = filepath.Join(cfg.Data.Orders, fmt.Sprintf("sp%02d.ord", i))
+	//
+	//	log.Printf("orders: loading %q\n", td.OrderFile)
+	//	o := orders.Parse(td.OrderFile)
+	//	if o.Errors == nil {
+	//		if verbose {
+	//			fmt.Printf(";; SP%02d TURN %3d\n", i, jdb.Galaxy.TurnNumber)
+	//			for _, section := range []*orders.Section{o.Combat, o.PreDeparture, o.Jumps, o.Production, o.PostArrival, o.Strikes} {
+	//				if section != nil {
+	//					fmt.Printf("START %q\n", section.Name)
+	//					for _, command := range section.Commands {
+	//						fmt.Printf("    %-18s", command.Name)
+	//						for _, arg := range command.Args {
+	//							fmt.Printf(" %q", arg)
+	//						}
+	//						fmt.Printf("\n")
+	//					}
+	//				}
+	//			}
+	//		}
+	//	} else {
+	//		errors = append(errors, o.Errors...)
+	//	}
+	//}
 	return errors
 }

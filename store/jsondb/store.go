@@ -26,24 +26,7 @@ type Store struct {
 		Radius      int `json:"radius"`
 		TurnNumber  int `json:"turn_number"`
 	} `json:"galaxy"`
-	Stars []struct {
-		Id          int   `json:"id"`
-		Color       int   `json:"color"`
-		HomeSystem  int   `json:"home_system"`
-		Message     int   `json:"message"`
-		NumPlanets  int   `json:"num_planets"`
-		PlanetIndex int   `json:"planet_index"`
-		Size        int   `json:"size"`
-		Type        int   `json:"type"`
-		VisitedBy   []int `json:"visited_by"`
-		WormHere    int   `json:"worm_here"`
-		WormX       int   `json:"worm_x"`
-		WormY       int   `json:"worm_y"`
-		WormZ       int   `json:"worm_z"`
-		X           int   `json:"x"`
-		Y           int   `json:"y"`
-		Z           int   `json:"z"`
-	} `json:"stars"`
+	Locations []Location `json:"locations"`
 	Planets []struct {
 		Id               int    `json:"id"`
 		Diameter         int    `json:"diameter"`
@@ -137,4 +120,45 @@ type Store struct {
 		Y             int    `json:"y"`
 		Z             int    `json:"z"`
 	} `json:"species"`
+	Stars []struct {
+		Id          int   `json:"id"`
+		Color       int   `json:"color"`
+		HomeSystem  int   `json:"home_system"`
+		Message     int   `json:"message"`
+		NumPlanets  int   `json:"num_planets"`
+		PlanetIndex int   `json:"planet_index"`
+		Size        int   `json:"size"`
+		Type        int   `json:"type"`
+		VisitedBy   []int `json:"visited_by"`
+		WormHere    int   `json:"worm_here"`
+		WormX       int   `json:"worm_x"`
+		WormY       int   `json:"worm_y"`
+		WormZ       int   `json:"worm_z"`
+		X           int   `json:"x"`
+		Y           int   `json:"y"`
+		Z           int   `json:"z"`
+	} `json:"stars"`
 }
+
+type Location struct	{
+	S int `json:"s"` // species number
+	X int `json:"x"`
+	Y int `json:"y"`
+	Z int `json:"z"`
+}
+
+/* Status codes for named planets. These are logically ORed together. */
+const HOME_PLANET = 1
+const COLONY = 2
+const POPULATED = 8
+const MINING_COLONY = 16
+const RESORT_COLONY = 32
+const DISBANDED_COLONY = 64
+
+/* Ship status codes. */
+const UNDER_CONSTRUCTION = 0
+const ON_SURFACE = 1
+const IN_ORBIT = 2
+const IN_DEEP_SPACE = 3
+const JUMPED_IN_COMBAT = 4
+const FORCED_JUMP = 5

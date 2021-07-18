@@ -33,7 +33,8 @@ type Config struct {
 		Orders string // path to orders files
 	}
 	Log struct {
-		Flags int
+		Flags   int // use as log.SetFlags(cfg.Log.Flags)
+		Verbose bool
 	}
 }
 
@@ -44,6 +45,7 @@ func DefaultConfig() *Config {
 	cfg.Data.JDB = "D:\\GoLand\\fhcms\\testdata\\t11"
 	cfg.Data.Orders = "D:\\GoLand\\fhcms\\testdata\\t11"
 	cfg.Log.Flags = log.Ldate | log.Ltime | log.LUTC // force logs to be UTC
+	cfg.Log.Verbose = true
 	return &cfg
 }
 
@@ -58,6 +60,7 @@ func (cfg *Config) Load() error {
 	debug := fs.Bool("debug", cfg.Debug, "log debug information (optional)")
 	dataJDB := fs.String("jdb-path", cfg.Data.JDB, "path to json data")
 	dataOrders := fs.String("data", cfg.Data.Orders, "path to orders files")
+	logVerbose := fs.Bool("verbose", cfg.Log.Verbose, "log extra information to the console")
 
 	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("FH"), ff.WithConfigFileFlag("config"), ff.WithConfigFileParser(ff.JSONParser)); err != nil {
 		return err
@@ -66,6 +69,7 @@ func (cfg *Config) Load() error {
 	cfg.Debug = *debug
 	cfg.Data.JDB = filepath.Clean(*dataJDB)
 	cfg.Data.Orders = filepath.Clean(*dataOrders)
+	cfg.Log.Verbose = *logVerbose
 
 	return nil
 }
