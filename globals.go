@@ -159,6 +159,7 @@ var (
 	log_to_file          bool
 	logging_disabled     bool
 	make_enemy           [MAX_SPECIES][MAX_SPECIES]bool
+	name_length int
 	namp_data            [MAX_SPECIES][]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
 	nampla1_base         *nampla_data                // warning: code assumes *nampla_data
 	nampla2_base         *nampla_data                // warning: code assumes *nampla_data
@@ -170,8 +171,8 @@ var (
 	num_combat_options   int
 	num_intercepts       int
 	num_locs             int
-	num_new_namplas      [MAX_SPECIES]int
-	num_new_ships        [MAX_SPECIES]int
+	num_new_namplas      [MAX_SPECIES]int // zero based
+	num_new_ships        [MAX_SPECIES]int // zero based
 	num_planets          int
 	num_species          int
 	num_stars            int
@@ -192,7 +193,7 @@ var (
 		"PB", "CT", "ES", "FF", "DD", "CL", "CS",
 		"CA", "CC", "BC", "BS", "DN", "SD", "BM",
 		"BW", "BR", "BA", "TR",
-	}
+	} // TODO: figure out that const problem between FF, FG, and DD
 	ship_already_listed [5000]byte
 	ship_base           []*ship_data_ // warning: code expects *ship_data_
 	ship_cost           = []int{      // warning: code assumes [NUM_SHIP_CLASSES]int
@@ -250,6 +251,7 @@ var (
 	star_data_modified bool
 	star               *star_data
 	strike_phase       bool
+	sub_light bool
 	summary_file       io.Writer
 	tech_abbr          = []string{ // warning: code assumes [6][4]byte
 		"MI", "MA", "ML", "GV", "LS", "BI",
@@ -258,6 +260,7 @@ var (
 		"Mining", "Manufacturing", "Military", "Gravitics", "Life Support", "Biology",
 	}
 	test_mode     bool
+	tonnage int
 	transaction   [MAX_TRANSACTIONS]trans_data
 	truncate_name bool
 	type_char     = []byte(" dD g")

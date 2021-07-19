@@ -38,6 +38,7 @@ type Command struct {
 	Line int
 	Name string
 	Args []string
+	OriginalInput string
 }
 
 func (o *Orders) NoOrders() bool {

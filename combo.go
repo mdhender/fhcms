@@ -21,11 +21,12 @@ package main
 import (
 	"fmt"
 	"github.com/mdhender/fhcms/agrep"
-	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/orders"
 	"io"
 	"log"
-	"path/filepath"
+	"strconv"
+	"strings"
+	"unicode"
 )
 
 //*************************************************************************
@@ -226,244 +227,206 @@ func do_AMBUSH_command() {
 //*************************************************************************
 // do_base.c
 
-func do_BASE_command() {
-	//var n                                                 int
-	//var item_class, name_length int
-	//var age_new                                           int
-	var found bool
-	var unused_ship_available bool
-	var new_tonnage, max_tonnage int
-	var new_starbase bool
-	var source_is_a_planet bool
-	var x, y, z, pn int
-	var upper_ship_name string
-	var original_line_pointer *cstring
-	var source_nampla *nampla_data
-	var source_ship, starbase, unused_ship *ship_data_
+// do_BASE_command implements
+//   Build or increase size of starbase "base" using "su_count" starbase units from "source"
+// Expects
+//   BASE source base
+//   BASE su_count source base
+// Where
+//   su_count is number >= 0
+//   source   is valid SHIP or PLANET
+func do_BASE_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "BASE" {
+		return []error{fmt.Errorf("internal error: %q passed to do_BASE_command", c.Name)}
+	} else if !(s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: %q does not implement %q.\n", c.Line, s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name     string
+		su_count int    // number of economic units to use
+		source   string // source of economic units
+		base     string // name of starbase to build
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 2:
+		command.source = c.Args[0]
+		command.base = c.Args[1]
+	case 3:
+		if n, err := strconv.Atoi(c.Args[0]); err != nil {
+			fprintf(log_file, "!!! Order ignored:\n")
+			fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+			fprintf(log_file, "!!! %d: invalid number %q.\n", c.Line, c.Name, c.Args[0])
+			return nil
+		} else {
+			command.su_count = n
+		}
+		command.source = c.Args[1]
+		command.base = c.Args[2]
+	default:
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: %q: invalid command format.\n", c.Line, c.Name)
+		return nil
+	}
 
 	/* Get number of starbase units to use. */
-	su_count, ok := get_value()
-	if !ok {
-		su_count = 0
-	} else if su_count < 0 { /* Make sure value is meaningful. */
+	if command.su_count < 0 { /* Make sure value is meaningful. */
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! Invalid SU count in BASE command.\n")
-		return
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: Invalid SU count %d.\n", c.Line, command.su_count)
+		return nil
 	}
-	original_count := su_count
+	su_count := command.su_count
+	original_count := command.su_count
 
 	/* Get source of starbase units. */
-	original_line_pointer = input_line_pointer
-	if !get_transfer_point() {
-		input_line_pointer = original_line_pointer
-		fix_separator() /* Check for missing comma or tab. */
-		if !get_transfer_point() {
-			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Invalid source location in BASE command.\n")
-			return
-		}
+	source, ok := get_transfer_point(command.source)
+	if !ok {
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: Invalid source location %q.\n", c.Line, command.source)
+		return nil
+	} else if source == nil {
+		return []error{fmt.Errorf("internal error: get_transfer_point(%q) returned nil,ok", command.source)}
+	} else if source.ship == nil && source.nampla == nil {
+		return []error{fmt.Errorf("internal error: get_transfer_point(%q) returned {nil,nil}", command.source)}
 	}
 
 	/* Make sure everything makes sense. */
-	if abbr_type == SHIP_CLASS {
-		source_is_a_planet = false
-		source_ship = ship
+	source_is_a_planet, source_nampla, source_ship := source.nampla != nil, source.nampla, source.ship
+	var source_qty int
+	if source_is_a_planet {
+		source_qty = source_nampla.item_quantity[SU]
+	} else {
+		source_qty = source_ship.item_quantity[SU]
+	}
+	if su_count == 0 {
+		// when a count of zero is supplied, consume all of the avaiable units
+		if su_count = source_qty; su_count == 0 {
+			// if that still leaves us at zero, silently ignore the order
+			return nil
+		}
+	}
 
+	var source_name string
+	var x, y, z, pn int
+	if source_is_a_planet {
+		source_name = fmt.Sprintf("PL %s", source_nampla.name)
+		x, y, z, pn = source_nampla.x, source_nampla.y, source_nampla.z, source_nampla.pn
+	} else {
+		source_name = my_ship_name(source_ship)
 		if source_ship.status == UNDER_CONSTRUCTION {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! %s is still under construction!\n", ship_name(source_ship))
-			return
-		}
-
-		if source_ship.status == FORCED_JUMP ||
-			source_ship.status == JUMPED_IN_COMBAT {
+			fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+			fprintf(log_file, "!!! %d: %q is still under construction.\n", c.Line, source_name)
+			return nil
+		} else if source_ship.status == FORCED_JUMP || source_ship.status == JUMPED_IN_COMBAT {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
-			return
+			fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+			fprintf(log_file, "!!! %d: %q jumped during combat and is still in transit.\n", c.Line, source_name)
+			return nil
 		}
-
-		if su_count == 0 {
-			su_count = source_ship.item_quantity[SU]
-		}
-		if su_count == 0 {
-			return
-		}
-		if source_ship.item_quantity[SU] < su_count {
-			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! %s does not enough starbase units!\n", ship_name(source_ship))
-			return
-		}
-
-		x = source_ship.x
-		y = source_ship.y
-		z = source_ship.z
-		pn = source_ship.pn
-	} else { /* Source is a planet. */
-		source_is_a_planet = true
-		source_nampla = nampla
-
-		if su_count == 0 {
-			su_count = source_nampla.item_quantity[SU]
-		}
-		if su_count == 0 {
-			return
-		}
-		if source_nampla.item_quantity[SU] < su_count {
-			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! PL %s does not have enough starbase units!\n", source_nampla.name)
-			return
-		}
-
-		x, y, z, pn = source_nampla.x, source_nampla.y, source_nampla.z, source_nampla.pn
+		x, y, z, pn = source_ship.x, source_ship.y, source_ship.z, source_ship.pn
 	}
 
-	/* Get starbase name. */
-	if get_class_abbr() != SHIP_CLASS || abbr_index != BA {
+	if source_qty < su_count {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! Invalid starbase name.\n")
-		return
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: %q does not own %d starbase units!\n", c.Line, source_name, su_count)
+		return nil
 	}
-	name_length = get_name()
 
-	/* Search all ships for name. */
-	found = false
-	unused_ship_available = false
+	// get starbase name
+	base, ok := get_class_abbr(command.base)
+	if !ok || base.abbr_index != BA {
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: %q is not a valid starbase name.", c.Line, command.base)
+		return nil
+	}
+
+	// search all ships for existing name
+	new_starbase, upperBaseName := false, strings.ToUpper(base.name)
 	for ship_index = 0; ship_index < species.num_ships; ship_index++ {
-		ship = ship_base[ship_index]
-
-		if ship.pn == 99 {
-			unused_ship_available = true
-			unused_ship = ship
+		if ship = species.ships[ship_index]; ship == nil || ship.pn == 99 {
 			continue
 		}
-
-		/* Make upper case copy of ship name. */
-		for i := 0; i < 32; i++ {
-			upper_ship_name[i] = toupper(ship.name[i])
-		}
-
-		/* Compare names. */
-		if strcmp(upper_ship_name, upper_name) == 0 {
-			found = true
+		// make upper case copy of ship name and compare the names
+		if upperBaseName == strings.ToUpper(my_ship_name(ship)) {
+			new_starbase = true
 			break
 		}
 	}
 
-	if found {
+	var starbase *ship_data_
+	if !new_starbase {
 		if ship.ttype != STARBASE {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Ship name already in use.\n")
-			return
-		}
-
-		if ship.x != x || ship.y != y || ship.z != z {
+			fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+			fprintf(log_file, "!!! %d: Ship name already in use.\n", c.Line)
+			return nil
+		} else if ship.x != x || ship.y != y || ship.z != z {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Starbase units and starbase are not at same X Y Z.\n")
-			return
+			fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+			fprintf(log_file, "!!! %d: Starbase units and starbase are not at same X Y Z.\n", c.Line)
+			return nil
 		}
-		starbase = ship
-		new_starbase = false
 	} else {
-		if unused_ship_available {
-			starbase = unused_ship
-		} else {
-			/* Make sure we have enough memory for new starbase. */
-			if num_new_ships[species_index] == NUM_EXTRA_SHIPS {
-				fprintf(stderr, "\n\n\tInsufficient memory for new starbase!\n\n")
-				exit(-1)
-			}
-			num_new_ships[species_index]++
-			starbase = ship_base[species.num_ships]
-			species.num_ships++
-			delete_ship(starbase) /* Initialize everything to zero. */
+		// initialize data for new starbase
+		ship = &ship_data_{
+			name:  command.base,
+			age:   -1,
+			class: BA,
+			pn:    pn,
+			ttype: STARBASE,
+			x:     x,
+			y:     y,
+			z:     z,
 		}
-
-		/* Initialize non-zero data for new ship. */
-		strcpy(starbase.name, original_name)
-		starbase.x = x
-		starbase.y = y
-		starbase.z = z
-		starbase.pn = pn
-		if pn == 0 {
-			starbase.status = IN_DEEP_SPACE
+		if ship.pn == 0 {
+			ship.status = IN_DEEP_SPACE
 		} else {
-			starbase.status = IN_ORBIT
+			ship.status = IN_ORBIT
 		}
-		starbase.ttype = STARBASE
-		starbase.class = BA
-		starbase.tonnage = 0
-		starbase.age = -1
-		starbase.remaining_cost = 0
-
-		/* Everything else was set to zero in above call to 'delete_ship'. */
-
-		new_starbase = true
 	}
+	starbase = ship
 
-	/* Make sure that starbase is not being built in the deep space section
-	 *  of a star system .*/
+	/* Make sure that starbase is not being built in the deep space section of a star system .*/
 	if starbase.pn == 0 {
 		for i := 0; i < num_stars; i++ {
-			star = star_base[i]
-
-			if star.x != x {
+			if star = star_base[i]; star == nil || star.x != x || star.y != y || star.z != z {
 				continue
-			}
-			if star.y != y {
-				continue
-			}
-			if star.z != z {
-				continue
-			}
-
-			if star.num_planets < 1 {
+			} else if star.num_planets < 1 {
 				break
 			}
-
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Starbase cannot be built in deep space if there are planets available!\n")
-			if new_starbase {
-				delete_ship(starbase)
-			}
-			return
+			fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+			fprintf(log_file, "!!! %d: Starbase can't be built in deep space when planets are available.\n", c.Line)
+			return nil
 		}
 	}
 
 	/* Make sure species can build a starbase of this size. */
-	max_tonnage = species.tech_level[MA] / 2
-	new_tonnage = starbase.tonnage + su_count
+	max_tonnage, new_tonnage := species.tech_level[MA]/2, starbase.tonnage+su_count
 	if new_tonnage > max_tonnage && original_count == 0 {
 		su_count = max_tonnage - starbase.tonnage
 		if su_count < 1 {
-			if new_starbase {
-				delete_ship(starbase)
-			}
-			return
+			// TODO: why not notify user of invalid order here?
+			return nil
 		}
 		new_tonnage = starbase.tonnage + su_count
 	}
-
 	if new_tonnage > max_tonnage {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! Maximum allowable tonnage exceeded.\n")
-		if new_starbase {
-			delete_ship(starbase)
-		}
-		return
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: Maximum allowable tonnage exceeded.\n", c.Line)
+		return nil
 	}
 
-	/* Finish up and log results. */
+	// log results before bumping up the total tonnage
 	log_string("    ")
 	if starbase.tonnage == 0 {
 		log_string(ship_name(starbase))
@@ -477,13 +440,20 @@ func do_BASE_command() {
 		log_string(" tons.\n")
 	}
 
-	starbase.tonnage = new_tonnage
-
+	// add the starbase to the species' ship list, consume any resources
+	// used to build or increase the size of the starbase, and bump up
+	// the total tonnage of the starbase
+	if new_starbase {
+		species.addShip(starbase)
+	}
 	if source_is_a_planet {
 		source_nampla.item_quantity[SU] -= su_count
 	} else {
 		source_ship.item_quantity[SU] -= su_count
 	}
+	starbase.tonnage = new_tonnage
+
+	return nil
 }
 
 //*************************************************************************
@@ -2063,7 +2033,7 @@ build_ship:
 	found = false
 	unused_ship_available = false
 	for ship_index = 0; ship_index < species.num_ships; ship_index++ {
-		ship = ship_base[ship_index]
+		ship = species.ships[ship_index]
 
 		if ship.pn == 99 {
 			unused_ship_available = true
@@ -2130,6 +2100,7 @@ check_ship:
 				return
 			}
 			new_ship = true
+			// TODO: use species.addShip
 			ship = ship_base + species.num_ships
 			delete_ship(ship) /* Initialize everything to zero. */
 		}
@@ -4337,7 +4308,7 @@ func do_locations() {
 
 		species = spec_data[species_number-1]
 		nampla_base = namp_data[species_number-1]
-		ship_base = ship_data[species_number-1]
+		ship_base = species.ships
 
 		for i := 0; i < species.num_namplas; i++ {
 			nampla = nampla_base[i]
@@ -4352,9 +4323,8 @@ func do_locations() {
 		}
 
 		for i := 0; i < species.num_ships; i++ {
-			ship = ship_base[i]
-
-			if ship.pn == 99 {
+			ship = species.ships[i]
+			if ship == nil || ship.pn == 99 {
 				continue
 			}
 			if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
@@ -4862,9 +4832,9 @@ func do_PRODUCTION_command(missing_production_order bool) {
 		ib_for_this_species, ab_for_this_species, total_ib, total_ab int
 		total_effective_tonnage                                      int
 
-		alien                             *species_data
-		alien_nampla_base, alien_nampla   *nampla_data
-		alien_ship_base, alien_ship, ship *ship_data_
+		alien                           *species_data
+		alien_nampla_base, alien_nampla *nampla_data
+		alien_ship, ship                *ship_data_
 	)
 
 	if doing_production {
@@ -5122,32 +5092,25 @@ got_nampla:
 			continue
 		}
 
-		/* Check if alien ship is still in the same star system as the
-		 *      planet. */
+		/* Check if alien ship is still in the same star system as the planet. */
 		if alien_number != transaction[trans_index].number1 {
 			/* First transaction for this alien. */
 			alien_number = transaction[trans_index].number1
 			if !data_in_memory[alien_number-1] {
-				fprintf(stderr, "\n\tData for species #%d should be in memory but is not!\n\n",
-					alien_number)
+				fprintf(stderr, "\n\tData for species #%d should be in memory but is not!\n\n", alien_number)
 				exit(-1)
 			}
 			alien = spec_data[alien_number-1]
 			alien_nampla_base = namp_data[alien_number-1]
-			alien_ship_base = ship_data[alien_number-1]
-
 			new_alien = true
 		}
 
 		/* Find the alien ship. */
 		found = false
 		for i := 0; i < alien.num_ships; i++ {
-			alien_ship = alien_ship_base[i]
-
-			if alien_ship.pn == 99 {
+			if alien_ship = alien.ships[i]; alien_ship == nil || alien_ship.pn == 99 {
 				continue
 			}
-
 			if strcmp(alien_ship.name, transaction[trans_index].name3) == 0 {
 				found = true
 				break
@@ -5377,8 +5340,9 @@ got_nampla:
 
 	/* All ships currently under construction may be detected by the besiegers and destroyed. */
 	for ship_index = 0; ship_index < species.num_ships; ship_index++ {
-		ship = ship_base[ship_index]
-
+		if ship = species.ships[ship_index]; ship == nil {
+			continue
+		}
 		if ship.status == UNDER_CONSTRUCTION && ship.x == nampla.x && ship.y == nampla.y && ship.z == nampla.z && ship.pn == nampla.pn {
 			if rnd(100) > siege_percent_effectiveness {
 				continue
@@ -5784,23 +5748,10 @@ pool_repair:
 	/* Get total number of DR units available. */
 	total_dr_units = 0
 	for i := 0; i < species.num_ships; i++ {
-		ship = ship_base[i]
-
-		if ship.pn == 99 {
+		if ship = species.ships[i]; ship == nil || ship.pn == 99 || ship.x != x || ship.y != y || ship.z != z {
 			continue
 		}
-		if ship.x != x {
-			continue
-		}
-		if ship.y != y {
-			continue
-		}
-		if ship.z != z {
-			continue
-		}
-
 		total_dr_units += ship.item_quantity[DR]
-
 		ship.special = 0
 	}
 
@@ -5810,29 +5761,15 @@ pool_repair:
 		/* Find most heavily damaged ship. */
 		max_age = 0
 		for i := 0; i < species.num_ships; i++ {
-			ship = ship_base[i]
-
-			if ship.pn == 99 {
+			ship = species.ships[i]
+			if ship == nil || ship.pn == 99 || ship.x != x || ship.y != y || ship.z != z {
+				continue
+			} else if ship.special != 0 {
+				continue
+			} else if ship.status == UNDER_CONSTRUCTION {
 				continue
 			}
-			if ship.x != x {
-				continue
-			}
-			if ship.y != y {
-				continue
-			}
-			if ship.z != z {
-				continue
-			}
-			if ship.special != 0 {
-				continue
-			}
-			if ship.status == UNDER_CONSTRUCTION {
-				continue
-			}
-
-			n = ship.age
-			if n > max_age {
+			if n = ship.age; n > max_age {
 				max_age = n
 				damaged_ship = ship
 			}
@@ -5885,21 +5822,9 @@ pool_repair:
 
 	/* Subtract units used from ships at the location. */
 	for i := 0; i < species.num_ships; i++ {
-		ship = ship_base[i]
-
-		if ship.pn == 99 {
+		if ship = species.ships[i]; ship == nil || ship.pn == 99 || ship.x != x || ship.y != y || ship.z != z {
 			continue
 		}
-		if ship.x != x {
-			continue
-		}
-		if ship.y != y {
-			continue
-		}
-		if ship.z != z {
-			continue
-		}
-
 		n = ship.item_quantity[DR]
 		if n < 1 {
 			continue
@@ -5907,10 +5832,8 @@ pool_repair:
 		if n > dr_units_used {
 			n = dr_units_used
 		}
-
 		ship.item_quantity[DR] -= n
 		dr_units_used -= n
-
 		if dr_units_used == 0 {
 			break
 		}
@@ -9398,8 +9321,13 @@ done:
  * "ship_index" if a valid ship designation is found. Otherwise, it will return
  * false. The algorithm employed allows minor spelling errors, as well as
  * accidental deletion of a ship abbreviation. */
+// TODO: breaking change: do not allow players to accidentally leave out the ship abbreviation
+func get_ship(s string, correct_spelling_required bool) (*ship_data_, bool) {
+	// rule out the obvious first
+	if ca, ok := get_class_abbr(s); !(ok && ca.abbr_type == SHIP_CLASS) {
+		return nil, false
+	}
 
-func get_ship() bool {
 	var i, n, name_length, best_score, next_best_score, best_ship_index, first_try, minimum_score int
 	var upper_ship_name [32]byte
 	var temp1_ptr, temp2_ptr *byte
@@ -9432,9 +9360,7 @@ again:
 
 	/* Search all ships for name. */
 	for ship_index = 0; ship_index < species.num_ships; ship_index++ {
-		ship = ship_base[ship_index]
-
-		if ship.pn == 99 {
+		if ship = species.ships[ship_index]; ship == nil || ship.pn == 99 {
 			continue
 		}
 
@@ -9481,9 +9407,7 @@ yet_again:
 	best_score = -9999
 	next_best_score = -9999
 	for ship_index = 0; ship_index < species.num_ships; ship_index++ {
-		ship = ship_base[ship_index]
-
-		if ship.pn == 99 {
+		if ship = species.ships[ship_index]; ship == nil || ship.pn == 99 {
 			continue
 		}
 
@@ -9503,7 +9427,7 @@ yet_again:
 		}
 	}
 
-	if best_ship == NULL {
+	if best_ship == nil {
 		return (false)
 	}
 	name_length = strlen(best_ship.name)
@@ -9511,8 +9435,7 @@ yet_again:
 
 	if best_score < minimum_score || /* Score too low. */
 		name_length < 5 || /* No errors allowed. */
-		best_score == next_best_score { /* Another name with equal
-		 *      score. */
+		best_score == next_best_score { /* Another name with equal score. */
 		if first_try {
 			first_try = false
 			goto yet_again
@@ -9692,28 +9615,28 @@ func get_transaction_data() {
 //*************************************************************************
 // get_transfer.c
 
-func get_transfer_point() bool {
-	/* Find out if it is a ship or a planet. First try for a correctly
-	 *  spelled ship name. */
-	temp_ptr := input_line_pointer // TODO: this does not work
+func get_transfer_point(s string) (*transfer_point, bool) {
 	correct_spelling_required = true
-	if get_ship() {
-		return (true)
+	// find out if is is a ship
+	temp_ptr := input_line_pointer // TODO: this does not work
+	if ship, ok := get_ship(s); ok {
+		return &transfer_point{ship: ship}, true
 	}
 
-	/* Probably not a ship. See if it's a planet. */
+	// not an exact match on ship, so see if it's a planet
 	input_line_pointer = temp_ptr // TODO: this does not work
-	if get_location() {
-		return (nampla != nil)
+	if nampla, ok := get_location(); ok {
+		return &transfer_point{nampla: nampla}, true
 	}
 
-	/* Now check for an incorrectly spelled ship name. */
+	// no? ok, see if it's an incorrectly spelled ship name
 	input_line_pointer = temp_ptr // TODO: this does not work
-	if get_ship() {
-		return (true)
+	if ship, ok := get_ship(); ok {
+		return &transfer_point{ship: ship}, true
 	}
 
-	return (false)
+	// it is not a ship or a planet
+	return nil, false
 }
 
 //*************************************************************************
@@ -9798,77 +9721,11 @@ func transfer_balance() {
 
 /* Skip white space and comments. */
 func skip_junk() {
-again:
-
-	/* Read next line. */
-	input_line_pointer = fgets(input_line, 256, input_file)
-	if input_line_pointer == NULL {
-		end_of_file = true
-		return
-	}
-
-	if just_opened_file { /* Skip mail header, if any. */
-		if *input_line == '\n' {
-			goto again
-		}
-
-		just_opened_file = false
-
-		if strncmp(input_line, "From ", 5) == 0 { /* This is a mail header. */
-			for {
-				input_line_pointer = fgets(input_line, 256, input_file)
-				if input_line_pointer == nil {
-					end_of_file = true /* Weird. */
-					return
-				}
-				if *input_line == '\n' {
-					break /* End of header. */
-				}
-			}
-
-			goto again
-		}
-	}
-
-	strcpy(original_line, input_line) /* Make a copy. */
-
-	/* Skip white space and comments. */
-	for {
-		switch *input_line_pointer {
-		case ';':
-			fallthrough /* Semi-colon. */
-		case '\n': /* Newline. */
-			goto again
-
-		case '\t':
-			fallthrough /* Tab. */
-		case ' ':
-			fallthrough /* Space. */
-		case ',': /* Comma. */
-			input_line_pointer++
-			continue
-
-		default:
-			return
-		}
-	}
+	panic("skip_junk called")
 }
 
 func skip_whitespace() {
-	for {
-		switch *input_line_pointer {
-		case '\t':
-			fallthrough /* Tab. */
-		case ' ':
-			fallthrough /* Space. */
-		case ',': /* Comma. */
-			input_line_pointer++
-			break
-
-		default:
-			return
-		}
-	}
+	panic("skip_whitespace called")
 }
 
 /* The following "get" routines will return 0 if the item found was not
@@ -9877,203 +9734,109 @@ func skip_whitespace() {
 
 /* Get a command and return its index. */
 func get_command() int {
-	var i, cmd_n int
-	var c byte
-	var cmd_s [4]byte
-
-	skip_junk()
-	if end_of_file {
-		return (-1)
-	}
-
-	c = *input_line_pointer
-	/* Get first three characters of command word. */
-	for i = 0; i < 3; i++ {
-		if !isalpha(c) {
-			return (0)
-		}
-		cmd_s[i] = toupper(c)
-		input_line_pointer++
-		c = *input_line_pointer
-	}
-	cmd_s[3] = 0
-
-	/* Skip everything after third character of command word. */
-	for {
-		switch c {
-		case '\t':
-			fallthrough
-		case '\n':
-			fallthrough
-		case ' ':
-			fallthrough
-		case ',':
-			fallthrough
-		case ';':
-			goto find_cmd
-
-		default:
-			input_line_pointer++
-			c = *input_line_pointer
-		}
-	}
-
-find_cmd:
-
-	/* Find corresponding string in list. */
-	cmd_n = UNKNOWN
-	for i = 1; i < NUM_COMMANDS; i++ {
-		if strcmp(cmd_s, command_abbr[i]) == 0 {
-			cmd_n = i
-			break
-		}
-	}
-
-	return (cmd_n)
+	panic("get_command called")
 }
 
-/* Get a class abbreviation and return TECH_ID, ITEM_CLASS, SHIP_CLASS,
- * PLANET_ID, SPECIES_ID or ALLIANCE_ID as appropriate, or UNKNOWN if it
- * cannot be identified. Also, set "abbr_type" to this value. If it is
- * TECH_ID, ITEM_CLASS or SHIP_CLASS, "abbr_index" will contain the
- * abbreviation index. If it is a ship, "tonnage" will contain tonnage/10,000,
- * and "sub_light" will be true or false. (Tonnage value returned is based
- * ONLY on abbreviation.) */
+// get_class_abbr examines a name to determine its type and meaning.
+// It will return TECH_ID, ITEM_CLASS, SHIP_CLASS, PLANET_ID, SPECIES_ID,
+// ALLIANCE_ID, or UNKNOWN if it cannot be identified.
+// NOTE: there is no such thing as ALLIANCE_ID.
+// Sets the globals "abbr_type" to this value.
+// If abbr_type is TECH_ID, ITEM_CLASS or SHIP_CLASS, then global "abbr_index"
+// will be set to the abbreviation index.
+// If abbr_type is SHIP_CLASS, the global "tonnage" will contain tonnage/10,000,
+// and the global "sub_light" will be true or false. The tonnage value returned
+// is based ONLY on abbreviation.)
 
-func get_class_abbr() int {
-	var i int
-	var digit_start *byte
-
-	skip_whitespace()
-
-	abbr_type = UNKNOWN
-
-	if !isalnum(*input_line_pointer) {
-		return (UNKNOWN)
+func get_class_abbr(s string) (*class_abbr, bool) {
+	// s could be ABBR NAME or maybe just NAME
+	fields := strings.SplitN(s, " ", 2)
+	var name string
+	if len(fields) == 2 {
+		name = fields[1]
 	}
-	input_abbr[0] = toupper(*input_line_pointer)
-	input_line_pointer++
-
-	if !isalnum(*input_line_pointer) {
-		return (UNKNOWN)
-	}
-	input_abbr[1] = toupper(*input_line_pointer)
-	input_line_pointer++
-
-	input_abbr[2] = 0
-
-	/* Check for IDs that are followed by one or more digits or letters. */
-	i = 2
-	digit_start = input_line_pointer
-	for isalnum(*input_line_pointer) {
-		input_abbr[i] = *input_line_pointer
-		i++
-		input_line_pointer++
-		input_abbr[i] = 0
-	}
-
-	/* Check tech ID. */
-	for i = 0; i < 6; i++ {
-		if strcmp(input_abbr, tech_abbr[i]) == 0 {
-			abbr_index = i
-			abbr_type = TECH_ID
-			return (abbr_type)
-		}
-	}
-
-	/* Check item abbreviations. */
-	for i = 0; i < MAX_ITEMS; i++ {
-		if strcmp(input_abbr, item_abbr[i]) == 0 {
-			abbr_index = i
-			abbr_type = ITEM_CLASS
-			return (abbr_type)
-		}
-	}
-
-	/* Check ship abbreviations. */
-	for i = 0; i < NUM_SHIP_CLASSES; i++ {
-		if strncmp(input_abbr, ship_abbr[i], 2) == 0 {
-			input_line_pointer = digit_start
-			abbr_index = i
-			tonnage = ship_tonnage[i]
-			if i == TR {
-				tonnage = 0
-				for isdigit(*input_line_pointer) {
-					tonnage = (10 * tonnage) + (*input_line_pointer - '0')
-					input_line_pointer++
-				}
-			}
-
-			if toupper(*input_line_pointer) == 'S' {
-				sub_light = true
-				input_line_pointer++
+	// ABBR could be ABBR, ABBR DIGITS, ABBR DIGITS SUFFIX
+	var abbr, digits, suffix string
+	var state int
+	for _, r := range strings.ToUpper(fields[0]) {
+		switch state {
+		case 0:
+			if !unicode.IsDigit(r) {
+				abbr += string(r)
 			} else {
-				sub_light = false
+				state, digits = 1, string(r)
 			}
-
-			if isalnum(*input_line_pointer) {
-				break /* Garbage. */
+		case 1:
+			if unicode.IsDigit(r) {
+				digits += string(r)
+			} else {
+				state, suffix = 2, string(r)
 			}
-			abbr_type = SHIP_CLASS
-			return (abbr_type)
+		case 2:
+			suffix += string(r)
 		}
 	}
 
-	/* Check for planet name. */
-	if strcmp(input_abbr, "PL") == 0 {
-		abbr_type = PLANET_ID
-		return (abbr_type)
+	if abbr == "" { // should never happen
+		abbr_index, abbr_type = 0, UNKNOWN
+		return &class_abbr{abbr_type: abbr_type}, false
 	}
 
-	/* Check for species name. */
-	if strcmp(input_abbr, "SP") == 0 {
-		abbr_type = SPECIES_ID
-		return (abbr_type)
+	if name == "" && digits == "" && suffix == "" {
+		// check for TECH_ID
+		for i := 0; i < 6; i++ {
+			if tech_abbr[i] == abbr {
+				abbr_index, abbr_type = i, TECH_ID
+				return &class_abbr{abbr_index: abbr_index, abbr_type: abbr_type}, true
+			}
+		}
+		// check for ITEM_CLASS
+		for i := 0; i < MAX_ITEMS; i++ {
+			if item_abbr[i] == abbr {
+				abbr_index, abbr_type = i, ITEM_CLASS
+				return &class_abbr{abbr_index: abbr_index, abbr_type: abbr_type}, true
+			}
+		}
 	}
 
-	abbr_type = UNKNOWN
-	return (abbr_type)
+	if name != "" && digits == "" && suffix == "" {
+		// check for PLANET_ID
+		if abbr == "PL" {
+			abbr_type = PLANET_ID
+			return &class_abbr{abbr_type: abbr_type, name: name}, true
+		}
+		// check for SPECIES_ID
+		if abbr == "SP" {
+			abbr_type = SPECIES_ID
+			return &class_abbr{abbr_type: abbr_type, name: name}, true
+		}
+	}
+
+	if name != "" {
+		// check for SHIP_CLASS
+		for i := 0; i < NUM_SHIP_CLASSES; i++ {
+			if ship_abbr[i] == abbr { // TODO: consider accepting TR and TRS
+				abbr_index, abbr_type = i, SHIP_CLASS
+				switch abbr_index {
+				case TR:
+					tonnage, _ = strconv.Atoi(digits)
+				default:
+					tonnage = ship_tonnage[i]
+				}
+				sub_light = suffix == "S"
+				return &class_abbr{abbr_index: abbr_index, abbr_type: abbr_type, name: name, sub_light: sub_light, tonnage: tonnage}, true
+			}
+		}
+	}
+
+	abbr_index, abbr_type = 0, UNKNOWN
+	return &class_abbr{abbr_type: abbr_type}, false
 }
 
 /* Get a name and copy original version to "original_name" and upper
  * case version to "upper_name". Return length of name. */
 func get_name() int {
-	var name_length int
-	var c byte
-
-	skip_whitespace()
-
-	name_length = 0
-	for {
-		c = *input_line_pointer
-		if c == ';' {
-			break
-		}
-		input_line_pointer++
-		if c == ',' || c == '\t' || c == '\n' {
-			break
-		}
-		if name_length < 31 {
-			original_name[name_length] = c
-			upper_name[name_length] = toupper(c)
-			name_length++
-		}
-	}
-
-	/* Remove any final spaces in name. */
-	for name_length > 0 {
-		c = original_name[name_length-1]
-		if c != ' ' {
-			break
-		}
-		name_length--
-	}
-
-	/* Terminate strings. */
-	original_name[name_length] = 0
-	upper_name[name_length] = 0
-
-	return (name_length)
+	panic("get_name called")
 }
 
 /* Read a long decimal and place its value in 'value'. */
@@ -10943,6 +10706,18 @@ func get_order_data() (errors []error) {
 	return errors
 }
 
+// my_ship_name will return SHIP_CLASS NAME.
+// The SHIP_CLASS includes the class, tonnage (for transports), and sublight suffix.
+// The NAME is the name originally assigned. It it not case-coerced.
+func my_ship_name(s *ship_data_) string {
+	if s == nil {
+		return ""
+	} else if ship.class == TR {
+		return fmt.Sprintf("%s%d%s %s", ship_abbr[ship.class], ship.tonnage, ship_type[ship.ttype], ship.name)
+	}
+	return fmt.Sprintf("%s%s %s", ship_abbr[ship.class], ship_type[ship.ttype], ship.name)
+}
+
 func (s *species_data) getOrders() []error {
 	if verbose_mode {
 		log.Printf("orders: loading %q\n", s.orders.filename)
@@ -10964,4 +10739,30 @@ func (s *species_data) getOrders() []error {
 		}
 	}
 	return s.orders.data.Errors
+}
+
+// addShip updates the species' ships array.
+// if there is an unused slot, the ship is inserted there.
+// if not, it is appended and the global globals are updated.
+// either way, the index of the slot is returned.
+func (s *species_data) addShip(ship *ship_data_) int {
+	for i := range s.ships {
+		if s.ships[i] == nil {
+			s.ships[i] = ship
+			return i
+		}
+	}
+	s.ships = append(s.ships, ship)
+	num_new_ships[s.id-1], s.num_ships = len(s.ships), len(s.ships)
+	ship_data[s.id-1], ship_base = s.ships, nil
+	return len(s.ships) - 1
+}
+
+func (s *species_data) deleteShip(ship *ship_data_) {
+	for i := range s.ships {
+		if s.ships[i] == ship {
+			s.ships[i] = nil
+			break
+		}
+	}
 }

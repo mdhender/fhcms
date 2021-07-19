@@ -58,6 +58,14 @@ type battle_data struct {
 	z                         int
 }
 
+type class_abbr struct {
+	abbr_index int
+	abbr_type int
+	name string // argh. why did i add this?
+	sub_light bool
+	tonnage int
+}
+
 type galaxy_data struct {
 	d_num_species int /* Design number of species in galaxy. */
 	num_species   int /* Actual number of species allocated. */
@@ -210,4 +218,10 @@ type trans_data struct {
 	name2            [40]byte
 	number3          int
 	name3            [40]byte
+}
+
+// transfer_point can be either a ship or a named planet
+type transfer_point struct {
+	nampla *nampla_data
+	ship *ship_data_
 }

@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package orders
 
 import (
+	"fmt"
 	"io/ioutil"
 )
 
@@ -42,9 +43,10 @@ func Parse(name string) *Orders {
 			command = nil
 		default:
 			if command == nil {
-				command = &Command{Line: tk.Line, Name: tk.Text}
+				command = &Command{Line: tk.Line, Name: tk.Text, OriginalInput: tk.Text}
 			} else {
 				command.Args = append(command.Args, tk.Text)
+				command.OriginalInput += fmt.Sprintf(", %q", tk.Text)
 			}
 		}
 	}
