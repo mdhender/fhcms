@@ -21,9 +21,13 @@ package main
 import (
 	"fmt"
 	"github.com/mdhender/fhcms/agrep"
+	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/orders"
 	"io"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode"
@@ -459,42 +463,33 @@ func do_BASE_command(s *orders.Section, c *orders.Command) []error {
 //*************************************************************************
 // do_bat.c
 
-func do_battle(bat *battle_data) {
-	var (
-		i, j, k, species_index, species_number, num_sp, save        int
-		max_rounds, round_number, battle_here, fight_here           int
-		unit_index, option_index, current_species, temp_status      int
-		temp_pn, num_namplas, array_index, bit_number, first_action int
-		traitor_number, betrayed_number                             int
-		betrayal, need_comma                                        bool
-		true_value, do_withdraw_check_first                         int
+func do_battle(cfg *config.Config, bat *battle_data) {
+	// shadow global values
+	var species_index, species_number int
+	//var x, y, z       int
 
-		identifiable_units   [MAX_SPECIES]int
-		unidentifiable_units [MAX_SPECIES]int
-
-		n, bit_mask int
-
-		x, y, z       int
-		where, option int
-		filename      [32]byte
-		enemy         int
-		enemy_num     [MAX_SPECIES]int
-		log_line      [256]int
-
-		combat_log, species_log io.Writer
-
-		act                   *action_data
-		namp, attacked_nampla *nampla_data
-		sh                    *ship_data_
-	)
+	// local variables
+	var err error
+	var i, j int
+	var max_rounds, round_number int
+	var unit_index, option_index, current_species, temp_status int
+	var temp_pn, num_namplas int
+	var traitor_number, betrayed_number int
+	var betrayal, need_comma bool
+	var battle_here, do_withdraw_check_first, fight_here, first_action bool // was int
+	var where, option int
+	var enemy int
+	var enemy_num [MAX_SPECIES]int
+	var act action_data
+	var namp, attacked_nampla *nampla_data
+	var sh *ship_data_
 
 	ambush_took_place = false
 
-	/* Open log file for writing. */
-	log_file = fopen("combat.log", "w")
-	if log_file == nil {
-		fprintf(stderr, "\n\tCannot open 'combat.log' for writing!\n\n")
-		exit(-1)
+	// create combat log file
+	log_file, err = os.OpenFile(filepath.Join(cfg.Data.Log, "combat.log"), os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
 	}
 
 	/* Open summary file for writing. */
@@ -505,81 +500,77 @@ func do_battle(bat *battle_data) {
 	}
 	log_summary = true
 
-	/* Get data for all species present at this battle. */
-	num_sp = bat.num_species_here
-	for species_index = 0; species_index < num_sp; species_index++ {
+	// mdhender: added clear out c_species, c_nampla, and c_ships
+	for species_index := 0; species_index < num_species; species_index++ {
+		c_species[species_index] = nil
+		c_nampla[species_index] = nil
+		c_ship[species_index] = nil
+	}
+
+	// TODO: I think that I broke the species to battle to c_species logic
+	log.Println("do_battle: i think that i broke the c_species logic")
+
+	// populate c_species, c_nampla, and c_ships for everyone and thing present at this battle location
+	num_sp_in_battle := bat.num_species_here
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
 		species_number = bat.spec_num[species_index]
 		c_species[species_index] = spec_data[species_number-1]
 		c_nampla[species_index] = namp_data[species_number-1]
 		c_ship[species_index] = ship_data[species_number-1]
-		if data_in_memory[species_number-1] {
-			data_modified[species_number-1] = true
-		} else {
-			fprintf(stderr, "\n\tData for species #%d is needed but is not available!\n\n",
-				species_number)
-			exit(-1)
-		}
+	}
 
-		/* Determine number of identifiable and unidentifiable units present. */
-		identifiable_units[species_index] = 0
-		unidentifiable_units[species_index] = 0
+	// determine number of identifiable units present for every species in the battle location
+	var identifiable_units, unidentifiable_units [MAX_SPECIES]int
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
+		species_number = bat.spec_num[species_index]
 
-		namp = c_nampla[species_index] - 1
-		for i := 0; i < c_species[species_index].num_namplas; i++ {
-			namp = c_nampla[species_index][i]
-
-			if namp.x != bat.x {
+		// determine number of identifiable colonies present
+		for colony_index := 0; i < c_species[species_index].num_namplas; colony_index++ {
+			namp := c_nampla[species_index][colony_index]
+			if namp == nil || namp.x != bat.x || namp.y != bat.y || namp.z != bat.z {
 				continue
 			}
-			if namp.y != bat.y {
-				continue
-			}
-			if namp.z != bat.z {
-				continue
-			}
-
-			if isset(namp.status, POPULATED) {
+			isIdentifiable := isset(namp.status, POPULATED)
+			if isIdentifiable {
 				identifiable_units[species_index]++
 			}
 		}
 
-		sh = c_ship[species_index] - 1
-		for i := 0; i < c_species[species_index].num_ships; i++ {
-			sh = c_ship[species_index][i]
-
-			if sh.x != bat.x {
+		// determine number of identifiable and unidentifiable ships present.
+		for ship_index := 0; ship_index < c_species[species_index].num_ships; ship_index++ {
+			ship := c_ship[species_index][ship_index]
+			if ship == nil || ship.x != bat.x || ship.y != bat.y || ship.z != bat.z {
+				continue
+			} else if ship.status == UNDER_CONSTRUCTION || ship.status == JUMPED_IN_COMBAT || ship.status == FORCED_JUMP {
 				continue
 			}
-			if sh.y != bat.y {
-				continue
-			}
-			if sh.z != bat.z {
-				continue
-			}
-			if sh.status == UNDER_CONSTRUCTION {
-				continue
-			}
-			if sh.status == JUMPED_IN_COMBAT {
-				continue
-			}
-			if sh.status == FORCED_JUMP {
-				continue
-			}
-
-			sh.dest_x = 0   /* Not yet exposed. */
-			sh.dest_y = 100 /* Shields at 100%. */
-
-			if sh.item_quantity[FD] == sh.tonnage {
-				unidentifiable_units[species_index]++
+			isIdentifiable := ship.item_quantity[FD] != sh.tonnage // TODO: why does carrying more FD than needed break distortion?
+			if isIdentifiable {
+				identifiable_units[species_index]++
 			} else {
-				identifiable_units[species_index]++
+				unidentifiable_units[species_index]++
 			}
 		}
+	}
 
-		if identifiable_units[species_index] > 0 || unidentifiable_units[species_index] == 0 {
-			field_distorted[species_index] = false
-		} else {
-			field_distorted[species_index] = true
+	// if any units for a species are identifiable, none of the field distorters will work for that species
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
+		field_distorted[species_index] = !(identifiable_units[species_index] > 0 || unidentifiable_units[species_index] == 0)
+	}
+
+	// reset the overloaded dest_x and dest_y fields. ARGH.
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
+		species_number = bat.spec_num[species_index]
+
+		for ship_index := 0; ship_index < c_species[species_index].num_ships; ship_index++ {
+			ship := c_ship[species_index][ship_index]
+			if ship == nil || ship.x != bat.x || ship.y != bat.y || ship.z != bat.z {
+				continue
+			} else if ship.status == UNDER_CONSTRUCTION || ship.status == JUMPED_IN_COMBAT || ship.status == FORCED_JUMP {
+				continue
+			}
+			ship.dest_x = 0   /* Not yet exposed. */ // TODO: stop overloading dest_x
+			ship.dest_y = 100 /* Shields at 100%. */ // TODO: stop overloading dest_y
 		}
 	}
 
@@ -599,164 +590,127 @@ func do_battle(bat *battle_data) {
 	log_int(bat.z)
 	log_string(". The following species are present:\n\n")
 
-	/* Convert enemy_mine array from a list of species numbers to an array
-	 *  of true/false values whose indices are:
-	 *
-	 *                  [species_index1][species_index2]
-	 *
-	 *  such that the value will be true if #1 mentioned #2 in an ATTACK
-	 *  or HIJACK command.  The actual true value will be 1 for ATTACK or
-	 *  2 for HIJACK. */
-
-	for species_index = 0; species_index < num_sp; species_index++ {
-		/* Make copy of list of enemies. */
-		for i = 0; i < MAX_SPECIES; i++ {
+	// convert enemy_mine array from a list of species numbers to an array of values whose indices are:
+	//    [species_index1][species_index2]
+	// such that the value will be non-zero if #1 mentioned #2 in an ATTACK or HIJACK command.
+	// the actual value will be 1 for ATTACK or 2 for HIJACK.
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
+		// make copy of list of enemies
+		for i := 0; i < MAX_SPECIES; i++ {
 			enemy_num[i] = bat.enemy_mine[species_index][i]
 			bat.enemy_mine[species_index][i] = 0
 		}
 
-		for i := 0; i < MAX_SPECIES; i++ {
-			enemy = enemy_num[i]
-			if enemy == 0 {
-				break /* No more enemies in list. */
-			} else if enemy < 0 {
-				enemy = -enemy
-				true_value = 2 /* This is a hijacking. */
-			} else {
-				true_value = 1 /* This is a normal attack. */
-			}
-
-			/* Convert absolute species numbers to species indices that
-			 *  have been assigned in the current battle. */
-			for j := 0; j < num_sp; j++ {
-				if enemy == bat.spec_num[j] {
-					bat.enemy_mine[species_index][j] = true_value
+		// enemy_num[i] == 0 means end of enemies in battle
+		for i := 0; i < MAX_SPECIES && enemy_num[i] != 0; i++ {
+			if enemy = enemy_num[i]; enemy > 0 { // positive value means attack
+				// convert absolute species numbers to species indices that have been assigned in the current battle
+				for j := 0; j < num_sp_in_battle; j++ {
+					if enemy == bat.spec_num[j] {
+						bat.enemy_mine[species_index][j] = 1 // ATTACK
+					}
+				}
+			} else { // negative value for enemy species id means hijack
+				enemy = -enemy // convert back to valid species id
+				// convert absolute species numbers to species indices that have been assigned in the current battle
+				for j := 0; j < num_sp_in_battle; j++ {
+					if enemy == bat.spec_num[j] {
+						bat.enemy_mine[species_index][j] = 2 // HIJACK
+					}
 				}
 			}
 		}
 	}
 
-	/* For each species that has been mentioned in an attack order, check
-	 *  if it can be surprised. A species can only be surprised if it has
-	 *  not given a BATTLE order and if it is being attacked ONLY by one
-	 *  or more ALLIES. */
-	for species_index = 0; species_index < num_sp; species_index++ {
-		j = bat.spec_num[species_index] - 1
-		array_index = j / 32
-		bit_number = j % 32
-		bit_mask = 1 << bit_number
-
-		for i := 0; i < num_sp; i++ {
+	// for each species that has been mentioned in an attack order, check if it can be surprised.
+	// a species can only be surprised if it has not given a BATTLE order and if it is being attacked ONLY by one or more ALLIES.
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
+		for i := 0; i < num_sp_in_battle; i++ {
 			if i == species_index {
 				continue
-			}
-
-			if !bat.enemy_mine[species_index][i] {
+			} else if bat.enemy_mine[species_index][i] != 0 {
+				continue
+			} else if field_distorted[species_index] {
+				// attacker is field-distorted; surprise not possible
+				bat.can_be_surprised[i] = 0
 				continue
 			}
-
-			if field_distorted[species_index] {
-				/* Attacker is field-distorted. Surprise not possible. */
-				bat.can_be_surprised[i] = false
-				continue
-			}
-
-			betrayal = c_species[i].ally[species_index]
-
-			if betrayal {
-				/* Someone is being attacked by an ALLY. */
+			if betrayal = c_species[i].ally[species_index]; betrayal {
+				// someone is being attacked by an ALLY
 				traitor_number = bat.spec_num[species_index]
 				betrayed_number = bat.spec_num[i]
 				make_enemy[betrayed_number-1][traitor_number-1] = betrayed_number
 				auto_enemy(traitor_number, betrayed_number)
 			}
-
-			if !bat.can_be_surprised[i] {
+			if bat.can_be_surprised[i] == 0 {
 				continue
 			}
-
-			if !betrayal { /* At least one attacker is not an ally. */
-				bat.can_be_surprised[i] = false
+			if !betrayal { // at least one attacker is not an ally
+				bat.can_be_surprised[i] = 0
 			}
 		}
 	}
 
-	/* For each species that has been mentioned in an attack order, see if
-	 *  there are other species present that have declared it as an ALLY.
-	 *  If so, have the attacker attack the other species and vice-versa. */
-	for species_index = 0; species_index < num_sp; species_index++ {
-		for i := 0; i < num_sp; i++ {
+	// for each species that has been mentioned in an attack order,
+	// see if there are other species present that have declared it as an ALLY.
+	// if so, have the attacker attack the other species and vice-versa.
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
+		for i := 0; i < num_sp_in_battle; i++ {
 			if i == species_index {
 				continue
-			}
-
-			if !bat.enemy_mine[species_index][i] {
+			} else if bat.enemy_mine[species_index][i] == 0 {
 				continue
 			}
-
-			j = bat.spec_num[i] - 1
-			array_index = j / 32
-			bit_number = j % 32
-			bit_mask = 1 << bit_number
-
-			for k := 0; k < num_sp; k++ {
-				if k == species_index {
+			j = bat.spec_num[i] - 1 // the species id being betrayed
+			for k := 0; k < num_sp_in_battle; k++ {
+				if k == species_index { // don't betray self
+					continue
+				} else if k == i { // don't betray the attacker? is that what i is here?
 					continue
 				}
-				if k == i {
-					continue
-				}
-
-				if isset(c_species[k].ally[species_index], bit_mask) {
-					/* Make sure it's not already set (it may already be set
-					 *  for HIJACK and we don't want to accidentally change
-					 *  it to ATTACK). */
-					if !bat.enemy_mine[species_index][k] {
-						bat.enemy_mine[species_index][k] = true
+				log.Println("do_battle: this index is likely wrong")
+				if c_species[k].ally[j] {
+					/* Make sure it's not already set (it may already be set for HIJACK and we don't want to accidentally change it to ATTACK). */
+					if bat.enemy_mine[j][k] == 0 {
+						bat.enemy_mine[j][k] = 1 // ATTACK
 					}
-					if !bat.enemy_mine[k][species_index] {
-						bat.enemy_mine[k][species_index] = true
+					if bat.enemy_mine[k][j] == 0 {
+						bat.enemy_mine[k][j] = 1 // ATTACK
 					}
 				}
 			}
 		}
 	}
 
-	/* If a species did not give a battle order and is not the target of an
-	 *  attack, set can_be_surprised flag to a special value. */
-	for species_index = 0; species_index < num_sp; species_index++ {
-		if !bat.can_be_surprised[species_index] {
+	/* If a species did not give a battle order and is not the target of an attack, set can_be_surprised flag to a special value. */
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
+		log.Println("do_battle: is species index the right index?")
+		if bat.can_be_surprised[species_index] == 0 {
 			continue
 		}
-
 		bat.can_be_surprised[species_index] = 55
-
-		for i := 0; i < num_sp; i++ {
+		for i := 0; i < num_sp_in_battle; i++ {
 			if i == species_index {
 				continue
-			}
-
-			if !bat.enemy_mine[i][species_index] {
+			} else if bat.enemy_mine[i][species_index] == 0 {
 				continue
 			}
-
-			bat.can_be_surprised[species_index] = true
-
+			bat.can_be_surprised[species_index] = 1 // todo: is this ATTACK as well?
 			break
 		}
 	}
 
 	/* List combatants. */
-	for species_index = 0; species_index < num_sp; species_index++ {
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
 		species_number = bat.spec_num[species_index]
-
 		log_string("    SP ")
 		if field_distorted[species_index] {
 			log_int(distorted(species_number))
 		} else {
 			log_string(c_species[species_index].name)
 		}
-		if bat.can_be_surprised[species_index] {
+		log.Println("do_battle: is species index the right index?")
+		if bat.can_be_surprised[species_index] != 0 {
 			log_string(" does not appear to be ready for combat.\n")
 		} else {
 			log_string(" is mobilized and ready for combat.\n")
@@ -764,56 +718,43 @@ func do_battle(bat *battle_data) {
 	}
 
 	/* Check if a declared enemy is being ambushed. */
-	for i := 0; i < num_sp; i++ {
-		namp = c_nampla[i] - 1
+	for i := 0; i < num_sp_in_battle; i++ {
 		num_namplas = c_species[i].num_namplas
 		bat.ambush_amount[i] = 0
 		for j = 0; j < num_namplas; j++ {
-			namp++
-
-			if namp.x != bat.x {
+			namp = c_nampla[i][j]
+			if namp == nil || namp.x != bat.x || namp.y != bat.y || namp.z != bat.z {
 				continue
 			}
-			if namp.y != bat.y {
-				continue
-			}
-			if namp.z != bat.z {
-				continue
-			}
-
 			bat.ambush_amount[i] += namp.use_on_ambush
 		}
-
 		if bat.ambush_amount[i] == 0 {
 			continue
 		}
-
-		for j := 0; j < num_sp; j++ {
-			if bat.enemy_mine[i][j] {
+		for j := 0; j < num_sp_in_battle; j++ {
+			if bat.enemy_mine[i][j] != 0 {
 				do_ambush(i, bat)
 			}
 		}
 	}
 
 	/* For all species that specified enemies, make the feeling mutual. */
-	for i := 0; i < num_sp; i++ {
-		for j := 0; j < num_sp; j++ {
-			if bat.enemy_mine[i][j] {
-				/* Make sure it's not already set (it may already be set for
-				 *  HIJACK and we don't want to accidentally change it to
-				 *  ATTACK). */
-				if !bat.enemy_mine[j][i] {
-					bat.enemy_mine[j][i] = true
+	for i := 0; i < num_sp_in_battle; i++ {
+		for j := 0; j < num_sp_in_battle; j++ {
+			if bat.enemy_mine[i][j] != 0 {
+				/* Make sure it's not already set (it may already be set for HIJACK and we don't want to accidentally change it to ATTACK). */
+				if bat.enemy_mine[j][i] == 0 {
+					bat.enemy_mine[j][i] = 1 // is this ATTACK?
 				}
 			}
 		}
 	}
 
-	/* Create a sequential list of combat options. First check if a
-	 *  deep space defense has been ordered. If so, then make sure that
-	 *  first option is DEEP_SPACE_FIGHT. */
+	// create a sequential list of combat options.
+	// first check if a deep space defense has been ordered.
+	// if so, then make sure that first option is DEEP_SPACE_FIGHT.
 	num_combat_options = 0
-	for species_index = 0; species_index < num_sp; species_index++ {
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
 		for i := 0; i < bat.num_engage_options[species_index]; i++ {
 			option = bat.engage_option[species_index][i]
 			if option == DEEP_SPACE_DEFENSE {
@@ -824,7 +765,7 @@ func do_battle(bat *battle_data) {
 	}
 
 consolidate:
-	for species_index = 0; species_index < num_sp; species_index++ {
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
 		for i := 0; i < bat.num_engage_options[species_index]; i++ {
 			option = bat.engage_option[species_index][i]
 			where = bat.engage_planet[species_index][i]
@@ -832,10 +773,8 @@ consolidate:
 		}
 	}
 
-	/* If ships are given unconditional withdraw orders, they will always have
-	 *  time to escape if fighting occurs first in a different part of the
-	 *  sector. The flag "do_withdraw_check_first" will be set only after the
-	 *  first round of combat. */
+	// If ships are given unconditional withdraw orders, they will always have time to escape if fighting occurs first in a different part of the sector.
+	// The flag "do_withdraw_check_first" will be set only after the first round of combat.
 	do_withdraw_check_first = false
 
 	/* Handle each combat option. */
@@ -845,8 +784,7 @@ consolidate:
 		option = combat_option[option_index]
 		where = combat_location[option_index]
 
-		/* Fill action arrays with data about ships taking part in current
-		 * action. */
+		/* Fill action arrays with data about ships taking part in current action. */
 		fight_here = fighting_params(option, where, bat, &act)
 
 		/* Check if a fight will take place here. */
@@ -857,14 +795,14 @@ consolidate:
 		/* See if anyone is taken by surprise. */
 		if !battle_here {
 			/* Combat is just starting. */
-			for species_index = 0; species_index < num_sp; species_index++ {
+			for species_index = 0; species_index < num_sp_in_battle; species_index++ {
 				species_number = bat.spec_num[species_index]
 
 				if bat.can_be_surprised[species_index] == 55 {
 					continue
 				}
 
-				if bat.can_be_surprised[species_index] {
+				if bat.can_be_surprised[species_index] != 0 {
 					log_string("\n    SP ")
 					if field_distorted[species_index] {
 						log_int(distorted(species_number))
@@ -880,22 +818,20 @@ consolidate:
 
 		/* Clear out can_be_surprised array. */
 		for i = 0; i < MAX_SPECIES; i++ {
-			bat.can_be_surprised[i] = false
+			bat.can_be_surprised[i] = 0
 		}
 
 		/* Determine maximum number of rounds. */
 		max_rounds = 10000 /* Something ridiculously large. */
-		if option == DEEP_SPACE_FIGHT && attacking_ML > 0 && defending_ML > 0 && deep_space_defense {
-			/* This is the initial deep space fight and the defender wants the
-			 *  fight to remain in deep space for as long as possible. */
+		if option == DEEP_SPACE_FIGHT && attacking_ML > 0 && defending_ML > 0 && deep_space_defense != 0 {
+			/* This is the initial deep space fight and the defender wants the fight to remain in deep space for as long as possible. */
 			if defending_ML > attacking_ML {
 				max_rounds = defending_ML - attacking_ML
 			} else {
 				max_rounds = 1
 			}
 		} else if option == PLANET_BOMBARDMENT {
-			/* To determine the effectiveness of the bombardment, we will
-			 *  simulate ten rounds of combat and add up the damage. */
+			/* To determine the effectiveness of the bombardment, we will simulate ten rounds of combat and add up the damage. */
 			max_rounds = 10
 		} else if option == GERM_WARFARE || option == SIEGE {
 			/* We just need to see who is attacking whom and get the number
@@ -952,7 +888,7 @@ consolidate:
 			}
 
 			if act.unit_type[unit_index] == SHIP {
-				sh = act.fighting_unit[unit_index] // cast to *ship_data_
+				sh = act.fighting_unit[unit_index].ship // cast to *ship_data_
 				temp_status = sh.status
 				temp_pn = sh.pn
 				if option == DEEP_SPACE_FIGHT {
@@ -974,7 +910,7 @@ consolidate:
 				sh.status = temp_status
 				sh.pn = temp_pn
 			} else {
-				namp = act.fighting_unit[unit_index] // cast to *nampla_data
+				namp = act.fighting_unit[unit_index].nampla // cast to *nampla_data
 				if need_comma {
 					log_string(", ")
 				}
@@ -1007,7 +943,7 @@ consolidate:
 				withdrawal_check(bat, &act)
 			}
 
-			if !do_round(option, round_number, bat, &act) {
+			if do_round(option, round_number, bat, &act) == 0 {
 				break
 			}
 
@@ -1033,9 +969,9 @@ consolidate:
 		if option == PLANET_BOMBARDMENT || option == GERM_WARFARE {
 			for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
 				if act.unit_type[unit_index] == GENOCIDE_NAMPLA {
-					attacked_nampla = act.fighting_unit[unit_index] // cast to *nampla_data
+					attacked_nampla = act.fighting_unit[unit_index].nampla // cast to *nampla_data
 					j = act.fighting_species_index[unit_index]
-					for i := 0; i < num_sp; i++ {
+					for i := 0; i < num_sp_in_battle; i++ {
 						if x_attacked_y[i][j] {
 							species_number = bat.spec_num[i]
 							log_string("      SP ")
@@ -1085,84 +1021,58 @@ consolidate:
 		printf("\n  End of battle in sector %d, %d, %d.\n", bat.x,
 			bat.y, bat.z)
 	}
-	fprintf(log_file, "\n  End of battle in sector %d, %d, %d.\n", bat.x,
-		bat.y, bat.z)
-	fprintf(summary_file, "\n  End of battle in sector %d, %d, %d.\n",
-		bat.x, bat.y, bat.z)
-	fclose(log_file)
-	fclose(summary_file)
+	fprintf(log_file, "\n  End of battle in sector %d, %d, %d.\n", bat.x, bat.y, bat.z)
+	fprintf(summary_file, "\n  End of battle in sector %d, %d, %d.\n", bat.x, bat.y, bat.z)
+	log.Println("do_battle: do i need to replace fclose with fflush if there are caching issues?")
+	log_file = nil     // was fclose(log_file)
+	summary_file = nil // was fclose(summary_file)
 
-	for species_index = 0; species_index < num_sp; species_index++ {
+	for species_index = 0; species_index < num_sp_in_battle; species_index++ {
 		species_number = bat.spec_num[species_index]
 
 		/* Open combat log file for reading. */
+		var combatLogFileName string
 		if bat.summary_only[species_index] {
-			combat_log = fopen("summary.log", "r")
+			combatLogFileName = "summary.log"
 		} else {
-			combat_log = fopen("combat.log", "r")
+			combatLogFileName = "combat.log"
 		}
-
-		if combat_log == nil {
-			fprintf(stderr, "\n\tCannot open combat log for reading!\n\n")
-			exit(-1)
+		if combatLog, err := ioutil.ReadFile(filepath.Join(cfg.Data.Log, combatLogFileName)); err != nil {
+			panic(err)
+		} else {
+			/* Open a temporary species log file for appending. */
+			filename := filepath.Join(cfg.Data.Log, fmt.Sprintf("sp%02d.temp.log", species_number))
+			if speciesTempLog, err := ioutil.ReadFile(filename); err == nil {
+				combatLog = append(speciesTempLog, combatLog...)
+			}
+			if err := ioutil.WriteFile(filename, combatLog, 0644); err != nil {
+				panic(err)
+			}
 		}
-
-		/* Open a temporary species log file for appending. */
-		filename := fmt.Sprintf("sp%02d.temp.log", species_number)
-		species_log = fopen(filename, "a")
-		if species_log == nil {
-			fprintf(stderr, "\n\tCannot open '%s' for appending!\n\n", filename)
-			exit(-1)
-		}
-
-		/* Copy combat log to temporary species log. */
-		for fgets(log_line, 256, combat_log) != nil {
-			fputs(log_line, species_log)
-		}
-
-		fclose(species_log)
-		fclose(combat_log)
-
 		append_log[species_number-1] = true
 
 		/* Get rid of ships that were destroyed. */
-		if !data_modified[species_number-1] {
-			continue
-		}
 		for i := 0; i < c_species[species_index].num_ships; i++ {
-			sh = c_ship[species_index][i]
-
-			if sh.age < 50 {
+			if sh = c_ship[species_index][i]; sh == nil || sh.age < 50 || sh.pn == 99 || sh.x != bat.x || sh.y != bat.y || sh.z != bat.z {
+				continue
+			} else if sh.status == UNDER_CONSTRUCTION {
 				continue
 			}
-			if sh.pn == 99 {
-				continue
-			}
-			if sh.x != bat.x {
-				continue
-			}
-			if sh.y != bat.y {
-				continue
-			}
-			if sh.z != bat.z {
-				continue
-			}
-			if sh.status == UNDER_CONSTRUCTION {
-				continue
-			}
-
 			delete_ship(sh)
 		}
 	}
 }
 
 func do_ambush(ambushing_species_index int, bat *battle_data) {
+	// shadow global variables
+	var species_number int
+
+	// local variables
 	var (
 		i, j, n, num_sp, ambushed_species_index, num_ships int
-		age_increment, species_number, old_truncate_name   int
+		age_increment, old_truncate_name                   int
 		friendly_tonnage, enemy_tonnage                    int
-
-		sh *ship_data_
+		sh                                                 *ship_data_
 	)
 
 	/* Get total ambushing tonnage. */
@@ -5969,7 +5879,7 @@ do_cost:
 /* The following routine will return true if a round of combat actually
  * occurred. Otherwise, it will return false. */
 
-func do_round(option int, round_number bool, bat *battle_data, act *action_data) int {
+func do_round(option int, round_number int, bat *battle_data, act *action_data) int {
 	var i, j, n, unit_index, combat_occurred, total_shots int
 	var attacker_index, defender_index, found, chance_to_hit int
 	var attacker_ml, attacker_gv, defender_ml int
@@ -8526,16 +8436,18 @@ try_again:
  * false.
  */
 
-func fighting_params(option, location int, bat *battle_data, act *action_data) int {
-	var x, y, z, pn int
-	var i, j, found, ttype, num_sp, unit_index, species_index int
-	var ship_index, nampla_index, sp1, sp2, use_this_ship, n_shots int
-	var engage_option, engage_location, attacking_ships_here int
-	var defending_ships_here, attacking_pds_here, defending_pds_here int
+func fighting_params(option, location int, bat *battle_data, act *action_data) bool { // was int
+	// shadow globals
+	var ship_index, nampla_index, x, y, z, pn, species_index int
+	// locals
+	var i, j, found, ttype, num_sp, unit_index int
+	var sp1, sp2, n_shots int
+	var engage_option, engage_location int
 	var num_fighting_units, tons int
 	var ml, ls, unit_power, offensive_power, defensive_power int
 	var sh *ship_data_
 	var nam *nampla_data
+	var attacking_ships_here, defending_ships_here, attacking_pds_here, defending_pds_here, use_this_ship bool // was int
 
 	/* Add fighting units to "act" arrays. At the same time, check if
 	 *  a fight of the current option ttype will occur at the current

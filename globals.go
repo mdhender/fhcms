@@ -36,7 +36,7 @@ var (
 	balance           int
 	battle_base       []*battle_data              // warning: code expects *battle_data
 	c_nampla          [MAX_SPECIES][]*nampla_data // warning: code expects [MAX_SPECIES]*nampla_data
-	c_ship            [MAX_SPECIES]*ship_data_
+	c_ship            [MAX_SPECIES][]*ship_data_  // warning: code expects [MAX_SPECIES]*ship_data_
 	c_species         [MAX_SPECIES]*species_data
 	color_char        = []byte(" OBAFGKM")
 	command_abbr      = []string{ // warning: code assumes [NUM_COMMANDS][4]byte
@@ -158,8 +158,8 @@ var (
 	log_summary          bool
 	log_to_file          bool
 	logging_disabled     bool
-	make_enemy           [MAX_SPECIES][MAX_SPECIES]bool
-	name_length int
+	make_enemy           [MAX_SPECIES][MAX_SPECIES]int // species id of the enemy-to-be
+	name_length          int
 	namp_data            [MAX_SPECIES][]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
 	nampla1_base         *nampla_data                // warning: code assumes *nampla_data
 	nampla2_base         *nampla_data                // warning: code assumes *nampla_data
@@ -251,7 +251,7 @@ var (
 	star_data_modified bool
 	star               *star_data
 	strike_phase       bool
-	sub_light bool
+	sub_light          bool
 	summary_file       io.Writer
 	tech_abbr          = []string{ // warning: code assumes [6][4]byte
 		"MI", "MA", "ML", "GV", "LS", "BI",
@@ -260,7 +260,7 @@ var (
 		"Mining", "Manufacturing", "Military", "Gravitics", "Life Support", "Biology",
 	}
 	test_mode     bool
-	tonnage int
+	tonnage       int
 	transaction   [MAX_TRANSACTIONS]trans_data
 	truncate_name bool
 	type_char     = []byte(" dD g")
@@ -268,6 +268,7 @@ var (
 	value         int
 	verbose_mode  bool
 	x             int
+	x_attacked_y  [MAX_SPECIES][MAX_SPECIES]bool // was char
 	y             int
 	z             int
 )

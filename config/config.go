@@ -30,6 +30,7 @@ type Config struct {
 	Debug bool
 	Data  struct {
 		JDB    string // path to json data file
+		Log    string // path to create log files
 		Orders string // path to orders files
 	}
 	Log struct {
@@ -43,6 +44,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	var cfg Config
 	cfg.Data.JDB = "D:\\GoLand\\fhcms\\testdata\\t11"
+	cfg.Data.Log = "D:\\GoLand\\fhcms\\testdata\\t11"
 	cfg.Data.Orders = "D:\\GoLand\\fhcms\\testdata\\t11"
 	cfg.Log.Flags = log.Ldate | log.Ltime | log.LUTC // force logs to be UTC
 	cfg.Log.Verbose = true
@@ -58,8 +60,9 @@ func DefaultConfig() *Config {
 func (cfg *Config) Load() error {
 	fs := flag.NewFlagSet("Server", flag.ExitOnError)
 	debug := fs.Bool("debug", cfg.Debug, "log debug information (optional)")
-	dataJDB := fs.String("jdb-path", cfg.Data.JDB, "path to json data")
-	dataOrders := fs.String("data", cfg.Data.Orders, "path to orders files")
+	dataJDB := fs.String("jdb-path", cfg.Data.JDB, "path to read json data")
+	dataLog := fs.String("data", cfg.Data.Log, "path to create log files")
+	dataOrders := fs.String("data", cfg.Data.Orders, "path to read orders files")
 	logVerbose := fs.Bool("verbose", cfg.Log.Verbose, "log extra information to the console")
 
 	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("FH"), ff.WithConfigFileFlag("config"), ff.WithConfigFileParser(ff.JSONParser)); err != nil {
@@ -68,6 +71,7 @@ func (cfg *Config) Load() error {
 
 	cfg.Debug = *debug
 	cfg.Data.JDB = filepath.Clean(*dataJDB)
+	cfg.Data.Log = filepath.Clean(*dataLog)
 	cfg.Data.Orders = filepath.Clean(*dataOrders)
 	cfg.Log.Verbose = *logVerbose
 

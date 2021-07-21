@@ -35,9 +35,9 @@ type Section struct {
 }
 
 type Command struct {
-	Line int
-	Name string
-	Args []string
+	Line          int
+	Name          string
+	Args          []string
 	OriginalInput string
 }
 

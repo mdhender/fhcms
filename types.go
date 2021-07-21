@@ -23,22 +23,26 @@ import "github.com/mdhender/fhcms/orders"
 type action_data struct {
 	bomb_damage            [MAX_SHIPS]int
 	fighting_species_index [MAX_SHIPS]int
-	fighting_unit          [MAX_SHIPS]*int // warning: code mixes pointer types here
-	original_age_or_PDs    [MAX_SHIPS]int
-	num_shots              [MAX_SHIPS]int
-	num_units_fighting     int
-	shield_strength        [MAX_SHIPS]int
-	shield_strength_left   [MAX_SHIPS]int
-	shots_left             [MAX_SHIPS]int
-	surprised              [MAX_SHIPS]int
-	unit_type              [MAX_SHIPS]int
-	weapon_damage          [MAX_SHIPS]int
+	//fighting_unit          [MAX_SHIPS]*int // warning: code mixes pointer types here
+	fighting_unit [MAX_SHIPS]struct {
+		nampla *nampla_data
+		ship   *ship_data_
+	}
+	original_age_or_PDs  [MAX_SHIPS]int
+	num_shots            [MAX_SHIPS]int
+	num_units_fighting   int
+	shield_strength      [MAX_SHIPS]int
+	shield_strength_left [MAX_SHIPS]int
+	shots_left           [MAX_SHIPS]int
+	surprised            [MAX_SHIPS]int
+	unit_type            [MAX_SHIPS]int
+	weapon_damage        [MAX_SHIPS]int
 }
 
 type battle_data struct {
 	ambush_amount             [MAX_SPECIES]int
-	can_be_surprised          [MAX_SPECIES]bool
-	enemy_mine                [MAX_SPECIES][MAX_SPECIES]int
+	can_be_surprised          [MAX_SPECIES]int
+	enemy_mine                [MAX_SPECIES][MAX_SPECIES]int // will be 0 for no enemy, 1 for ATTACK, 2 for HIJACK
 	engage_option             [MAX_SPECIES][MAX_ENGAGE_OPTIONS]int
 	engage_planet             [MAX_SPECIES][MAX_ENGAGE_OPTIONS]int
 	fleet_withdraw_percentage [MAX_SPECIES]int
@@ -60,10 +64,10 @@ type battle_data struct {
 
 type class_abbr struct {
 	abbr_index int
-	abbr_type int
-	name string // argh. why did i add this?
-	sub_light bool
-	tonnage int
+	abbr_type  int
+	name       string // argh. why did i add this?
+	sub_light  bool
+	tonnage    int
 }
 
 type galaxy_data struct {
@@ -223,5 +227,5 @@ type trans_data struct {
 // transfer_point can be either a ship or a named planet
 type transfer_point struct {
 	nampla *nampla_data
-	ship *ship_data_
+	ship   *ship_data_
 }
