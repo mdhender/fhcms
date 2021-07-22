@@ -1069,11 +1069,12 @@ func do_ambush(ambushing_species_index int, bat *battle_data) {
 
 	// local variables
 	var (
-		i, j, n, num_sp, ambushed_species_index, num_ships int
-		age_increment, old_truncate_name                   int
+		i, n, num_sp, ambushed_species_index, num_ships int
+		age_increment                   int
 		friendly_tonnage, enemy_tonnage                    int
 		sh                                                 *ship_data_
 	)
+	var old_truncate_name bool // was int
 
 	/* Get total ambushing tonnage. */
 	friendly_tonnage = 0
@@ -1103,7 +1104,7 @@ func do_ambush(ambushing_species_index int, bat *battle_data) {
 	num_sp = bat.num_species_here
 	enemy_tonnage = 0
 	for ambushed_species_index = 0; ambushed_species_index < num_sp; ambushed_species_index++ {
-		if !bat.enemy_mine[ambushing_species_index][ambushed_species_index] {
+		if bat.enemy_mine[ambushing_species_index][ambushed_species_index] == 0 {
 			continue
 		}
 
@@ -1151,7 +1152,7 @@ func do_ambush(ambushing_species_index int, bat *battle_data) {
 
 	/* Age each ambushed ship. */
 	for ambushed_species_index = 0; ambushed_species_index < num_sp; ambushed_species_index++ {
-		if !bat.enemy_mine[ambushing_species_index][ambushed_species_index] {
+		if bat.enemy_mine[ambushing_species_index][ambushed_species_index] == 0{
 			continue
 		}
 
@@ -1266,7 +1267,7 @@ func do_bombardment(unit_index int, act *action_data) {
 		sh              *ship_data_
 	)
 
-	attacked_nampla = act.fighting_unit[unit_index] // cast to *nampla_data
+	attacked_nampla = act.fighting_unit[unit_index].nampla // cast to *nampla_data
 	planet = planet_base[attacked_nampla.planet_index]
 
 	initial_base = attacked_nampla.mi_base + attacked_nampla.ma_base
@@ -1330,8 +1331,8 @@ func do_bombardment(unit_index int, act *action_data) {
 		attacked_nampla.pop_units = 0
 		attacked_nampla.siege_eff = 0
 		attacked_nampla.shipyards = 0
-		attacked_nampla.hiding = 0
-		attacked_nampla.hidden = 0
+		attacked_nampla.hiding = false // was 0
+		attacked_nampla.hidden = false // 0
 		attacked_nampla.use_on_ambush = 0
 
 		/* Reset status. */
