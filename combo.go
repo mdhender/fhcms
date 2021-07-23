@@ -2639,7 +2639,7 @@ func do_DESTROY_command(s *orders.Section, c *orders.Command) []error {
 //           is required only if the target colony is in a different system.
 //           ship must be a transport or warship (it may not be a base).
 func do_DEVELOP_command(s *orders.Section, c *orders.Command) []error {
-	if c.Name != "DESTROY" {
+	if c.Name != "DEVELOP" {
 		return []error{fmt.Errorf("internal error: %q passed to do_DEVELOP_command", c.Name)}
 	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
@@ -3139,14 +3139,42 @@ done:
 //*************************************************************************
 // do_disband.c
 
+// do_DISBAND_command will disband a colony.
+// Mining and manufacturing base are converted back to AU, CU, and IU.
+// Accepts the following formats
+//   DISBAND COLONY
+// Where
+//   COLONY is the name of the colony to disband.
 func do_DISBAND_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "DISBAND" {
+		return []error{fmt.Errorf("internal error: %q passed to do_DISBAND_command", c.Name)}
+	} else if !(s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name   string
+		colony string // name of colony to disband
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.colony = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	/* Get the planet. */
-	found := get_location()
+	_, found := get_location(command.colony) // TODO: borked because get_location is borked
 	if !found || nampla == nil {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in DISBAND command.\n")
-		return
+		return nil
 	}
 
 	/* Make sure planet is not the home planet. */
@@ -3154,15 +3182,15 @@ func do_DISBAND_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You cannot disband your home planet!\n")
-		return
+		return nil
 	}
 
 	/* Make sure planet is not under siege. */
-	if nampla.siege_eff {
+	if nampla.siege_eff != 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You cannot disband a planet that is under siege!\n")
-		return
+		return nil
 	}
 
 	/* Mark the colony as "disbanded" and convert mining and manufacturing
@@ -3178,6 +3206,8 @@ func do_DISBAND_command(s *orders.Section, c *orders.Command) []error {
 	log_string("    The colony on PL ")
 	log_string(nampla.name)
 	log_string(" was ordered to disband.\n")
+
+	return nil
 }
 
 //*************************************************************************
