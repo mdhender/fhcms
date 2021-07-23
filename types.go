@@ -214,14 +214,14 @@ type star_type_code struct {
 type trans_data struct {
 	ttype            int /* Transaction type. */
 	donor, recipient int
-	value            int /* Value of transaction. */
-	x, y, z, pn      int /* Location associated with transaction. */
-	number1          int /* Other items associated with transaction.*/
-	name1            [40]byte
+	value            int    /* Value of transaction. */
+	x, y, z, pn      int    /* Location associated with transaction. */
+	number1          int    /* Other items associated with transaction.*/
+	name1            string // warning: was [40]byte
 	number2          int
-	name2            [40]byte
+	name2            string // warning: was [40]byte
 	number3          int
-	name3            [40]byte
+	name3            string // warning: was [40]byte
 }
 
 // transfer_point can be either a ship or a named planet

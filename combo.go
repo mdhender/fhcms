@@ -1070,9 +1070,9 @@ func do_ambush(ambushing_species_index int, bat *battle_data) {
 	// local variables
 	var (
 		i, n, num_sp, ambushed_species_index, num_ships int
-		age_increment                   int
-		friendly_tonnage, enemy_tonnage                    int
-		sh                                                 *ship_data_
+		age_increment                                   int
+		friendly_tonnage, enemy_tonnage                 int
+		sh                                              *ship_data_
 	)
 	var old_truncate_name bool // was int
 
@@ -1152,7 +1152,7 @@ func do_ambush(ambushing_species_index int, bat *battle_data) {
 
 	/* Age each ambushed ship. */
 	for ambushed_species_index = 0; ambushed_species_index < num_sp; ambushed_species_index++ {
-		if bat.enemy_mine[ambushing_species_index][ambushed_species_index] == 0{
+		if bat.enemy_mine[ambushing_species_index][ambushed_species_index] == 0 {
 			continue
 		}
 
@@ -1259,16 +1259,17 @@ func auto_enemy(traitor_species_number, betrayed_species_number int) {
 
 func do_bombardment(unit_index int, act *action_data) {
 	var (
-		i, new_mi, new_ma, defending_species                                                   int
+		//i int
+		new_mi, new_ma, defending_species                                                      int
 		n, total_bomb_damage, CS_bomb_damage, new_pop, initial_base, total_pop, percent_damage int
 
-		planet          *planet_data
+		//planet          *planet_data
 		attacked_nampla *nampla_data
 		sh              *ship_data_
 	)
 
 	attacked_nampla = act.fighting_unit[unit_index].nampla // cast to *nampla_data
-	planet = planet_base[attacked_nampla.planet_index]
+	//planet = planet_base[attacked_nampla.planet_index]
 
 	initial_base = attacked_nampla.mi_base + attacked_nampla.ma_base
 	total_pop = initial_base
@@ -1435,19 +1436,29 @@ func do_bombardment(unit_index int, act *action_data) {
 // do_build.c
 
 func do_BUILD_command(continuing_construction, interspecies_construction bool) {
-	var i, n, class, critical_tech, found, name_length int
+	// shadow globals
+	var name_length int
+	// local variables
+	var n, class, critical_tech int
+	var found bool // warning: was int
 	var siege_effectiveness int
 	var cost_given bool
-	var new_ship, max_tonnage int
-	var tonnage_increase, alien_number, cargo_on_board int
-	var unused_nampla_available, unused_ship_available, capacity int
-	var pop_check_needed, contact_word_number, contact_bit_number int
-	var already_notified [MAX_SPECIES]int
+	var new_ship bool // warning: was int
+	var max_tonnage int
+	var tonnage_increase, alien_number int
+	var cargo_on_board bool          // warning: was int
+	var unused_nampla_available bool // warning: was int
+	var unused_ship_available bool   // warning: was int
+	var capacity int
+	var pop_check_needed bool // warning: was int
+	//var contact_word_number, contact_bit_number int
+	var already_notified [MAX_SPECIES]bool // warning: was [MAX_SPECIES]int
 	var upper_ship_name string
 	var src, dest *byte
 	var original_line_pointer *cstring
 	var cost, cost_argument, unit_cost, num_items, pop_reduction int
-	var premium, total_cost, original_num_items, contact_mask int
+	var premium, total_cost, original_num_items int
+	//var contact_mask int
 	var max_funds_available int
 	var recipient_species *species_data
 	var recipient_nampla, unused_nampla, destination_nampla, temp_nampla *nampla_data
@@ -1508,6 +1519,8 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 		}
 	}
 
+	var classAbbr *class_abbr
+
 	/* Get number of items to build. */
 	num_items, ok = get_value()
 	if !ok {
@@ -1516,7 +1529,8 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 	original_num_items = num_items
 
 	/* Get class of item. */
-	class = get_class_abbr()
+	classAbbr, _ = get_class_abbr()
+	class = classAbbr.abbr_type
 
 	if class != ITEM_CLASS || abbr_index == RM {
 		/* Players sometimes accidentally use "MI" for "IU"
@@ -1724,9 +1738,9 @@ do_cost:
 			n = num_transactions
 			num_transactions++
 			transaction[n].ttype = DETECTION_DURING_SIEGE
-			transaction[n].value = 3 /* Construction of PDs. */
-			strcpy(transaction[n].name1, nampla.name)
-			strcpy(transaction[n].name3, species.name)
+			transaction[n].value = 3            /* Construction of PDs. */
+			transaction[n].name1 = nampla.name  // warning: was strcpy(transaction[n].name1, nampla.name)
+			transaction[n].name3 = species.name // warning: was strcpy(transaction[n].name3, species.name)
 			transaction[n].number3 = alien_number
 
 			already_notified[alien_number-1] = true
@@ -1738,7 +1752,7 @@ do_cost:
 		/* Get destination of transfer, if any. */
 		pop_check_needed = false
 		temp_nampla = nampla
-		found = get_transfer_point()
+		_, found = get_transfer_point()
 		destination_nampla = nampla
 		nampla = temp_nampla
 		if !found {
@@ -1783,10 +1797,20 @@ do_cost:
 			log_string(ship_name(ship))
 
 			if class == CU && num_items > 0 {
-				if nampla == nampla_base {
+				if nampla == nampla_base[0] { // by convention, nampla_base[0] is the species home planet
 					ship.loading_point = 9999 /* Home planet. */
 				} else {
-					ship.loading_point = (nampla - nampla_base)
+					ship.loading_point = -1 // just in case we con't find it
+					// warning: was ship.loading_point = (nampla - nampla_base)
+					for x, np := range nampla_base {
+						if nampla == np {
+							ship.loading_point = x
+							break
+						}
+					}
+					if ship.loading_point == -1 {
+						panic("assert(ship.loading_point != -1)")
+					}
 				}
 			}
 		} else { /* Destination is 'destination_nampla'. */
@@ -1854,18 +1878,19 @@ do_cost:
 		if unused_nampla_available {
 			recipient_nampla = unused_nampla
 		} else {
+			log.Println("[do_BUILD_command] this won't work 'num_new_namplas[species_index]++'")
 			num_new_namplas[species_index]++
 			if num_new_namplas[species_index] > NUM_EXTRA_NAMPLAS {
 				fprintf(stderr, "\n\n\tInsufficient memory for new planet name in do_build.c!\n")
 				exit(-1)
 			}
-			recipient_nampla = namp_data[g_spec_number-1] + recipient_species.num_namplas
+			recipient_nampla = namp_data[g_spec_number-1][recipient_species.num_namplas]
 			recipient_species.num_namplas += 1
 			delete_nampla(recipient_nampla) /* Set everything to zero. */
 		}
 
 		/* Initialize new nampla. */
-		strcpy(recipient_nampla.name, nampla.name)
+		recipient_nampla.name = nampla.name // warning: was strcpy(recipient_nampla.name, nampla.name)
 		recipient_nampla.x = nampla.x
 		recipient_nampla.y = nampla.y
 		recipient_nampla.z = nampla.z
@@ -1898,8 +1923,8 @@ do_cost:
 	transaction[n].number1 = num_items
 	transaction[n].number2 = class
 	transaction[n].number3 = cost
-	strcpy(transaction[n].name1, species.name)
-	strcpy(transaction[n].name2, recipient_nampla.name)
+	transaction[n].name1 = species.name          // warning: was strcpy(transaction[n].name1, species.name)
+	transaction[n].name2 = recipient_nampla.name // warning: was strcpy(transaction[n].name2, recipient_nampla.name)
 
 	return
 
@@ -1907,12 +1932,12 @@ build_ship:
 
 	original_line_pointer = input_line_pointer
 	if continuing_construction {
-		found = get_ship()
+		_, found = get_ship()
 		if !found {
 			/* Check for missing comma or tab after ship name. */
 			input_line_pointer = original_line_pointer
 			fix_separator()
-			found = get_ship()
+			_, found = get_ship()
 		}
 
 		if found {
@@ -1921,7 +1946,8 @@ build_ship:
 		input_line_pointer = original_line_pointer
 	}
 
-	class = get_class_abbr()
+	class, _ = get_class_abbr()
+	class = classAbbr.abbr_type
 
 	if class != SHIP_CLASS || tonnage < 1 {
 		fprintf(log_file, "!!! Order ignored:\n")
@@ -1953,9 +1979,7 @@ build_ship:
 		}
 
 		/* Make upper case copy of ship name. */
-		for i = 0; i < 32; i++ {
-			upper_ship_name[i] = toupper(ship.name[i])
-		}
+		upper_ship_name = strings.ToUpper(ship.name)
 
 		/* Compare names. */
 		if strcmp(upper_ship_name, upper_name) == 0 {
@@ -2012,12 +2036,12 @@ check_ship:
 			}
 			new_ship = true
 			// TODO: use species.addShip
-			ship = ship_base + species.num_ships
+			ship = ship_base[species.num_ships]
 			delete_ship(ship) /* Initialize everything to zero. */
 		}
 
 		/* Initialize non-zero data for new ship. */
-		strcpy(ship.name, original_name)
+		ship.name = original_name // warning: was strcpy(ship.name, original_name)
 		ship.x = nampla.x
 		ship.y = nampla.y
 		ship.z = nampla.z
@@ -2241,10 +2265,10 @@ check_ship:
 			n = num_transactions
 			num_transactions++
 			transaction[n].ttype = DETECTION_DURING_SIEGE
-			transaction[n].value = 2 /* Construction of ship/starbase. */
-			strcpy(transaction[n].name1, nampla.name)
-			strcpy(transaction[n].name2, ship_name(ship))
-			strcpy(transaction[n].name3, species.name)
+			transaction[n].value = 2               /* Construction of ship/starbase. */
+			transaction[n].name1 = nampla.name     // warning: was strcpy(transaction[n].name1, nampla.name)
+			transaction[n].name2 = ship_name(ship) // warning: was strcpy(transaction[n].name2, ship_name(ship))
+			transaction[n].name3 = species.name    // warning: was strcpy(transaction[n].name3, species.name)
 			transaction[n].number3 = alien_number
 
 			already_notified[alien_number-1] = true
@@ -2380,10 +2404,10 @@ check_ship:
 			n = num_transactions
 			num_transactions++
 			transaction[n].ttype = DETECTION_DURING_SIEGE
-			transaction[n].value = 2 /* Construction of ship/starbase. */
-			strcpy(transaction[n].name1, nampla.name)
-			strcpy(transaction[n].name2, ship_name(ship))
-			strcpy(transaction[n].name3, species.name)
+			transaction[n].value = 2               /* Construction of ship/starbase. */
+			transaction[n].name1 = nampla.name     // warning: was strcpy(transaction[n].name1, nampla.name)
+			transaction[n].name2 = ship_name(ship) // warning: was strcpy(transaction[n].name2, ship_name(ship))
+			transaction[n].name3 = species.name    // warning: was strcpy(transaction[n].name3, species.name)
 			transaction[n].number3 = alien_number
 
 			already_notified[alien_number-1] = true
@@ -2414,37 +2438,29 @@ check_ship:
 
 	/* Transfer the ship to the recipient species. */
 	unused_ship_available = false
-	recipient_ship = ship_data[g_spec_number-1]
 	for i := 0; i < recipient_species.num_ships; i++ {
+		recipient_ship = ship_data[g_spec_number-1][i]
 		if recipient_ship.pn == 99 {
 			unused_ship_available = true
 			break
 		}
-
-		recipient_ship++
 	}
 
 	if !unused_ship_available {
+		log.Println("[do_BUILD_command] this won't work 'Make sure we have enough memory for new ship.'")
 		/* Make sure we have enough memory for new ship. */
 		if num_new_ships[g_spec_number-1] == NUM_EXTRA_SHIPS {
 			fprintf(stderr, "\n\n\tInsufficient memory for new recipient ship!\n\n")
 			exit(-1)
 		}
-		recipient_ship = ship_data[g_spec_number-1] + recipient_species.num_ships
+		recipient_ship = ship_data[g_spec_number-1][recipient_species.num_ships]
 		recipient_species.num_ships++
 		num_new_ships[g_spec_number-1]++
 	}
 
 	/* Copy donor ship to recipient ship. */
-	src = ship            // cast to char *
-	dest = recipient_ship // cast to char *
-	for i := 0; i < sizeof("struct ship_data"); i++ {
-		*dest = *src
-		dest, src = dest+1, src+1
-	}
-
+	recipient_ship.copyFrom(ship)
 	recipient_ship.status = IN_ORBIT
-
 	data_modified[g_spec_number-1] = true
 
 	/* Delete donor ship. */
@@ -2467,8 +2483,8 @@ check_ship:
 	transaction[n].recipient = g_spec_number
 	transaction[n].value = 2 /* Ship, not items. */
 	transaction[n].number3 = total_cost + premium
-	strcpy(transaction[n].name1, species.name)
-	strcpy(transaction[n].name2, ship_name(recipient_ship))
+	transaction[n].name1 = species.name              // warning: was strcpy(transaction[n].name1, species.name)
+	transaction[n].name2 = ship_name(recipient_ship) // warning: was strcpy(transaction[n].name2, ship_name(recipient_ship))
 }
 
 //*************************************************************************
@@ -2477,12 +2493,12 @@ check_ship:
 func do_DEEP_command() {
 	/* Get the ship. */
 	original_line_pointer := input_line_pointer
-	found := get_ship()
+	_, found := get_ship()
 	if !found {
 		/* Check for missing comma or tab after ship name. */
 		input_line_pointer = original_line_pointer
 		fix_separator()
-		found = get_ship()
+		_, found = get_ship()
 		if !found {
 			fprintf(log_file, "!!! Order ignored:\n")
 			fprintf(log_file, "!!! %s", original_line)
@@ -2536,7 +2552,7 @@ func do_DEEP_command() {
 func do_DESTROY_command() {
 	/* Get the ship. */
 	correct_spelling_required = true
-	found := get_ship()
+	_, found := get_ship()
 	if !found {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s", input_line)
@@ -10629,6 +10645,31 @@ func my_ship_name(s *ship_data_) string {
 		return fmt.Sprintf("%s%d%s %s", ship_abbr[ship.class], ship.tonnage, ship_type[ship.ttype], ship.name)
 	}
 	return fmt.Sprintf("%s%s %s", ship_abbr[ship.class], ship_type[ship.ttype], ship.name)
+}
+
+func (s *ship_data_) copyFrom(src *ship_data_) {
+	s.name = src.name
+	s.age = src.age
+	s.arrived_via_wormhole = src.arrived_via_wormhole
+	s.class = src.class
+	s.dest_x = src.dest_x
+	s.dest_y = src.dest_y
+	s.dest_z = src.dest_z
+	for k, v := range src.item_quantity {
+		s.item_quantity[k] = v
+	}
+	s.just_jumped = src.just_jumped
+	s.loading_point = src.loading_point
+	s.pn = src.pn
+	s.remaining_cost = src.remaining_cost
+	s.special = src.special
+	s.status = src.status
+	s.tonnage = src.tonnage
+	s.ttype = src.ttype
+	s.unloading_point = src.unloading_point
+	s.x = src.x
+	s.y = src.y
+	s.z = src.z
 }
 
 func (s *species_data) getOrders() []error {

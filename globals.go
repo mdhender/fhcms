@@ -146,24 +146,25 @@ var (
 		10, 20, 30, 40, 50, 60, 70, 80,
 		90, 999, 999, 999, 999, 999,
 	}
-	just_opened_file     int
-	last_random          uint32 = 1924085713 /* Random seed. */
-	loc                  [MAX_LOCATIONS]sp_loc_data
-	log_file             io.Writer
-	log_indentation      int
-	log_line             [1028]byte
-	log_position         int
-	log_start_of_line    bool
-	log_stdout           bool
-	log_summary          bool
-	log_to_file          bool
-	logging_disabled     bool
-	make_enemy           [MAX_SPECIES][MAX_SPECIES]int // species id of the enemy-to-be
-	name_length          int
-	namp_data            [MAX_SPECIES][]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
-	nampla1_base         *nampla_data                // warning: code assumes *nampla_data
-	nampla2_base         *nampla_data                // warning: code assumes *nampla_data
-	nampla_base          []*nampla_data              // warning: code assumes *nampla_data
+	just_opened_file  int
+	last_random       uint32 = 1924085713 /* Random seed. */
+	loc               [MAX_LOCATIONS]sp_loc_data
+	log_file          io.Writer
+	log_indentation   int
+	log_line          [1028]byte
+	log_position      int
+	log_start_of_line bool
+	log_stdout        bool
+	log_summary       bool
+	log_to_file       bool
+	logging_disabled  bool
+	make_enemy        [MAX_SPECIES][MAX_SPECIES]int // species id of the enemy-to-be
+	name_length       int
+	namp_data         [MAX_SPECIES][]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
+	nampla1_base      *nampla_data                // warning: code assumes *nampla_data
+	nampla2_base      *nampla_data                // warning: code assumes *nampla_data
+	// by convention, nampla_base[0] is the species home planet
+	nampla_base          []*nampla_data // warning: code assumes *nampla_data
 	nampla_index         int
 	nampla               *nampla_data
 	next_nampla_index    int
@@ -264,7 +265,7 @@ var (
 	transaction   [MAX_TRANSACTIONS]trans_data
 	truncate_name bool
 	type_char     = []byte(" dD g")
-	upper_name    []byte
+	upper_name    string // warning: was []byte
 	value         int
 	verbose_mode  bool
 	x             int
