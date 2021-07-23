@@ -64,28 +64,28 @@ func power(tonnage int) int {
 
 func battle_error(species_number int) {
 	fprintf(log_file, "!!! Order ignored:\n")
-	fprintf(log_file, "!!! %s", input_line)
+	fprintf(log_file, "!!! %s\n", c.OriginalInput)
 	fprintf(log_file, "!!! Missing BATTLE command!\n")
 	return
 }
 
 func bad_species() {
 	fprintf(log_file, "!!! Order ignored:\n")
-	fprintf(log_file, "!!! %s", input_line)
+	fprintf(log_file, "!!! %s\n", c.OriginalInput)
 	fprintf(log_file, "!!! Invalid species name!\n")
 	return
 }
 
 func bad_argument() {
 	fprintf(log_file, "!!! Order ignored:\n")
-	fprintf(log_file, "!!! %s", input_line)
+	fprintf(log_file, "!!! %s\n", c.OriginalInput)
 	fprintf(log_file, "!!! Invalid argument in command.\n")
 	return
 }
 
 func bad_coordinates() {
 	fprintf(log_file, "!!! Order ignored:\n")
-	fprintf(log_file, "!!! %s", input_line)
+	fprintf(log_file, "!!! %s\n", c.OriginalInput)
 	fprintf(log_file, "!!! Invalid coordinates in command.\n")
 	return
 }
@@ -139,13 +139,13 @@ func disbanded_ship(ship *ship_data_) bool {
 //*************************************************************************
 // do_ally.c
 
-func do_ALLY_command() {
+func do_ALLY_command(s *orders.Section, c *orders.Command) []error {
 	/* Get name of species that is being declared an ally. */
 	if !get_species_name() {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing argument in ALLY command.\n")
-		return
+		return nil
 	}
 
 	/* Get array index and bit mask. */
@@ -155,9 +155,9 @@ func do_ALLY_command() {
 	/* Check if we've met this species and make sure it is not an enemy. */
 	if !species.contact[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! You can't declare alliance with a species you haven't met.\n")
-		return
+		return nil
 	}
 
 	/* Set/clear the appropriate bit. */
@@ -173,50 +173,51 @@ func do_ALLY_command() {
 		log_string(g_spec_name)
 	}
 	log_string(".\n")
+	return nil
 }
 
 //*************************************************************************
 // do_amb.c
 
-func do_AMBUSH_command() {
+func do_AMBUSH_command(s *orders.Section, c *orders.Command) []error {
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		return nil
 	}
 
 	/* Get amount to spend. */
 	value, status := get_value()
 	if !status || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing amount.\n")
-		return
+		return nil
 	}
 	if value == 0 {
 		value = balance
 	}
 	if value == 0 {
-		return
+		return nil
 	}
 	cost := value
 
 	/* Check if planet is under siege. */
 	if nampla.siege_eff != 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Besieged planet cannot ambush!\n")
-		return
+		return nil
 	}
 
 	/* Check if sufficient funds are available. */
 	if check_bounced(cost) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
-		return
+		return nil
 	}
 
 	/* Increment amount spent on ambush. */
@@ -226,6 +227,7 @@ func do_AMBUSH_command() {
 	log_string("    Spent ")
 	log_long(cost)
 	log_string(" in preparation for an ambush.\n")
+	return nil
 }
 
 //*************************************************************************
@@ -1435,7 +1437,7 @@ func do_bombardment(unit_index int, act *action_data) {
 //*************************************************************************
 // do_build.c
 
-func do_BUILD_command(continuing_construction, interspecies_construction bool) {
+func do_BUILD_command(s *orders.Section, c *orders.Command, continuing_construction, interspecies_construction bool) []error {
 	// shadow globals
 	var name_length int
 	// local variables
@@ -1454,7 +1456,6 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 	//var contact_word_number, contact_bit_number int
 	var already_notified [MAX_SPECIES]bool // warning: was [MAX_SPECIES]int
 	var upper_ship_name string
-	var src, dest *byte
 	var original_line_pointer *cstring
 	var cost, cost_argument, unit_cost, num_items, pop_reduction int
 	var premium, total_cost, original_num_items int
@@ -1468,9 +1469,9 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		return nil
 	}
 
 	/* Get ready if planet is under siege. */
@@ -1490,32 +1491,32 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 			fix_separator()
 			if !get_species_name() {
 				fprintf(log_file, "!!! Order ignored:\n")
-				fprintf(log_file, "!!! %s", original_line)
+				fprintf(log_file, "!!! %s", c.OriginalInput)
 				fprintf(log_file, "!!! Invalid species name.\n")
-				return
+				return nil
 			}
 		}
 		recipient_species = spec_data[g_spec_number-1]
 
 		if species.tech_level[MA] < 25 {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! MA tech level must be at least 25 to do interspecies construction.\n")
-			return
+			return nil
 		}
 
 		/* Check if we've met this species and make sure it is not an enemy. */
 		if !species.contact[g_spec_number] {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! You can't do interspecies construction for a species you haven't met.\n")
-			return
+			return nil
 		}
 		if species.enemy[g_spec_number] {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! You can't do interspecies construction for an ENEMY.\n")
-			return
+			return nil
 		}
 	}
 
@@ -1541,9 +1542,9 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 			abbr_index = AU
 		} else {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid item class.\n")
-			return
+			return nil
 		}
 	}
 	class = abbr_index
@@ -1551,9 +1552,9 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 	if interspecies_construction {
 		if class == PD || class == CU {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! You cannot build CUs or PDs for another species.\n")
-			return
+			return nil
 		}
 	}
 
@@ -1561,9 +1562,9 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 	critical_tech = item_critical_tech[class]
 	if species.tech_level[critical_tech] < item_tech_requirment[class] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient tech level to build item.\n")
-		return
+		return nil
 	}
 
 	/* Get cost of item. */
@@ -1577,15 +1578,15 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 		num_items = balance / unit_cost
 	}
 	if num_items == 0 {
-		return
+		return nil
 	}
 
 	/* Make sure item count is meaningful. */
 	if num_items < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Meaningless item count.\n")
-		return
+		return nil
 	}
 
 	/* Make sure there is enough available population. */
@@ -1595,20 +1596,18 @@ func do_BUILD_command(continuing_construction, interspecies_construction bool) {
 			if original_num_items == 0 {
 				num_items = nampla.pop_units
 				if num_items == 0 {
-					return
+					return nil
 				}
 			} else {
 				if nampla.pop_units > 0 {
 					fprintf(log_file, "! WARNING: %s", original_line)
-					fprintf(log_file,
-						"! Insufficient available population units. Substituting %ld for %ld.\n",
-						nampla.pop_units, num_items)
+					fprintf(log_file, "! Insufficient available population units. Substituting %d for %d.\n", nampla.pop_units, num_items)
 					num_items = nampla.pop_units
 				} else {
 					fprintf(log_file, "!!! Order ignored:\n")
-					fprintf(log_file, "!!! %s", original_line)
+					fprintf(log_file, "!!! %s", c.OriginalInput)
 					fprintf(log_file, "!!! Insufficient available population units.\n")
-					return
+					return nil
 				}
 			}
 		}
@@ -1630,7 +1629,7 @@ do_cost:
 		if interspecies_construction && original_num_items == 0 {
 			num_items--
 			if num_items < 1 {
-				return
+				return nil
 			}
 			goto do_cost
 		}
@@ -1648,14 +1647,13 @@ do_cost:
 
 		if num_items > 0 {
 			fprintf(log_file, "! WARNING: %s", original_line)
-			fprintf(log_file, "! Insufficient funds. Substituting %ld for %ld.\n",
-				num_items, original_num_items)
+			fprintf(log_file, "! Insufficient funds. Substituting %d for %d.\n", num_items, original_num_items)
 			goto do_cost
 		} else {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! Insufficient funds to execute order.\n")
-			return
+			return nil
 		}
 	}
 
@@ -1677,7 +1675,7 @@ do_cost:
 
 	if first_pass && class == PD && siege_effectiveness > 0 {
 		log_string(" scheduled for production despite the siege.\n")
-		return
+		return nil
 	} else {
 		log_string(" produced")
 		if interspecies_construction {
@@ -1745,7 +1743,7 @@ do_cost:
 
 			already_notified[alien_number-1] = true
 		}
-		return
+		return nil
 	}
 
 	if !interspecies_construction {
@@ -1840,7 +1838,7 @@ do_cost:
 			check_population(destination_nampla)
 		}
 
-		return
+		return nil
 	}
 
 	log_string(".\n")
@@ -1905,7 +1903,7 @@ do_cost:
 	data_modified[g_spec_number-1] = true
 
 	if first_pass {
-		return
+		return nil
 	}
 
 	/* Define transaction so that recipient will be notified. */
@@ -1926,7 +1924,7 @@ do_cost:
 	transaction[n].name1 = species.name          // warning: was strcpy(transaction[n].name1, species.name)
 	transaction[n].name2 = recipient_nampla.name // warning: was strcpy(transaction[n].name2, recipient_nampla.name)
 
-	return
+	return nil
 
 build_ship:
 
@@ -1951,9 +1949,9 @@ build_ship:
 
 	if class != SHIP_CLASS || tonnage < 1 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid ship class.\n")
-		return
+		return nil
 	}
 	class = abbr_index
 
@@ -1961,9 +1959,9 @@ build_ship:
 	name_length = get_name()
 	if name_length < 1 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid ship name.\n")
-		return
+		return nil
 	}
 
 	/* Search all ships for name. */
@@ -2001,9 +1999,9 @@ check_ship:
 		if (ship.status != UNDER_CONSTRUCTION && ship.ttype != STARBASE) ||
 			(!continuing_construction) {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! Ship name already in use.\n")
-			return
+			return nil
 		}
 
 		new_ship = false
@@ -2012,9 +2010,9 @@ check_ship:
 		 *  the name. */
 		if continuing_construction {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid ship name.\n")
-			return
+			return nil
 		}
 
 		if unused_ship_available {
@@ -2023,16 +2021,14 @@ check_ship:
 			/* Make sure we have enough memory for new ship. */
 			if num_new_ships[species_index] >= NUM_EXTRA_SHIPS {
 				if num_new_ships[species_index] == 9999 {
-					return
+					return nil
 				}
 
 				fprintf(log_file, "!!! Order ignored:\n")
 				fprintf(log_file, "!!! %s", original_line)
-				fprintf(log_file,
-					"!!! You cannot build more than %d ships per turn!\n",
-					NUM_EXTRA_SHIPS)
+				fprintf(log_file, "!!! You cannot build more than %d ships per turn!\n", NUM_EXTRA_SHIPS)
 				num_new_ships[species_index] = 9999
-				return
+				return nil
 			}
 			new_ship = true
 			// TODO: use species.addShip
@@ -2079,9 +2075,9 @@ check_ship:
 	if cost_given {
 		if interspecies_construction && (ship.ttype != STARBASE) {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! Amount to spend may not be specified.\n")
-			return
+			return nil
 		}
 
 		if cost == 0 {
@@ -2095,41 +2091,40 @@ check_ship:
 				if new_ship {
 					delete_ship(ship)
 				}
-				return
+				return nil
 			}
 		}
 
 		if cost < 1 {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! Amount specified is meaningless.\n")
 			if new_ship {
 				delete_ship(ship)
 			}
-			return
+			return nil
 		}
 
 		if ship.ttype == STARBASE {
 			if cost%ship_cost[BA] != 0 {
 				fprintf(log_file, "!!! Order ignored:\n")
-				fprintf(log_file, "!!! %s", original_line)
-				fprintf(log_file, "!!! Amount spent on starbase must be multiple of %d.\n",
-					ship_cost[BA])
+				fprintf(log_file, "!!! %s", c.OriginalInput)
+				fprintf(log_file, "!!! Amount spent on starbase must be multiple of %d.\n", ship_cost[BA])
 				if new_ship {
 					delete_ship(ship)
 				}
-				return
+				return nil
 			}
 		}
 	} else {
 		if ship.ttype == STARBASE {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
 			fprintf(log_file, "!!! Amount to spend MUST be specified for starbase.\n")
 			if new_ship {
 				delete_ship(ship)
 			}
-			return
+			return nil
 		}
 
 		cost = ship.remaining_cost
@@ -2143,7 +2138,7 @@ check_ship:
 		if tonnage > max_tonnage && cost_argument == 0 {
 			tonnage_increase = max_tonnage - ship.tonnage
 			if tonnage_increase < 1 {
-				return
+				return nil
 			}
 			tonnage = ship.tonnage + tonnage_increase
 			cost = tonnage_increase * ship_cost[BA]
@@ -2152,23 +2147,23 @@ check_ship:
 
 	if tonnage > max_tonnage {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Maximum allowable tonnage exceeded.\n")
 		if new_ship {
 			delete_ship(ship)
 		}
-		return
+		return nil
 	}
 
 	/* Make sure species has gravitics technology if this is an FTL ship. */
 	if ship.ttype == FTL && species.tech_level[GV] < 1 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Gravitics tech needed to build FTL ship!\n")
 		if new_ship {
 			delete_ship(ship)
 		}
-		return
+		return nil
 	}
 
 	/* Make sure amount specified is not an overpayment. */
@@ -2179,12 +2174,12 @@ check_ship:
 	/* Make sure planet has sufficient shipyards. */
 	if shipyard_capacity < 1 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Shipyard capacity exceeded!\n")
 		if new_ship {
 			delete_ship(ship)
 		}
-		return
+		return nil
 	}
 
 	/* Make sure there is enough money to pay for it. */
@@ -2208,12 +2203,12 @@ check_ship:
 
 	if check_bounced(cost + premium) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
 		if new_ship {
 			delete_ship(ship)
 		}
-		return
+		return nil
 	}
 
 	shipyard_capacity--
@@ -2276,7 +2271,7 @@ check_ship:
 
 		delete_ship(ship)
 
-		return
+		return nil
 	}
 
 	/* Finish up and log results. */
@@ -2420,7 +2415,7 @@ check_ship:
 	log_char('\n')
 
 	if !interspecies_construction {
-		return
+		return nil
 	}
 
 	/* Transfer any cargo on the ship to the planet. */
@@ -2467,7 +2462,7 @@ check_ship:
 	delete_ship(ship)
 
 	if first_pass {
-		return
+		return nil
 	}
 
 	/* Define transaction so that recipient will be notified. */
@@ -2485,55 +2480,75 @@ check_ship:
 	transaction[n].number3 = total_cost + premium
 	transaction[n].name1 = species.name              // warning: was strcpy(transaction[n].name1, species.name)
 	transaction[n].name2 = ship_name(recipient_ship) // warning: was strcpy(transaction[n].name2, ship_name(recipient_ship))
+
+	return nil
 }
 
 //*************************************************************************
 // do_deep.c
 
-func do_DEEP_command() {
+func do_DEEP_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "DEEP" {
+		return []error{fmt.Errorf("internal error: %q passed to do_DEEP_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: %q does not implement %q.\n", c.Line, s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name string
+		ship string // name of ship to move
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.ship = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: %q: invalid command format.\n", c.Line, c.Name)
+		return nil
+	}
+
+	correct_spelling_required = false
 	/* Get the ship. */
-	original_line_pointer := input_line_pointer
-	_, found := get_ship()
+	_, found := get_ship(command.ship, correct_spelling_required)
 	if !found {
-		/* Check for missing comma or tab after ship name. */
-		input_line_pointer = original_line_pointer
-		fix_separator()
-		_, found = get_ship()
 		if !found {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Invalid ship name in ORBIT command.\n")
-			return
+			fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+			fprintf(log_file, "!!! %d: Invalid ship name in ORBIT command.\n", c.Line)
+			return nil
 		}
 	}
 
 	if ship.ttype == STARBASE {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! DEEP order may not be given for a starbase.\n")
-		return
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: DEEP order may not be given for a starbase.\n", c.Line)
+		return nil
 	}
 
 	if ship.status == UNDER_CONSTRUCTION {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! Ship is still under construction.\n")
-		return
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: Ship is still under construction.\n", c.Line)
+		return nil
 	}
 
 	if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
-		return
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: Ship jumped during combat and is still in transit.\n", c.Line)
+		return nil
 	}
 
 	/* Make sure ship is not salvage of a disbanded colony. */
 	if disbanded_ship(ship) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! This ship is salvage of a disbanded colony!\n")
-		return
+		fprintf(log_file, "!!! %d: %s\n", c.Line, c.OriginalInput)
+		fprintf(log_file, "!!! %d: This ship is salvage of a disbanded colony!\n", c.Line)
+		return nil
 	}
 
 	/* Move the ship. */
@@ -2544,20 +2559,45 @@ func do_DEEP_command() {
 	log_string("    ")
 	log_string(ship_name(ship))
 	log_string(" moved into deep space.\n")
+
+	return nil
 }
 
 //*************************************************************************
 // do_des.c
 
-func do_DESTROY_command() {
-	/* Get the ship. */
+func do_DESTROY_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "DESTROY" {
+		return []error{fmt.Errorf("internal error: %q passed to do_DESTROY_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name string
+		unit string // name of ship or starbase to destroy
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.unit = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	correct_spelling_required = false
+	/* Get the ship or starbase name */
 	correct_spelling_required = true
-	_, found := get_ship()
+	_, found := get_ship(command.unit, correct_spelling_required)
 	if !found {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid ship or starbase name in DESTROY command.\n")
-		return
+		return nil
 	}
 
 	/* Log result. */
@@ -2566,32 +2606,94 @@ func do_DESTROY_command() {
 
 	if first_pass {
 		log_string(" will be destroyed.\n")
-		return
+		return nil
 	}
 
 	log_string(" was destroyed.\n")
 
 	delete_ship(ship)
+
+	return nil
 }
 
 //*************************************************************************
 // do_dev.c
 
-func do_DEVELOP_command() {
-	var i, num_CUs, num_AUs, num_IUs, more_args, load_transport, capacity, resort_colony, mining_colony, production_penalty, CUs_only int
-	var c byte
-	var original_line_pointer, tp *byte
-	var n, ni, na, amount_to_spend, original_cost, max_funds_available, ls_needed, raw_material_units, production_capacity, colony_production, ib, ab, md, denom, reb, specified_max int
+// do_DEVELOP_command will generate orders to develop a colony.
+// The orders will create AU, CU, and IU items, and, if the colony is in
+// a different system, transfer them to a ship.
+// TODO: will it generate the unload and install orders?
+// Accepts the following formats
+//   DEVELOP                       # treated as DEVELOP 0 productionColony
+//   DEVELOP COLONY                # treated as DEVELOP 0 COLONY
+//   DEVELOP LIMIT                 # treated as DEVELOP LIMIT productionColony
+//   DEVELOP COLONY SHIP           # treated as DEVELOP 0 COLONY SHIP
+//   DEVELOP LIMIT COLONY
+//   DEVELOP LIMIT COLONY SHIP
+// Where
+//    LIMIT  is a non-negative integer and is the maximum number of units
+//           to spend. if not given (or zero), defaults to all available units.
+//    COLONY is the name of the colony to develop. if not given, default to
+//           the production colony.
+//    SHIP   is the name of the ship to shuttle items to the target colony.
+//           is required only if the target colony is in a different system.
+//           ship must be a transport or warship (it may not be a base).
+func do_DEVELOP_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "DESTROY" {
+		return []error{fmt.Errorf("internal error: %q passed to do_DEVELOP_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name   string
+		limit  string
+		colony string // name of colony to develop (defaults to the production colony)
+		ship   string // name of ship to shuttle items to target colony
+	}{name: c.Name, limit: "0"}
+	switch len(c.Args) {
+	case 0:
+		command.limit = "0"
+	case 1:
+		if _, err := strconv.Atoi(c.Args[0]); err != nil {
+			command.colony = c.Args[0]
+		}
+	case 2:
+		if _, err := strconv.Atoi(c.Args[0]); err != nil {
+			command.colony, command.ship = c.Args[0], c.Args[1]
+		}
+	case 3:
+		command.limit, command.colony, command.ship = c.Args[0], c.Args[1], c.Args[2]
+	default:
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	var i, num_CUs, num_AUs, num_IUs int
+	var more_args bool
+	var load_transport bool // warning: was int
+	var capacity int
+	var resort_colony, mining_colony bool // warning: was int
+	var production_penalty int
+	var CUs_only bool // warning: was int
+	var n, ni, na, amount_to_spend, max_funds_available, ls_needed, raw_material_units, production_capacity, colony_production, ib, ab, md, denom, reb, specified_max int
+	//var original_cost int
 	var colony_planet, home_planet *planet_data
-	var temp_nampla, colony_nampla *nampla_data
+	var colony_nampla *nampla_data
 
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		return nil
 	}
+	// TODO: why is nampla the production colony?
+	productionColony := nampla
 
 	/* Get default spending limit. */
 	max_funds_available = species.econ_units
@@ -2609,41 +2711,27 @@ func do_DEVELOP_command() {
 			specified_max = value
 			if value <= max_funds_available {
 				max_funds_available = value
+			} else if max_funds_available == 0 {
+				fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
+				fprintf(log_file, "! There are no funds available.\n")
+				return nil
 			} else {
-				fprintf(log_file, "! WARNING: %s", input_line)
-				fprintf(log_file, "! Insufficient funds. Substituting %ld for %ld.\n", max_funds_available, value)
-				if max_funds_available == 0 {
-					return
-				}
+				fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
+				fprintf(log_file, "! Insufficient funds. Substituting %d for %d.\n", max_funds_available, value)
 			}
 		} else {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid spending limit.\n")
-			return
+			return nil
 		}
 	}
 
 	/* See if there are any more arguments. */
-	tp = input_line_pointer
-	more_args = false
-	for {
-		c = *tp
-		tp++
-		if c == 0 {
-			break
-		}
-		if c == ';' || c == '\n' {
-			break
-		}
-		if c == ' ' || c == '\t' {
-			continue
-		}
-		more_args = true
-		break
-	}
-
-	if !more_args {
+	// TODO: what is happening here? who set nampla to the target colony???
+	// oh. no target colony, so nampla must be the production colony.
+	if more_args = command.colony != ""; !more_args {
+		// this code duplicates the colony_nampla code below
 		/* Make sure planet is not a healthy home planet. */
 		if isset(nampla.status, HOME_PLANET) {
 			reb = species.hp_original_base - (nampla.mi_base + nampla.ma_base)
@@ -2654,22 +2742,23 @@ func do_DEVELOP_command() {
 				}
 			} else {
 				fprintf(log_file, "!!! Order ignored:\n")
-				fprintf(log_file, "!!! %s", input_line)
+				fprintf(log_file, "!!! %s\n", c.OriginalInput)
 				fprintf(log_file, "!!! You can only DEVELOP a home planet if it is recovering from bombing.\n")
-				return
+				return nil
 			}
 		}
 
+		// colony not given, so order is for the production colony
 		/* No arguments. Order is for this planet. */
 		num_CUs = nampla.pop_units
 		if 2*num_CUs > max_funds_available {
 			num_CUs = max_funds_available / 2
 		}
 		if num_CUs <= 0 {
-			return
+			return nil
 		}
 
-		colony_planet = planet_base + nampla.planet_index
+		colony_planet = planet_base[nampla.planet_index] // warning: was planet_base + nampla.planet_index
 		ib = nampla.mi_base + nampla.IUs_to_install
 		ab = nampla.ma_base + nampla.AUs_to_install
 		md = colony_planet.mining_difficulty
@@ -2690,10 +2779,11 @@ func do_DEVELOP_command() {
 		amount_to_spend = num_CUs + num_AUs + num_IUs
 
 		if check_bounced(amount_to_spend) {
+			log.Println("bug 2774: assert(!check_bounced(amount_to_spend))")
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Internal error. Please notify GM!\n")
-			return
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Internal error: code 2774. Please notify GM!\n")
+			return nil
 		}
 
 		nampla.pop_units -= num_CUs
@@ -2709,28 +2799,21 @@ func do_DEVELOP_command() {
 
 		check_population(nampla)
 
-		return
+		return nil
 	}
 
 	/* Get the planet to be developed. */
-	temp_nampla = nampla
-	original_line_pointer = input_line_pointer
-	i = get_location()
-	if !i || nampla == nil {
-		/* Check for missing comma or tab after source name. */
-		input_line_pointer = original_line_pointer
-		fix_separator()
-		i = get_location()
-	}
-	colony_nampla = nampla
-	nampla = temp_nampla
-	if !i || colony_nampla == nil {
+	var ok bool
+	colony_nampla, ok = get_location(command.colony) // TODO: this can be a name or x,y,z???
+	nampla = productionColony
+	if !ok || colony_nampla == nil {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in DEVELOP command.\n")
-		return
+		return nil
 	}
 
+	// this code duplicates the missing command.colony_nampla code above
 	/* Make sure planet is not a healthy home planet. */
 	if isset(colony_nampla.status, HOME_PLANET) {
 		reb = species.hp_original_base - (colony_nampla.mi_base + colony_nampla.ma_base)
@@ -2741,9 +2824,9 @@ func do_DEVELOP_command() {
 			}
 		} else {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! You can only DEVELOP a home planet if it is recovering from bombing.\n")
-			return
+			return nil
 		}
 	}
 
@@ -2751,8 +2834,8 @@ func do_DEVELOP_command() {
 	 *  build its own IUs and AUs. Note that we cannot use nampla.status
 	 *  because it is not correctly set until the Finish program is run. */
 
-	home_planet = planet_base + nampla_base.planet_index
-	colony_planet = planet_base + colony_nampla.planet_index
+	home_planet = planet_base[nampla_base[0].planet_index]  // warning: was planet_base + nampla_base.planet_index
+	colony_planet = planet_base[colony_nampla.planet_index] // warning: was planet_base + colony_nampla.planet_index
 	ls_needed = life_support_needed(species, home_planet, colony_planet)
 
 	ni = colony_nampla.mi_base + colony_nampla.IUs_to_install
@@ -2794,33 +2877,15 @@ func do_DEVELOP_command() {
 	}
 
 	/* See if there are more arguments. */
-	tp = input_line_pointer
-	more_args = false
-	for {
-		c = *tp
-		tp++
-		if c == 0 {
-			break
-		}
-		if c == ';' || c == '\n' {
-			break
-		}
-		if c == ' ' || c == '\t' {
-			continue
-		}
-		more_args = true
-		break
-	}
-
-	if more_args {
+	if more_args = command.ship != ""; more_args {
 		load_transport = true
 
 		/* Get the ship to receive the cargo. */
-		if !get_ship() {
+		if _, ok := get_ship(command.ship, false); !ok {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Ship to be loaded does not exist!\n")
-			return
+			return nil
 		}
 
 		if ship.class == TR {
@@ -2837,15 +2902,16 @@ func do_DEVELOP_command() {
 
 		if capacity <= 0 {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! %s was already full and could take no more cargo!\n", ship_name(ship))
-			return
+			return nil
 		}
 
 		if capacity > max_funds_available {
 			capacity = max_funds_available
 			if max_funds_available != specified_max {
-				fprintf(log_file, "! WARNING: %s", input_line)
+				// TODO: check for zero funds available
+				fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
 				fprintf(log_file, "! Insufficient funds to completely fill %s!\n", ship_name(ship))
 				fprintf(log_file, "! Will use all remaining funds (= %d).\n", capacity)
 			}
@@ -2857,9 +2923,9 @@ func do_DEVELOP_command() {
 		 *  producing planet. */
 		if nampla.x != colony_nampla.x || nampla.y != colony_nampla.y || nampla.z != colony_nampla.z {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Colony and producing planet are not in the same sector.\n")
-			return
+			return nil
 		}
 
 		num_CUs = nampla.pop_units
@@ -2873,7 +2939,7 @@ func do_DEVELOP_command() {
 		if load_transport {
 			num_CUs = capacity / 2
 			if num_CUs > nampla.pop_units {
-				fprintf(log_file, "! WARNING: %s", input_line)
+				fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
 				fprintf(log_file, "! Insufficient available population! %d CUs are needed", num_CUs)
 				num_CUs = nampla.pop_units
 				fprintf(log_file, " to fill ship but only %d can be built.\n", num_CUs)
@@ -2886,7 +2952,7 @@ func do_DEVELOP_command() {
 		if load_transport {
 			num_CUs = capacity / 2
 			if num_CUs > nampla.pop_units {
-				fprintf(log_file, "! WARNING: %s", input_line)
+				fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
 				fprintf(log_file, "! Insufficient available population! %d CUs are needed", num_CUs)
 				num_CUs = nampla.pop_units
 				fprintf(log_file, " to fill ship but only %d can be built.\n", num_CUs)
@@ -2907,17 +2973,14 @@ func do_DEVELOP_command() {
 			}
 
 			if num_CUs > nampla.pop_units {
-				fprintf(log_file, "! WARNING: %s", input_line)
-				fprintf(log_file,
-					"! Insufficient available population! %d CUs are needed",
-					num_CUs)
+				fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
+				fprintf(log_file, "! Insufficient available population! %d CUs are needed", num_CUs)
 				num_CUs = nampla.pop_units
-				fprintf(log_file, " to fill ship, but\n!   only %d can be built.\n",
-					num_CUs)
+				fprintf(log_file, " to fill ship, but\n!   only %d can be built.\n", num_CUs)
 			}
 		}
 
-		colony_planet = planet_base + colony_nampla.planet_index
+		colony_planet = planet_base[colony_nampla.planet_index] // warning: was planet_base + colony_nampla.planet_index
 
 		i = 100 + colony_planet.mining_difficulty
 		num_AUs = ((100 * num_CUs) + (i+1)/2) / i
@@ -2925,7 +2988,7 @@ func do_DEVELOP_command() {
 	}
 
 	if num_CUs <= 0 {
-		return
+		return nil
 	}
 
 	/* Make sure there's enough money to pay for it all. */
@@ -2936,10 +2999,11 @@ func do_DEVELOP_command() {
 	}
 
 	if check_bounced(amount_to_spend) {
+		log.Println("bug 3002: assert(!check_bounced(amount_to_spend))")
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! Internal error. Notify GM!\n")
-		return
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Internal error: code 3002. Please notify GM!\n")
+		return nil
 	}
 
 	/* Start logging what happened. */
@@ -2978,14 +3042,30 @@ func do_DEVELOP_command() {
 				ship.item_quantity[AU] += num_AUs
 			}
 
-			n = colony_nampla - nampla_base
-			if n == 0 {
+			n = -1 // warning: was colony_nampla - nampla_base
+			for q := range nampla_base {
+				if colony_nampla == nampla_base[q] {
+					n = q
+					break
+				}
+			}
+			if n == -1 {
+				panic("assert(colony_nampla - nampla_base != -1)")
+			} else if n == 0 {
 				n = 9999 /* Home planet. */
 			}
 			ship.unloading_point = n
 
-			n = nampla - nampla_base
-			if n == 0 {
+			n = -1 // warning: was nampla - nampla_base
+			for q := range nampla_base {
+				if colony_nampla == nampla_base[q] {
+					n = q
+					break
+				}
+			}
+			if n == -1 {
+				panic("assert(nampla - nampla_base != -1)")
+			} else if n == 0 {
 				n = 9999 /* Home planet. */
 			}
 			ship.loading_point = n
@@ -3008,6 +3088,7 @@ func do_DEVELOP_command() {
 	}
 
 	log_string(".\n")
+	return nil
 }
 
 func start_dev_log(num_CUs, num_IUs, num_AUs int) {
@@ -3058,12 +3139,12 @@ done:
 //*************************************************************************
 // do_disband.c
 
-func do_DISBAND_command() {
+func do_DISBAND_command(s *orders.Section, c *orders.Command) []error {
 	/* Get the planet. */
 	found := get_location()
 	if !found || nampla == nil {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in DISBAND command.\n")
 		return
 	}
@@ -3071,7 +3152,7 @@ func do_DISBAND_command() {
 	/* Make sure planet is not the home planet. */
 	if isset(nampla.status, HOME_PLANET) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You cannot disband your home planet!\n")
 		return
 	}
@@ -3079,7 +3160,7 @@ func do_DISBAND_command() {
 	/* Make sure planet is not under siege. */
 	if nampla.siege_eff {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You cannot disband a planet that is under siege!\n")
 		return
 	}
@@ -3102,7 +3183,7 @@ func do_DISBAND_command() {
 //*************************************************************************
 // do_enemy.c
 
-func do_ENEMY_command() {
+func do_ENEMY_command(s *orders.Section, c *orders.Command) []error {
 	/* See if declaration is for all species. */
 	var allEnemies bool
 	if _, ok := get_value(); ok {
@@ -3116,7 +3197,7 @@ func do_ENEMY_command() {
 		/* Get name of species that is being declared an enemy. */
 		if !get_species_name() {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid or missing argument in ENEMY command.\n")
 			return
 		}
@@ -3140,7 +3221,7 @@ func do_ENEMY_command() {
 //*************************************************************************
 // do_est.c
 
-func do_ESTIMATE_command() {
+func do_ESTIMATE_command(s *orders.Section, c *orders.Command) []error {
 	var (
 		i, max_error                            int
 		estimate                                [6]int
@@ -3152,7 +3233,7 @@ func do_ESTIMATE_command() {
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
 		return
 	}
@@ -3160,7 +3241,7 @@ func do_ESTIMATE_command() {
 	/* Get name of alien species. */
 	if !get_species_name() {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in ESTIMATE command.\n")
 		return
 	}
@@ -3168,7 +3249,7 @@ func do_ESTIMATE_command() {
 	/* Check if we've met this species. */
 	if !species.contact[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't do an estimate of a species you haven't met.\n")
 		return
 	}
@@ -3177,7 +3258,7 @@ func do_ESTIMATE_command() {
 	cost = 25
 	if check_bounced(cost) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
 		return
 	}
@@ -3369,11 +3450,11 @@ func do_germ_warfare(attacking_species, defending_species, defender_index int, b
 //*************************************************************************
 // do_hide.c
 
-func do_HIDE_command() {
+func do_HIDE_command(s *orders.Section, c *orders.Command) []error {
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
 		return
 	}
@@ -3381,13 +3462,13 @@ func do_HIDE_command() {
 	/* Make sure this is not a mining colony or home planet. */
 	if isset(nampla.status, HOME_PLANET) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You may not HIDE a home planet.\n")
 		return
 	}
 	if isset(nampla.status, RESORT_COLONY) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You may not HIDE a resort colony.\n")
 		return
 	}
@@ -3395,7 +3476,7 @@ func do_HIDE_command() {
 	/* Check if planet is under siege. */
 	if nampla.siege_eff != 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Besieged planet cannot HIDE!\n")
 		return
 	}
@@ -3405,7 +3486,7 @@ func do_HIDE_command() {
 	if isset(nampla.status, MINING_COLONY) {
 		if cost > species.econ_units {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Mining colony does not have sufficient EUs to hide.\n")
 			return
 		} else {
@@ -3413,7 +3494,7 @@ func do_HIDE_command() {
 		}
 	} else if check_bounced(cost) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
 		return
 	}
@@ -3430,7 +3511,7 @@ func do_HIDE_command() {
 //*************************************************************************
 // do_inst.c
 
-func do_INSTALL_command() {
+func do_INSTALL_command(s *orders.Section, c *orders.Command) []error {
 	var i, item_class, item_count, num_available int
 	var do_all_units bool
 	var recovering_home_planet, alien_index int
@@ -3450,7 +3531,7 @@ func do_INSTALL_command() {
 	/* Make sure value is meaningful. */
 	if value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid item count in INSTALL command.\n")
 		return
 	}
@@ -3467,7 +3548,7 @@ func do_INSTALL_command() {
 			abbr_index = AU
 		} else {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid item class!\n")
 			return
 		}
@@ -3479,7 +3560,7 @@ get_planet:
 	/* Get planet where items are to be installed. */
 	if !get_location() || nampla == nil {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in INSTALL command.\n")
 		return
 	}
@@ -3512,7 +3593,7 @@ get_planet:
 		}
 
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You may not colonize someone else's populated home planet!\n")
 
 		return
@@ -3528,7 +3609,7 @@ get_planet:
 			recovering_home_planet = true /* HP was bombed. */
 		} else {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Installation not allowed on a healthy home planet!\n")
 			return
 		}
@@ -3578,7 +3659,7 @@ check_items:
 			item_count = num_available
 		} else {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! No colonist units on planet for installation.\n")
 			return
 		}
@@ -3619,11 +3700,11 @@ check_items:
 //*************************************************************************
 // do_int.c
 
-func do_INTERCEPT_command() {
+func do_INTERCEPT_command(s *orders.Section, c *orders.Command) []error {
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
 		return
 	}
@@ -3632,7 +3713,7 @@ func do_INTERCEPT_command() {
 	_, ok := get_value()
 	if !ok || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing amount.\n")
 		return
 	}
@@ -3647,7 +3728,7 @@ func do_INTERCEPT_command() {
 	/* Check if planet is under siege. */
 	if nampla.siege_eff != 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Besieged planet cannot INTERCEPT!\n")
 		return
 	}
@@ -3655,7 +3736,7 @@ func do_INTERCEPT_command() {
 	/* Check if sufficient funds are available. */
 	if check_bounced(cost) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
 		return
 	}
@@ -3873,7 +3954,7 @@ func handle_intercept(intercept_index int) {
 //*************************************************************************
 // do_land.c
 
-func do_LAND_command() {
+func do_LAND_command(s *orders.Section, c *orders.Command) []error {
 	var (
 		i, n, siege_effectiveness, landing_detected, landed          int
 		alien_number, alien_index, alien_pn, array_index, bit_number int
@@ -4299,7 +4380,7 @@ func add_location(x, y, z int) {
 //*************************************************************************
 // do_mes.c
 
-func do_MESSAGE_command() {
+func do_MESSAGE_command(s *orders.Section, c *orders.Command) []error {
 	var i, message_number, message_fd int
 	var c1, c2, c3 byte
 	var message_file io.Writer
@@ -4308,7 +4389,7 @@ func do_MESSAGE_command() {
 	var bad_species bool
 	if !get_species_name() {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in MESSAGE command.\n")
 		bad_species = true
 	}
@@ -4412,7 +4493,7 @@ func do_MESSAGE_command() {
 //*************************************************************************
 // do_name.c
 
-func do_NAME_command() {
+func do_NAME_command(s *orders.Section, c *orders.Command) []error {
 	var i, name_length int
 	var upper_nampla_name [32]byte
 	var original_line_pointer *cstring
@@ -4423,7 +4504,7 @@ func do_NAME_command() {
 	found := get_location()
 	if !found || nampla != nil || pn == 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid coordinates in NAME command.\n")
 		return
 	}
@@ -4442,7 +4523,7 @@ func do_NAME_command() {
 	name_length = get_name()
 	if name_length < 1 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in NAME command.\n")
 		return
 	}
@@ -4464,7 +4545,7 @@ func do_NAME_command() {
 		if nampla.x == x && nampla.y == y && nampla.z == z &&
 			nampla.pn == pn {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! The planet at these coordinates already has a name.\n")
 			return
 		}
@@ -4483,7 +4564,7 @@ func do_NAME_command() {
 
 	if found {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Planet in NAME command already exists.\n")
 		return
 	}
@@ -4536,7 +4617,7 @@ func do_NAME_command() {
 //*************************************************************************
 // do_neutral.c
 
-func do_NEUTRAL_command() {
+func do_NEUTRAL_command(s *orders.Section, c *orders.Command) []error {
 	/* See if declaration is for all species. */
 	var allSpecies bool
 	if _, ok := get_value(); ok {
@@ -4549,7 +4630,7 @@ func do_NEUTRAL_command() {
 		/* Get name of species. */
 		if !get_species_name() {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid or missing argument in NEUTRAL command.\n")
 			return
 		}
@@ -4573,7 +4654,7 @@ func do_NEUTRAL_command() {
 //*************************************************************************
 // do_orbit.c
 
-func do_ORBIT_command() {
+func do_ORBIT_command(s *orders.Section, c *orders.Command) []error {
 	var specified_planet_number int
 
 	/* Get the ship. */
@@ -4739,7 +4820,7 @@ finish_up:
 //*************************************************************************
 // do_prod.c
 
-func do_PRODUCTION_command(missing_production_order bool) {
+func do_PRODUCTION_command(s *orders.Section, c *orders.Command, missing_production_order bool) []error {
 	var (
 		i, j, abbr_type, name_length, alien_number, under_siege  int
 		siege_percent_effectiveness, new_alien, num_siege_ships  int
@@ -4792,7 +4873,7 @@ func do_PRODUCTION_command(missing_production_order bool) {
 
 	if abbr_type != PLANET_ID {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in PRODUCTION command.\n")
 		return
 	}
@@ -4823,7 +4904,7 @@ func do_PRODUCTION_command(missing_production_order bool) {
 
 	if !found {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in PRODUCTION command.\n")
 		return
 	}
@@ -4831,7 +4912,7 @@ func do_PRODUCTION_command(missing_production_order bool) {
 	/* Check if production was already done for this planet. */
 	if production_done[nampla_index] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! More than one PRODUCTION command for planet.\n")
 		return
 	}
@@ -4840,7 +4921,7 @@ func do_PRODUCTION_command(missing_production_order bool) {
 	/* Check if this colony was disbanded. */
 	if isset(nampla.status, DISBANDED_COLONY) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Production orders cannot be given for a disbanded colony!\n")
 		return
 	}
@@ -5384,13 +5465,13 @@ got_nampla:
 //*************************************************************************
 // do_recy.c
 
-func do_RECYCLE_command() {
+func do_RECYCLE_command(s *orders.Section, c *orders.Command) []error {
 	var class, recycle_value, original_cost, units_available int
 
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
 		return
 	}
@@ -5404,7 +5485,7 @@ func do_RECYCLE_command() {
 
 	if class != ITEM_CLASS {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid item class in RECYCLE command.\n")
 		return
 	}
@@ -5419,7 +5500,7 @@ func do_RECYCLE_command() {
 	}
 	if value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid item count in RECYCLE command.\n")
 		return
 	}
@@ -5428,7 +5509,7 @@ func do_RECYCLE_command() {
 	units_available = nampla.item_quantity[class]
 	if value > units_available {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Attempt to recycle more items than are available.\n")
 		return
 	}
@@ -5475,7 +5556,7 @@ recycle_ship:
 	correct_spelling_required = true
 	if !get_ship() {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship to be recycled does not exist.\n")
 		return
 	}
@@ -5483,7 +5564,7 @@ recycle_ship:
 	/* Make sure it didn't just jump. */
 	if ship.just_jumped {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship just jumped and is still in transit.\n")
 		return
 	}
@@ -5492,7 +5573,7 @@ recycle_ship:
 	if ship.x != nampla.x || ship.y != nampla.y ||
 		ship.z != nampla.z || ship.pn != nampla.pn {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship is not at the production planet.\n")
 		return
 	}
@@ -5551,7 +5632,7 @@ recycle_ship:
 //*************************************************************************
 // do_rep.c
 
-func do_REPAIR_command() {
+func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 	var n, x, y, z, age_reduction, num_dr_units int
 	var total_dr_units, dr_units_used, max_age, desired_age int
 	var original_line_pointer *cstring
@@ -5770,14 +5851,14 @@ pool_repair:
 //*************************************************************************
 // do_res.c
 
-func do_RESEARCH_command() {
+func do_RESEARCH_command(s *orders.Section, c *orders.Command) []error {
 	var n, tech, initial_level, current_level int
 	var cost, amount_spent, cost_for_one_level, funds_remaining, max_funds_available int
 
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
 		return
 	}
@@ -5788,7 +5869,7 @@ func do_RESEARCH_command() {
 	/* Get technology. */
 	if get_class_abbr() != TECH_ID {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing technology.\n")
 		return
 	}
@@ -5796,7 +5877,7 @@ func do_RESEARCH_command() {
 
 	if species.tech_knowledge[tech] == 0 && sp_tech_level[tech] == 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Zero level can only be raised via TECH or TEACH.\n")
 		return
 	}
@@ -5808,7 +5889,7 @@ func do_RESEARCH_command() {
 
 	if status == false || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing amount to spend!\n")
 		return
 	}
@@ -5833,13 +5914,13 @@ do_cost:
 
 		if max_funds_available > 0 {
 			fprintf(log_file, "! WARNING: %s", input_line)
-			fprintf(log_file, "! Insufficient funds. Substituting %ld for %ld.\n", max_funds_available, cost)
+			fprintf(log_file, "! Insufficient funds. Substituting %d for %d.\n", max_funds_available, cost)
 			value = max_funds_available
 			goto do_cost
 		}
 
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
 		return
 	}
@@ -6507,25 +6588,25 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 //*************************************************************************
 // do_scan.c
 
-func do_SCAN_command() {
+func do_SCAN_command(s *orders.Section, c *orders.Command) []error {
 	found := get_ship()
 	if !found {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid ship name in SCAN command.\n")
 		return
 	}
 
 	if ship.status == UNDER_CONSTRUCTION {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship is still under construction.\n")
 		return
 	}
 
 	if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
 		return
 	}
@@ -6554,7 +6635,7 @@ func do_SCAN_command() {
 //*************************************************************************
 // do_send.c
 
-func do_SEND_command() {
+func do_SEND_command(s *orders.Section, c *orders.Command) []error {
 	var n, contact_word_number, contact_bit_number int
 	var num_available, contact_mask, item_count int
 	var nampla1, nampla2 *nampla_data
@@ -6565,7 +6646,7 @@ func do_SEND_command() {
 	/* Make sure value is meaningful. */
 	if !ok || value < 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid item count in SEND command.\n")
 		return
 	}
@@ -6581,12 +6662,12 @@ func do_SEND_command() {
 	if num_available < item_count {
 		if num_available == 0 {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! You do not have any EUs!\n")
 			return
 		}
 		fprintf(log_file, "! WARNING: %s", input_line)
-		fprintf(log_file, "! You do not have %ld EUs! Substituting %ld for %ld.\n",
+		fprintf(log_file, "! You do not have %d EUs! Substituting %d for %d.\n",
 			item_count, num_available, item_count)
 		item_count = num_available
 	}
@@ -6595,7 +6676,7 @@ func do_SEND_command() {
 	found := get_species_name()
 	if !found {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in SEND command.\n")
 		return
 	}
@@ -6603,13 +6684,13 @@ func do_SEND_command() {
 	/* Check if we've met this species and make sure it is not an enemy. */
 	if !species.contact[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't SEND to a species you haven't met.\n")
 		return
 	}
 	if species.enemy[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You may not SEND economic units to an ENEMY.\n")
 		return
 	}
@@ -6655,11 +6736,11 @@ func do_SEND_command() {
 //*************************************************************************
 // do_shipyard.c
 
-func do_SHIPYARD_command() {
+func do_SHIPYARD_command(s *orders.Section, c *orders.Command) []error {
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
 		return
 	}
@@ -6667,7 +6748,7 @@ func do_SHIPYARD_command() {
 	/* Make sure this is not a mining or resort colony. */
 	if (nampla.status&MINING_COLONY) != 0 || (nampla.status&RESORT_COLONY) != 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You may not build shipyards on a mining or resort colony!\n")
 		return
 	}
@@ -6675,7 +6756,7 @@ func do_SHIPYARD_command() {
 	/* Check if planet has already built a shipyard. */
 	if shipyard_built {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Only one shipyard can be built per planet per turn!\n")
 		return
 	}
@@ -6684,7 +6765,7 @@ func do_SHIPYARD_command() {
 	cost := 10 * species.tech_level[MA]
 	if check_bounced(cost) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
 		return
 	}
@@ -6759,7 +6840,7 @@ func do_siege(bat *battle_data, act *action_data) {
 //*************************************************************************
 // do_teach.c
 
-func do_TEACH_command() {
+func do_TEACH_command(s *orders.Section, c *orders.Command) []error {
 	var tech int
 	var need_technology bool
 
@@ -6787,7 +6868,7 @@ func do_TEACH_command() {
 	if need_technology {
 		if get_class_abbr() != TECH_ID {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid or missing technology!\n")
 			return
 		}
@@ -6797,7 +6878,7 @@ func do_TEACH_command() {
 	/* Get species to transfer knowledge to. */
 	if !get_species_name() {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in TEACH command.\n")
 		return
 	}
@@ -6805,14 +6886,14 @@ func do_TEACH_command() {
 	/* Check if we've met this species and make sure it is not an enemy. */
 	if !species.contact[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't TEACH a species you haven't met.\n")
 		return
 	}
 
 	if species.enemy[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't TEACH an ENEMY.\n")
 		return
 	}
@@ -6840,7 +6921,7 @@ func do_TEACH_command() {
 //*************************************************************************
 // do_tech.c
 
-func do_TECH_command() {
+func do_TECH_command(s *orders.Section, c *orders.Command) []error {
 	var tech int
 	var need_technology bool
 
@@ -6864,7 +6945,7 @@ func do_TECH_command() {
 	/* Get species to transfer tech to. */
 	if !get_species_name() {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in TECH command.\n")
 		return
 	}
@@ -6872,13 +6953,13 @@ func do_TECH_command() {
 	/* Check if we've met this species and make sure it is not an enemy. */
 	if !species.contact[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't transfer tech to a species you haven't met.\n")
 		return
 	}
 	if species.enemy[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't transfer tech to an ENEMY.\n")
 		return
 	}
@@ -6887,7 +6968,7 @@ func do_TECH_command() {
 	if need_technology {
 		if get_class_abbr() != TECH_ID {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid or missing technology!\n")
 			return
 		}
@@ -6911,7 +6992,7 @@ func do_TECH_command() {
 		}
 
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't transfer the same tech to the same species more than once!\n")
 		return
 	}
@@ -6952,7 +7033,7 @@ func do_TECH_command() {
 //*************************************************************************
 // do_tel.c
 
-func do_TELESCOPE_command() {
+func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 	var i, n, range_in_parsecs, max_range, alien_index int
 	var alien_number, alien_nampla_index, alien_ship_index int
 	var location_printed, industry, detection_chance, num_obs_locs int
@@ -6968,7 +7049,7 @@ func do_TELESCOPE_command() {
 	found := get_ship()
 	if !found || ship.ttype != STARBASE {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid starbase name in TELESCOPE command.\n")
 		return
 	}
@@ -6977,7 +7058,7 @@ func do_TELESCOPE_command() {
 	/* Make sure starbase does not get more than one TELESCOPE order per turn. */
 	if starbase.dest_z != 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! A starbase may only be given one TELESCOPE order per turn.\n")
 		return
 	}
@@ -6987,7 +7068,7 @@ func do_TELESCOPE_command() {
 	range_in_parsecs = starbase.item_quantity[GT] / 2
 	if range_in_parsecs < 1 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Starbase is not carrying enough gravitic telescope units.\n")
 		return
 	}
@@ -7214,7 +7295,7 @@ func do_TELESCOPE_command() {
 
 				if !alien_name_printed {
 					if !location_printed {
-						fprintf(log_file, "\n    %ld%3ld%3ld:\n", x, y, z)
+						fprintf(log_file, "\n    %d%3d%3d:\n", x, y, z)
 						location_printed = true
 						something_found = true
 					}
@@ -7262,7 +7343,7 @@ func do_TELESCOPE_command() {
 
 				if !alien_name_printed {
 					if !location_printed {
-						fprintf(log_file, "\n    %ld%3ld%3ld:\n", x, y, z)
+						fprintf(log_file, "\n    %d%3d%3d:\n", x, y, z)
 						location_printed = true
 						something_found = true
 					}
@@ -7320,7 +7401,7 @@ func do_TELESCOPE_command() {
 //*************************************************************************
 // do_terr.c
 
-func do_TERRAFORM_command() {
+func do_TERRAFORM_command(s *orders.Section, c *orders.Command) []error {
 	var i, j, ls_needed int
 	var home_planet, colony_planet *planet_data
 
@@ -7333,7 +7414,7 @@ func do_TERRAFORM_command() {
 	/* Get planet where terraforming is to be done. */
 	if !get_location() || nampla == nil {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in TERRAFORM command.\n")
 		return
 	}
@@ -7341,7 +7422,7 @@ func do_TERRAFORM_command() {
 	/* Make sure planet is not a home planet. */
 	if isset(nampla.status, HOME_PLANET) {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Terraforming may not be done on a home planet.\n")
 		return
 	}
@@ -7354,7 +7435,7 @@ func do_TERRAFORM_command() {
 
 	if ls_needed == 0 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Colony does not need to be terraformed.\n")
 		return
 	}
@@ -7370,14 +7451,14 @@ func do_TERRAFORM_command() {
 
 	if num_plants < 3 {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! At least three TPs are needed to terraform.\n")
 		return
 	}
 
 	if num_plants > nampla.item_quantity[TP] {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! PL %s doesn't have that many TPs!\n",
 			nampla.name)
 		return
@@ -7570,7 +7651,7 @@ add_neutral_gas:
 //*************************************************************************
 // do_tran.c
 
-func do_TRANSFER_command() {
+func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 	var i, n, item_class, item_count, capacity, transfer_ttype int
 	var attempt_during_siege, siege_1_chance, siege_2_chance int
 	var alien_number, first_try, both_args_present, need_destination int
@@ -8103,7 +8184,7 @@ get_destination:
 //*************************************************************************
 // do_unl.c
 
-func do_UNLOAD_command() {
+func do_UNLOAD_command(s *orders.Section, c *orders.Command) []error {
 	var i, found, item_count, recovering_home_planet, alien_index int
 	var n, reb, current_pop int
 	var alien_home_nampla *nampla_data
@@ -8111,21 +8192,21 @@ func do_UNLOAD_command() {
 	/* Get the ship. */
 	if !get_ship() {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid ship name in UNLOAD command.\n")
 		return
 	}
 
 	if ship.status == UNDER_CONSTRUCTION {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship is still under construction.\n")
 		return
 	}
 
 	if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
 		return
 	}
@@ -8152,7 +8233,7 @@ func do_UNLOAD_command() {
 
 	if !found {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship is not at a named planet.\n")
 		return
 	}
@@ -8185,7 +8266,7 @@ func do_UNLOAD_command() {
 		}
 
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You may not colonize someone else's populated home planet!\n")
 
 		return
@@ -8202,7 +8283,7 @@ func do_UNLOAD_command() {
 			recovering_home_planet = true /* HP was bombed. */
 		} else {
 			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", input_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Installation not allowed on a healthy home planet!\n")
 			return
 		}
@@ -8304,14 +8385,14 @@ func do_UNLOAD_command() {
 //*************************************************************************
 // do_upg.c
 
-func do_UPGRADE_command() {
+func do_UPGRADE_command(s *orders.Section, c *orders.Command) []error {
 	var age_reduction int
 	var amount_to_spend, original_cost, max_funds_available int
 
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
 		return
 	}
@@ -8413,7 +8494,7 @@ try_again:
 		if max_funds_available > 0 {
 			if value_specified {
 				fprintf(log_file, "! WARNING: %s", input_line)
-				fprintf(log_file, "! Insufficient funds. Substituting %ld for %ld.\n",
+				fprintf(log_file, "! Insufficient funds. Substituting %d for %d.\n",
 					max_funds_available, value)
 			}
 			amount_to_spend = max_funds_available
@@ -8422,7 +8503,7 @@ try_again:
 		}
 
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", input_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
 		return
 	}
@@ -9067,7 +9148,8 @@ func gamemaster_abort_option() {
  * location is valid, true will be returned, otherwise false will be
  * returned. */
 
-func get_location() bool {
+func get_location(s string) (*nampla_data, bool) {
+	panic("this is borked because it wants access to the original input, not the command")
 	var i, n, temp_nampla_index, first_try, name_length, best_score, next_best_score, best_nampla_index, minimum_score int
 	var upper_nampla_name [32]byte
 	var temp1_ptr, temp2_ptr *byte
@@ -9631,7 +9713,7 @@ func transfer_balance() {
 		} else {
 			limiting_balance = raw_material_units
 		}
-		fprintf(log_file, " (Ending balance is %ld.)", limiting_amount)
+		fprintf(log_file, " (Ending balance is %d.)", limiting_amount)
 	}
 	fprintf(log_file, "\n")
 
@@ -9772,7 +9854,7 @@ func get_name() int {
 func get_value() (int, bool) {
 	skip_whitespace()
 
-	n := sscanf(input_line_pointer, "%ld", &value)
+	n := sscanf(input_line_pointer, "%d", &value)
 	if n != 1 {
 		return 0, false /* Not a numeric value. */
 	}
@@ -10094,7 +10176,7 @@ func scan(x, y, z int) {
 	if star.message {
 		/* There is a message that must be logged whenever this star
 		 *      system is scanned. */
-		filename := fmt.Sprint("message%ld.txt", star.message)
+		filename := fmt.Sprint("message%d.txt", star.message)
 		log_message(filename)
 	}
 
@@ -10387,7 +10469,7 @@ func check_population(nampla *nampla_data) bool {
 	if is_now_populated && !was_already_populated {
 		if nampla.message {
 			/* There is a message that must be logged whenever this planet becomes populated for the first time. */
-			filename := fmt.Sprintf("message%ld.txt", nampla.message)
+			filename := fmt.Sprintf("message%d.txt", nampla.message)
 			log_message(filename)
 		}
 	}
