@@ -3213,11 +3213,45 @@ func do_DISBAND_command(s *orders.Section, c *orders.Command) []error {
 //*************************************************************************
 // do_enemy.c
 
+// do_ENEMY_command will set the diplomatic status of either a single
+// species or all species to "enemy."
+// Accepts the following formats
+//   ENEMY SPECIES
+//   ENEMY NUMBER
+// Where
+//    SPECIES is the name of a species. Note that it must include the
+//            "SP" code!
+//    NUMBER  is any integer value.
 func do_ENEMY_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "ENEMY" {
+		return []error{fmt.Errorf("internal error: %q passed to do_ENEMY_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE" || s.Name == "PRODUCTION") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name    string
+		all     bool   // true only if all species are to be updated
+		species string // name of species to set diplomatic status
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		if _, err := strconv.Atoi(c.Args[0]); err == nil {
+			command.all = true
+		} else {
+			command.all, command.species = false, c.Args[0]
+		}
+	default:
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	/* See if declaration is for all species. */
-	var allEnemies bool
-	if _, ok := get_value(); ok {
-		allEnemies = true
+	if command.all {
 		// set all enememy bits and clear all ally bits
 		for i := 0; i < MAX_SPECIES; i++ {
 			species.enemy[i] = true
@@ -3225,11 +3259,11 @@ func do_ENEMY_command(s *orders.Section, c *orders.Command) []error {
 		}
 	} else {
 		/* Get name of species that is being declared an enemy. */
-		if !get_species_name() {
+		if !get_species_name(command.species) {
 			fprintf(log_file, "!!! Order ignored:\n")
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid or missing argument in ENEMY command.\n")
-			return
+			return nil
 		}
 
 		/* Set/clear the appropriate bit. */
@@ -3239,19 +3273,48 @@ func do_ENEMY_command(s *orders.Section, c *orders.Command) []error {
 
 	/* Log the result. */
 	log_string("    Enmity was declared towards ")
-	if allEnemies {
+	if command.all {
 		log_string("ALL species")
 	} else {
 		log_string("SP ")
 		log_string(g_spec_name)
 	}
 	log_string(".\n")
+	return nil
 }
 
 //*************************************************************************
 // do_est.c
 
+// do_ESTIMATE_command will estimate the tech levels of a single species.
+// Accepts the following formats
+//   ESTIMATE SPECIES
+// Where
+//    SPECIES is the name of a species. Note that it must include the
+//            "SP" code!
 func do_ESTIMATE_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "ENEMY" {
+		return []error{fmt.Errorf("internal error: %q passed to do_ENEMY_command", c.Name)}
+	} else if !(s.Name == "PRODUCTION") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name    string
+		species string // name of species to estimate
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.species = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	var (
 		i, max_error                            int
 		estimate                                [6]int
@@ -3262,35 +3325,35 @@ func do_ESTIMATE_command(s *orders.Section, c *orders.Command) []error {
 
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		return nil
 	}
 
 	/* Get name of alien species. */
-	if !get_species_name() {
-		fprintf(log_file, "!!! Order ignored:\n")
+	if !get_species_name(command.name) {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in ESTIMATE command.\n")
-		return
+		return nil
 	}
 
 	/* Check if we've met this species. */
 	if !species.contact[g_spec_number] {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't do an estimate of a species you haven't met.\n")
-		return
+		return nil
 	}
 
 	/* Check if sufficient funds are available. */
 	cost = 25
 	if check_bounced(cost) {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
-		return
+		return nil
 	}
 
 	/* Log the result. */
@@ -3300,7 +3363,7 @@ func do_ESTIMATE_command(s *orders.Section, c *orders.Command) []error {
 		log_string(" was made at a cost of ")
 		log_long(cost)
 		log_string(".\n")
-		return
+		return nil
 	}
 
 	/* Make the estimates. */
@@ -3338,6 +3401,8 @@ func do_ESTIMATE_command(s *orders.Section, c *orders.Command) []error {
 	log_string(", BI = ")
 	log_int(estimate[BI])
 	log_string(".\n")
+
+	return nil
 }
 
 //*************************************************************************
@@ -9502,7 +9567,7 @@ yet_again:
  * "g_species_name". The algorithm employed allows minor spelling errors,
  * as well as accidental deletion of the SP abbreviation. */
 
-func get_species_name() bool {
+func get_species_name(name string) bool {
 	var i, n, species_index, best_score, best_species_index, next_best_score, first_try, minimum_score, name_length int
 	var sp_name [32]byte
 	var temp1_ptr, temp2_ptr *byte
