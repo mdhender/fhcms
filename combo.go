@@ -3316,13 +3316,10 @@ func do_ESTIMATE_command(s *orders.Section, c *orders.Command) []error {
 		return nil
 	}
 
-	var (
-		i, max_error                            int
-		estimate                                [6]int
-		contact_word_number, contact_bit_number int
-		cost, contact_mask                      int
-		alien                                   *species_data
-	)
+	var max_error int
+	var estimate [6]int
+	var cost int
+	var alien *species_data
 
 	/* Check if this order was preceded by a PRODUCTION order. */
 	if !doing_production {
@@ -3410,13 +3407,11 @@ func do_ESTIMATE_command(s *orders.Section, c *orders.Command) []error {
 // do_germ.c
 
 func do_germ_warfare(attacking_species, defending_species, defender_index int, bat *battle_data, act *action_data) {
-	var (
-		i, attacker_BI, defender_BI, success_chance int
-		econ_units_from_looting                     int
-		planet                                      *planet_data
-		attacked_nampla                             *nampla_data
-		sh                                          *ship_data_
-	)
+	var i, attacker_BI, defender_BI, success_chance int
+	var econ_units_from_looting int
+	var planet *planet_data
+	var attacked_nampla *nampla_data
+	var sh *ship_data_
 
 	attacker_BI = c_species[attacking_species].tech_level[BI]
 	defender_BI = c_species[defending_species].tech_level[BI]
@@ -3672,11 +3667,11 @@ func do_INSTALL_command(s *orders.Section, c *orders.Command) []error {
 		return nil
 	}
 
-	var i, item_class, item_count, num_available int
+	var item_class, item_count, num_available int
 	var do_all_units bool
 	var recovering_home_planet bool // warning: was int
 	var alien_index int
-	var n, current_pop, reb int
+	var n, reb int
 	var alien_home_nampla *nampla_data
 
 	/* Get number of items to install. */
@@ -3805,7 +3800,7 @@ check_items:
 				do_all_units = false
 				goto check_items
 			} else {
-				return
+				return nil
 			}
 		}
 	} else if nampla.item_quantity[item_class] < item_count {
@@ -4720,39 +4715,118 @@ func do_MESSAGE_command(s *orders.Section, c *orders.Command) []error {
 //*************************************************************************
 // do_name.c
 
+// do_NAME_command assigns a name to a planet, which will also be the name
+// of any colony established there.
+// Accepts the following formats
+//   NAME X Y Z ORBIT PLANET
+// Where
+//   X      is the x-coordinate of the system containing the planet
+//   Y      is the y-coordinate of the system containing the planet
+//   Z      is the z-coordinate of the system containing the planet
+//   ORBIT  is the orbit of the planet in the system. It must be a
+//          positive integer.
+//   PLANET is the name to use for the planet. It must start with "PL."
 func do_NAME_command(s *orders.Section, c *orders.Command) []error {
-	var i, name_length int
-	var upper_nampla_name [32]byte
-	var original_line_pointer *cstring
+	// shadow global values
+	var name_length int
 	var planet *planet_data
+
+	if c.Name != "NAME" {
+		return []error{fmt.Errorf("internal error: %q passed to do_NAME_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name           string
+		x, y, z, orbit int
+		planet         string // name to give planet
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 5:
+		if i, err := strconv.Atoi(c.Args[0]); err != nil {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid x-coordinate in NAME command.\n")
+			return nil
+		} else {
+			command.x = i
+		}
+		if i, err := strconv.Atoi(c.Args[1]); err != nil {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid y-coordinate in NAME command.\n")
+			return nil
+		} else {
+			command.y = i
+		}
+		if i, err := strconv.Atoi(c.Args[2]); err != nil {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid z-coordinate in NAME command.\n")
+			return nil
+		} else {
+			command.z = i
+		}
+		if i, err := strconv.Atoi(c.Args[3]); err != nil || !(0 < i || i <= 9) {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid orbit in NAME command.\n")
+			return nil
+		} else {
+			command.orbit = i
+		}
+		command.planet = c.Args[4]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	// local vars
+	var upper_nampla_name string // warning: was [32]byte
 	var unused_nampla *nampla_data
 
 	/* Get x y z coordinates. */
-	found := get_location()
+	_, found := get_location(command.x, command.y, command.z)
 	if !found || nampla != nil || pn == 0 {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid coordinates in NAME command.\n")
-		return
+		return nil
 	}
 
 	/* Get planet abbreviation. */
-	skip_whitespace()
-	original_line_pointer = input_line_pointer
-	if get_class_abbr() != PLANET_ID {
-		/* Check if PL was mispelled (i.e, "PT" or "PN"). Otherwise assume that it was accidentally omitted. */
-		if tolower(*original_line_pointer) != 'p' || isalnum(*(original_line_pointer + 2)) {
-			input_line_pointer = original_line_pointer
+	if classAbbr, ok := get_class_abbr(command.planet); !ok || classAbbr == nil {
+		if classAbbr, ok = get_class_abbr("PL " + command.planet); !ok || classAbbr == nil {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid planet name in NAME command.\n")
+			return nil
+		} else if classAbbr.abbr_type != PLANET_ID {
+			log.Println("bug 4808: assert(classAbbr.abbr_type == PLANET_ID)")
+			fprintf(log_file, "!!! Order ignored:\n")
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Internal error: code 4808. Please notify GM!\n")
+			return nil
 		}
+	} else if classAbbr.abbr_type != PLANET_ID {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Invalid planet name in NAME command.\n")
+		return nil
 	}
 
 	/* Get planet name. */
 	name_length = get_name()
 	if name_length < 1 {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in NAME command.\n")
-		return
+		return nil
 	}
 
 	/* Search existing namplas for name and location. */
@@ -4769,18 +4843,15 @@ func do_NAME_command(s *orders.Section, c *orders.Command) []error {
 		}
 
 		/* Check if a named planet already exists at this location. */
-		if nampla.x == x && nampla.y == y && nampla.z == z &&
-			nampla.pn == pn {
-			fprintf(log_file, "!!! Order ignored:\n")
+		if nampla.x == x && nampla.y == y && nampla.z == z && nampla.pn == pn {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! The planet at these coordinates already has a name.\n")
-			return
+			return nil
 		}
 
 		/* Make upper case copy of nampla name. */
-		for i := 0; i < 32; i++ {
-			upper_nampla_name[i] = toupper(nampla.name[i])
-		}
+		upper_nampla_name = strings.ToUpper(nampla.name)
 
 		/* Compare names. */
 		if strcmp(upper_nampla_name, upper_name) == 0 {
@@ -4790,10 +4861,10 @@ func do_NAME_command(s *orders.Section, c *orders.Command) []error {
 	}
 
 	if found {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Planet in NAME command already exists.\n")
-		return
+		return nil
 	}
 
 	/* Add new nampla to database for this species. */
@@ -4806,20 +4877,20 @@ func do_NAME_command(s *orders.Section, c *orders.Command) []error {
 			fprintf(stderr, "\n\t%s\n", input_line)
 			exit(-1)
 		}
-		nampla = nampla_base + species.num_namplas
+		nampla = nampla_base[species.num_namplas] // warning: was nampla_base + species.num_namplas
 		species.num_namplas += 1
 		delete_nampla(nampla) /* Set everything to zero. */
 	}
 
 	/* Initialize new nampla. */
-	strcpy(nampla.name, original_name)
+	nampla.name = original_name // warning: was strcpy(nampla.name, original_name)
 	nampla.x = x
 	nampla.y = y
 	nampla.z = z
 	nampla.pn = pn
 	nampla.status = COLONY
 	nampla.planet_index = star.planet_index + pn - 1
-	planet = planet_base + nampla.planet_index
+	planet = planet_base[nampla.planet_index] // warning: was planet_base + nampla.planet_index
 	nampla.message = planet.message
 
 	/* Everything else was set to zero in above call to 'delete_nampla'. */
@@ -4839,6 +4910,8 @@ func do_NAME_command(s *orders.Section, c *orders.Command) []error {
 	log_string(", planet #")
 	log_int(nampla.pn)
 	log_string(".\n")
+
+	return nil
 }
 
 //*************************************************************************
