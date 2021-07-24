@@ -93,6 +93,7 @@ var (
 	}
 	g_spec_name             string // warning: code assumes [32]byte
 	g_spec_number           int
+	germ_bombs_used         [MAX_SPECIES][MAX_SPECIES]int
 	header_printed          int
 	home_planet             *planet_data
 	ignore_field_distorters bool
@@ -360,7 +361,6 @@ extern struct ship_data *   ship_base;
 
 extern int   num_transactions;
 extern char  field_distorted[MAX_SPECIES];
-extern short germ_bombs_used[MAX_SPECIES][MAX_SPECIES];
 extern struct planet_data * planet_base;
 extern struct species_data *c_species[MAX_SPECIES];
 extern struct nampla_data * c_nampla[MAX_SPECIES];
