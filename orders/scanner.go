@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package orders
 
 import (
+	"log"
 	"strconv"
 	"strings"
 	"unicode"
@@ -34,6 +35,7 @@ type Scanner struct {
 type Token struct {
 	Line, Col int // one-based values
 	Text      string
+	Message   []byte
 }
 
 func NewScanner(b []byte) *Scanner {
@@ -118,6 +120,9 @@ func (s *Scanner) Next() *Token {
 	}
 
 	word := strings.ToUpper(sb.String())
+	if word == "MESSAGE" {
+		log.Printf("[orders] MESSAGE not correctly implemented")
+	}
 
 	// check for keywords. these are the "commands" for orders.
 	for _, keyword := range []string{
