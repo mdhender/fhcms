@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mdhender/fhcms/agrep"
 	"github.com/mdhender/fhcms/config"
@@ -3162,7 +3163,7 @@ func do_DISBAND_command(s *orders.Section, c *orders.Command) []error {
 	case 1:
 		command.colony = c.Args[0]
 	default:
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
 		return nil
@@ -3874,45 +3875,86 @@ check_items:
 //*************************************************************************
 // do_int.c
 
+// do_INTERCEPT_command will economic units to intercept attacking ships
+// before they reach a colony.
+// Accepts the following formats
+//   INTERCEPT NUMBER
+// Where
+//   NUMBER is a non-negative integer and is the maximum number of units
+//          to spend on intercepting attacking ships in the current turn.
 func do_INTERCEPT_command(s *orders.Section, c *orders.Command) []error {
-	/* Check if this order was preceded by a PRODUCTION order. */
-	if !doing_production {
-		fprintf(log_file, "!!! Order ignored:\n")
+	if c.Name != "INTERCEPT" {
+		return []error{fmt.Errorf("internal error: %q passed to do_INTERCEPT_command", c.Name)}
+	} else if !(s.Name == "PRODUCTION") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name   string
+		number string // maximum number of units to spend
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.number = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
 	}
 
+	/* Check if this order was preceded by a PRODUCTION order. */
+	if !doing_production {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Missing PRODUCTION order.\n")
+		return nil
+	}
+
+	isColony := nampla != nampla_base[0] // warning: depends on that nampla_base 0 thing
+
 	/* Get amount to spend. */
-	_, ok := get_value()
-	if !ok || value < 0 {
-		fprintf(log_file, "!!! Order ignored:\n")
+	cost, err := strconv.Atoi(command.name)
+	if err != nil || cost < 0 {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing amount.\n")
-		return
+		return nil
 	}
-	if value == 0 {
-		value = balance
+	if cost == 0 {
+		cost, value = balance, balance
 	}
-	if value == 0 {
-		return
+	if cost == 0 {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		if isColony {
+			fprintf(log_file, "!!! The colony has insufficient funds available.\n")
+		} else {
+			fprintf(log_file, "!!! The planet has insufficient funds available.\n")
+		}
+		return nil
 	}
-	cost := value
 
 	/* Check if planet is under siege. */
 	if nampla.siege_eff != 0 {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Besieged planet cannot INTERCEPT!\n")
-		return
+		if isColony {
+			fprintf(log_file, "!!! Besieged colony cannot INTERCEPT.\n")
+		} else {
+			fprintf(log_file, "!!! Besieged planet cannot INTERCEPT.\n")
+		}
+		return nil
 	}
 
 	/* Check if sufficient funds are available. */
 	if check_bounced(cost) {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
-		return
+		return nil
 	}
 
 	log_string("    Preparations were made for an interception at a cost of ")
@@ -3920,7 +3962,7 @@ func do_INTERCEPT_command(s *orders.Section, c *orders.Command) []error {
 	log_string(".\n")
 
 	if first_pass {
-		return
+		return nil
 	}
 
 	/* Allocate funds. */
@@ -3935,10 +3977,9 @@ func do_INTERCEPT_command(s *orders.Section, c *orders.Command) []error {
 			continue
 		}
 
-		/* This interception was started by another planet in the same
-		 *      star system. */
+		/* This interception was started by another planet in the same star system. */
 		intercept[i].amount_spent += cost
-		return
+		return nil
 	}
 
 	if num_intercepts == MAX_INTERCEPTS {
@@ -3952,18 +3993,20 @@ func do_INTERCEPT_command(s *orders.Section, c *orders.Command) []error {
 	intercept[num_intercepts].amount_spent = cost
 
 	num_intercepts++
+
+	return nil
 }
 
 func handle_intercept(intercept_index int) {
 	var (
 		i, j, n, num_enemy_ships, alien_index, enemy_index, enemy_num, num_ships_left, array_index, bit_number int
 		is_an_enemy, is_distorted                                                                              bool
-		enemy_number                                                                                           [MAX_ENEMY_SHIPS]byte
 		bit_mask, cost_to_destroy                                                                              int
 		alien                                                                                                  *species_data
 		alien_sh, enemy_sh                                                                                     *ship_data_
-		enemy_ship                                                                                             [MAX_ENEMY_SHIPS]*ship_data_
 	)
+	var enemy_number [MAX_ENEMY_SHIPS]int // warning: was [MAX_ENEMY_SHIPS]byte
+	var enemy_ship [MAX_ENEMY_SHIPS]*ship_data_
 
 	/* Make a list of all enemy ships that jumped into this system. */
 	num_enemy_ships = 0
@@ -3993,7 +4036,7 @@ func handle_intercept(intercept_index int) {
 			}
 
 			/* Did it jump this turn? */
-			if !alien_sh.just_jumped {
+			if alien_sh.just_jumped == 0 {
 				continue
 			}
 			if alien_sh.just_jumped == 50 {
@@ -4115,7 +4158,7 @@ func handle_intercept(intercept_index int) {
 		transaction[n].ttype = SHIP_MISHAP
 		transaction[n].value = 1 /* Interception. */
 		transaction[n].number1 = enemy_number[enemy_index]
-		strcpy(transaction[n].name1, ship_name(enemy_sh))
+		transaction[n].name1 = ship_name(enemy_sh) // warning: was strcpy(transaction[n].name1, ship_name(enemy_sh))
 
 		delete_ship(enemy_sh)
 
@@ -4128,57 +4171,89 @@ func handle_intercept(intercept_index int) {
 //*************************************************************************
 // do_land.c
 
+// do_LAND_command will land a ship on planet with an active colony.
+// Accepts the following formats
+//   LAND SHIP          # valid only if ship is orbiting or on a colony
+//   LAND SHIP PN
+// Where
+//   SHIP   is the name of the ship to land.
+//   PN    is the number of the planet in the system.
+//          If PN is not specified, it will default to the planet
+//          that the ship is orbiting at the start of the turn.
 func do_LAND_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "LAND" {
+		return []error{fmt.Errorf("internal error: %q passed to do_LAND_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name string
+		ship string // name of ship
+		pn   string // orbit number / planet number to land on
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.ship = c.Args[0]
+	case 2:
+		command.ship, command.pn = c.Args[0], c.Args[1]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	var (
-		i, n, siege_effectiveness, landing_detected, landed          int
-		alien_number, alien_index, alien_pn, array_index, bit_number int
-		requested_alien_landing, alien_here, already_logged          int
-		bit_mask                                                     int
-		original_line_pointer                                        *byte
-		alien                                                        *species_data
-		alien_nampla                                                 *nampla_data
+		n, siege_effectiveness                           int
+		alien_number, alien_index, alien_pn, array_index int
+		alien                                            *species_data
+		alien_nampla                                     *nampla_data
 	)
+	var alien_here, requested_alien_landing, landed, landing_detected, already_logged bool // was int
 
 	/* Get the ship. */
-	original_line_pointer = input_line_pointer
-	found := get_ship()
+	_, found := get_ship(command.ship, false)
 	if !found {
-		/* Check for missing comma or tab after ship name. */
-		input_line_pointer = original_line_pointer
-		fix_separator()
-		found = get_ship()
-		if !found {
-			fprintf(log_file, "!!! Order ignored:\n")
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Invalid ship name in LAND command.\n")
-			return
-		}
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Invalid ship name in LAND command.\n")
+		return nil
 	}
 
-	/* Make sure the ship is not a starbase. */
+	/* Make sure the ship is not a starbase, under construction, or moved this turn. */
 	if ship.ttype == STARBASE {
-		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! A starbase cannot land on a planet!\n")
-		return
-	}
-
-	if ship.status == UNDER_CONSTRUCTION {
-		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! A starbase cannot land on a planet or colony.\n")
+		return nil
+	} else if ship.status == UNDER_CONSTRUCTION {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship is still under construction.\n")
-		return
-	}
-
-	if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
-		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		return nil
+	} else if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
-		return
+		return nil
 	}
 
 	/* Get the planet number, if specified. */
-	_, found = get_value()
+	// TODO: borked because this is a number?
+	if command.pn == "" {
+		found = false
+	} else if pn, err := strconv.Atoi(command.pn); err != nil || pn < 0 {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Invalid planet number in LAND command.\n")
+		return nil
+	} else {
+		// TODO: stop setting globals!
+		value, found = pn, true
+	}
 
 get_planet:
 
@@ -4187,7 +4262,7 @@ get_planet:
 	requested_alien_landing = false
 	landed = false
 	if !found {
-		found = get_location()
+		_, found = get_location(command.pn) /// TODO: borked?
 		if !found || nampla == nil {
 			found = false
 		}
@@ -4197,15 +4272,8 @@ get_planet:
 		found = false
 		alien_pn = value
 		requested_alien_landing = true
-		array_index = (species_number - 1) / 32
-		bit_number = (species_number - 1) % 32
-		bit_mask = 1 << bit_number
 		for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
-			if !data_in_memory[alien_index] {
-				continue
-			}
-
-			alien = spec_data[alien_index]
+			alien = spec_data[species_number-1] // warning: was spec_data[alien_index]
 			for i := 0; i < alien.num_namplas; i++ {
 				alien_nampla = namp_data[alien_index][i]
 
@@ -4258,10 +4326,6 @@ finish_up:
 		/* Notify the other alien(s). */
 		landed = found
 		for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
-			if !data_in_memory[alien_index] {
-				continue
-			}
-
 			if alien_index == species_number-1 {
 				continue
 			}
@@ -4332,11 +4396,15 @@ finish_up:
 				n = num_transactions
 				num_transactions++
 				transaction[n].ttype = LANDING_REQUEST
-				transaction[n].value = landed
+				if landed {
+					transaction[n].value = 1
+				} else {
+					transaction[n].value = 0
+				}
 				transaction[n].number1 = alien_index + 1
-				strcpy(transaction[n].name1, alien_nampla.name)
-				strcpy(transaction[n].name2, ship_name(ship))
-				strcpy(transaction[n].name3, species.name)
+				transaction[n].name1 = alien_nampla.name // warning: was strcpy(transaction[n].name1, alien_nampla.name)
+				transaction[n].name2 = ship_name(ship)   // warning: was strcpy(transaction[n].name2, ship_name(ship))
+				transaction[n].name3 = species.name      // warning: was strcpy(transaction[n].name3, species.name)
 
 				break
 			}
@@ -4346,7 +4414,7 @@ finish_up:
 	}
 
 	if alien_here && !landed {
-		return
+		return nil
 	}
 
 	if !found {
@@ -4357,27 +4425,26 @@ finish_up:
 			goto get_planet
 		}
 
-		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing planet in LAND command.\n")
-		return
+		return nil
 	}
 
 	/* Make sure the ship and the planet are in the same star system. */
-	if ship.x != nampla.x || ship.y != nampla.y ||
-		ship.z != nampla.z {
-		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+	if ship.x != nampla.x || ship.y != nampla.y || ship.z != nampla.z {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship and planet are not in the same sector.\n")
-		return
+		return nil
 	}
 
 	/* Make sure planet is populated. */
 	if !isset(nampla.status, POPULATED) {
-		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Planet in LAND command is not populated.\n")
-		return
+		return nil
 	}
 
 	/* Move the ship. */
@@ -4385,11 +4452,10 @@ finish_up:
 	ship.status = ON_SURFACE
 
 	if already_logged {
-		return
+		return nil
 	}
 
-	/* If the planet is under siege, the landing may be detected by the
-	 *  besiegers. */
+	/* If the planet is under siege, the landing may be detected by the  besiegers. */
 	log_string("    ")
 	log_string(ship_name(ship))
 
@@ -4440,14 +4506,15 @@ finish_up:
 					n = num_transactions
 					num_transactions++
 					transaction[n].ttype = DETECTION_DURING_SIEGE
-					transaction[n].value = 1 /* Landing. */
-					strcpy(transaction[n].name1, nampla.name)
-					strcpy(transaction[n].name2, ship_name(ship))
-					strcpy(transaction[n].name3, species.name)
+					transaction[n].value = 1               /* Landing. */
+					transaction[n].name1 = nampla.name     // warning: was strcpy(transaction[n].name1, nampla.name)
+					transaction[n].name2 = ship_name(ship) // warning: was strcpy(transaction[n].name2, ship_name(ship))
+					transaction[n].name3 = species.name    // warning: was strcpy(transaction[n].name3, species.name)
 					transaction[n].number3 = alien_number
 				}
 			}
 
+			// TODO: maybe consider lieing sometime about being detected
 			if rnd(100) <= siege_effectiveness {
 				/* Ship doesn't know if it was detected. */
 				log_string(" may have been detected by the besiegers when it landed on PL ")
@@ -4474,6 +4541,8 @@ finish_up:
 	}
 
 	log_string(".\n")
+
+	return nil
 }
 
 //*************************************************************************
@@ -4482,23 +4551,16 @@ finish_up:
 /* This routine will create the "loc" array based on current species' data. */
 func do_locations() {
 	num_locs = 0
-
 	for species_number = 1; species_number <= galaxy.num_species; species_number++ {
-		if !data_in_memory[species_number-1] {
-			continue
-		}
-
 		species = spec_data[species_number-1]
 		nampla_base = namp_data[species_number-1]
 		ship_base = species.ships
 
 		for i := 0; i < species.num_namplas; i++ {
 			nampla = nampla_base[i]
-
 			if nampla.pn == 99 {
 				continue
 			}
-
 			if isset(nampla.status, POPULATED) {
 				add_location(nampla.x, nampla.y, nampla.z)
 			}
@@ -4512,7 +4574,6 @@ func do_locations() {
 			if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
 				continue
 			}
-
 			add_location(ship.x, ship.y, ship.z)
 		}
 	}
@@ -4532,7 +4593,6 @@ func add_location(x, y, z int) {
 		if loc[i].s != species_number {
 			continue
 		}
-
 		return /* This location is already in list for this species. */
 	}
 
@@ -4554,82 +4614,75 @@ func add_location(x, y, z int) {
 //*************************************************************************
 // do_mes.c
 
+// do_MESSAGE_command sends a message to a known speciea
+// Accepts the following formats
+//   MESSAGE SPECIES
+//   TEXT
+//   ZZZ
+// Where
+//   SPECIES is the name of the species to send the message to. it must
+//           included the "SP" code.
+//   TEXT    is the text of the message. it may span multiple lines.
+//   ZZZ     is the message terminator. it must be the first text on the line.
 func do_MESSAGE_command(s *orders.Section, c *orders.Command) []error {
-	var i, message_number, message_fd int
-	var c1, c2, c3 byte
-	var message_file io.Writer
+	if c.Name != "MESSAGE" {
+		return []error{fmt.Errorf("internal error: %q passed to do_MESSAGE_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name    string
+		species string // species name
+		text    []byte
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.species = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	var i, message_number int
 
 	/* Get destination of message. */
 	var bad_species bool
-	if !get_species_name() {
-		fprintf(log_file, "!!! Order ignored:\n")
+	if !get_species_name(command.species) {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in MESSAGE command.\n")
 		bad_species = true
 	}
 
 	/* Generate a random number, create a filename with it, and use it to store message. */
+	var filename string
 	if !first_pass && !bad_species {
-		var filename string
 		for {
 			/* Generate a random filename. */
 			message_number = rnd(32000)
-			filename := fmt.Sprintf("m%d.msg", message_number)
-
+			filename := fmt.Sprintf("D:\\GoLand\\fhcms\\testdata\\m%d.msg", message_number)
 			// TODO: this should be a stat() call?
-			/* Make sure that this filename is not already in use. */
-			message_fd = open(filename, 0)
-			if message_fd < 0 {
-				break
+			if _, err := os.Stat(filename); err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					break
+				}
 			}
-
 			/* File already exists. Try again. */
-			close(message_fd)
-		}
-
-		message_file = fopen(filename, "w")
-		if message_file == nil {
-			fprintf(stderr, "\n\n!!! Cannot open message file '%s' for writing !!!\n\n", filename)
-			exit(-1)
 		}
 	}
 
 	/* Copy message to file. */
+	// borked. order parser should have read this.
+	if err := ioutil.WriteFile(filename, command.text, 0644); err != nil {
+		fprintf(stderr, "\n\n!!! Cannot open message file %q for writing !!!\n\n", filename)
+		panic(err)
+	}
 	unterminated_message := false
-	for {
-		/* Read next line. */
-		input_line_pointer = fgets(input_line, 256, input_file)
-		if input_line_pointer == nil {
-			unterminated_message = true
-			end_of_file = true
-			break
-		}
-
-		skip_whitespace()
-
-		c1 = input_line_pointer.get()
-		input_line_pointer.incr()
-		c2 = input_line_pointer.get()
-		input_line_pointer.incr()
-		c3 = input_line_pointer.get()
-		input_line_pointer.incr()
-
-		c1 = toupper(c1)
-		c2 = toupper(c2)
-		c3 = toupper(c3)
-
-		if c1 == 'Z' && c2 == 'Z' && c3 == 'Z' {
-			break
-		}
-
-		if !first_pass && !bad_species {
-			fputs(input_line, message_file)
-		}
-	}
-
-	if bad_species {
-		return
-	}
 
 	/* Log the result. */
 	log_string("    A message was sent to SP ")
@@ -4637,16 +4690,14 @@ func do_MESSAGE_command(s *orders.Section, c *orders.Command) []error {
 	log_string(".\n")
 
 	if unterminated_message {
-		log_string("  ! WARNING: Message was not properly terminated with ZZZ!")
-		log_string(" Any orders that follow the message will be assumed")
+		log_string("  ! WARNING: Message was not properly terminated with ZZZ!\n")
+		log_string(" Any orders that follow the message will be assumed\n")
 		log_string(" to be part of the message and will be ignored!\n")
 	}
 
 	if first_pass {
-		return
+		return nil
 	}
-
-	fclose(message_file)
 
 	/* Define this message transaction and add to list of transactions. */
 	if num_transactions == MAX_TRANSACTIONS {
@@ -4659,9 +4710,11 @@ func do_MESSAGE_command(s *orders.Section, c *orders.Command) []error {
 	transaction[i].ttype = MESSAGE_TO_SPECIES
 	transaction[i].value = message_number
 	transaction[i].number1 = species_number
-	strcpy(transaction[i].name1, species.name)
+	transaction[i].name1 = species.name // warning: was strcpy(transaction[i].name1, species.name)
 	transaction[i].number2 = g_spec_number
-	strcpy(transaction[i].name2, g_spec_name)
+	transaction[i].name2 = g_spec_name // warning: was strcpy(transaction[i].name2, g_spec_name)
+
+	return nil
 }
 
 //*************************************************************************

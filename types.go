@@ -136,7 +136,7 @@ type ship_data_ struct {
 	class                  int            /* Ship class. */
 	dest_x, dest_y, dest_z int            /* Destination if ship was forced to jump from combat.  Also used by TELESCOPE command. And for SHIELDS in combat. */
 	item_quantity          [MAX_ITEMS]int /* Quantity of each item carried. */
-	just_jumped            bool           /* Set if ship jumped this turn. */
+	just_jumped            int            /* Set if ship jumped this turn. */ // 50 means MOVEd?
 	loading_point          int            /* Nampla index for planet where ship was last loaded with CUs. Zero = none. Use 9999 for home planet. */
 	remaining_cost         int            /* The cost needed to complete the ship if still under construction. */
 	special                int            /* Different for each application. */
