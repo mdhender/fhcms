@@ -5919,12 +5919,12 @@ got_nampla:
 // Accepts the following formats
 //   RECYCLE NUMBER CODE
 //   RECYCLE SHIP
-//   RECYCLE STARBASE
 // Where
 //   NUMBER is a non-negative integer and is the maximum amount of the
 //          item to recyle. Zero (0) means to recycle all available units.
 //   CODE   is the abbreviation for the unit to recycle.
-//   SHIP   is the name of the ship to recycle. It must include the code.
+//   SHIP   is the name of the ship or starbase to recycle. It must include
+//          the code.
 func do_RECYCLE_command(s *orders.Section, c *orders.Command) []error {
 	if c.Name != "RECYCLE" {
 		return []error{fmt.Errorf("internal error: %q passed to do_RECYCLE_command", c.Name)}
@@ -5944,7 +5944,7 @@ func do_RECYCLE_command(s *orders.Section, c *orders.Command) []error {
 		name  string
 		limit int
 		code  string // abbreviation for the unit to recycle
-		ship  string // name of ship
+		ship  string // name of ship or starbase
 	}{name: c.Name}
 	switch len(c.Args) {
 	case 1:
@@ -5991,7 +5991,7 @@ func do_RECYCLE_command(s *orders.Section, c *orders.Command) []error {
 	if command.limit == 0 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! No units available to recycle.\n")
+		fprintf(log_file, "!!! Attempt to recycle more items than are available.\n")
 		return nil
 	} else if command.limit < 0 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
@@ -6129,73 +6129,156 @@ recycle_ship:
 //*************************************************************************
 // do_rep.c
 
+// do_REPAIR_command repairs a ship using damage repair units from the
+// ship's cargo. If a sector is specified instead of a single ship,
+// all ships in the sector will pool their damage repair units and
+// perform as much repair work as possible.
+// Accepts the following formats
+//   REPAIR SHIP
+//   REPAIR SHIP NUMBER
+//   REPAIR X Y Z AGE
+// Where
+//   AGE    is a non-negative integer and is the limit for applying
+//          damage repair from the pool. All ships with an effective age
+//          greater than this value are candidates for repair. Repairs
+//          will be applied to bring those ships down to this age, but no
+//          lower. Priority starts with the most heavily damaged. If not
+//          given, this defaults to age zero.
+//   NUMBER is a non-negative integer and is the maximum number of damage
+//          repair units to consume. If no number is supplied when
+//          repairing a ship, then the ship will be repaired to age zero.
+//          If there aren't enough damage repair units for that, then the
+//          ship will be repaird to as near to age zero as possible using
+//          the available units.
+//   SHIP   is the name of a ship or starbase to repair.
+//   X      is the x-coordinate for the sector.
+//   Y      is the y-coordinate for the sector.
+//   Z      is the z-coordinate for the sector.
 func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
-	var n, x, y, z, age_reduction, num_dr_units int
+	if c.Name != "REPAIR" {
+		return []error{fmt.Errorf("internal error: %q passed to do_REPAIR_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name       string
+		allIn      bool
+		desiredAge int
+		limit      int
+		ship       string // name of ship or starbase to repair
+		x, y, z    int    // sector coordinates
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.ship, command.allIn = c.Args[0], true
+	case 2:
+		command.ship = c.Args[0]
+		if i, err := strconv.Atoi(c.Args[1]); err != nil || i < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid count in REPAIR command.\n")
+		} else {
+			command.limit = i
+		}
+	case 3, 4:
+		if x, err := strconv.Atoi(c.Args[0]); err != nil || x < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid x-coordinate in REPAIR command.\n")
+		} else {
+			command.x = x
+		}
+		if y, err := strconv.Atoi(c.Args[1]); err != nil || y < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid y-coordinate in REPAIR command.\n")
+		} else {
+			command.y = y
+		}
+		if z, err := strconv.Atoi(c.Args[2]); err != nil || z < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid z-coordinate in REPAIR command.\n")
+		} else {
+			command.z = z
+		}
+		if len(c.Args) == 4 {
+			if desiredAge, err := strconv.Atoi(c.Args[3]); err != nil || desiredAge < 0 {
+				fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+				fprintf(log_file, "!!! %s\n", c.OriginalInput)
+				fprintf(log_file, "!!! Invalid desired age limit in REPAIR command.\n")
+			} else {
+				command.desiredAge = desiredAge
+			}
+		} else {
+			command.desiredAge = 0
+		}
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	// shadow global variables
+	var x, y, z int
+
+	// local variables
+	var n, age_reduction, num_dr_units int
 	var total_dr_units, dr_units_used, max_age, desired_age int
-	var original_line_pointer *cstring
 	var damaged_ship *ship_data_
 
 	/* See if this is a "pool" repair. */
-	if _, ok := get_value(); ok {
-		x = value
-		y, _ = get_value()
-		z, _ = get_value()
-
-		if _, ok := get_value(); ok {
-			desired_age = value
-		} else {
-			desired_age = 0
-		}
-
+	if command.ship == "" {
+		x, y, z, desired_age = command.x, command.y, command.z, command.desiredAge
 		goto pool_repair
 	}
 
 	/* Get the ship to be repaired. */
-	original_line_pointer = input_line_pointer
-	if !get_ship() {
-		/* Check for missing comma or tab after ship name. */
-		input_line_pointer = original_line_pointer
-		fix_separator()
-		if !get_ship() {
-			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Ship to be repaired does not exist.\n")
-			return
-		}
-	}
-
-	if ship.status == UNDER_CONSTRUCTION {
+	if _, ok := get_ship(command.ship, false); !ok {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! Ship to be repaired does not exist.\n")
+		return nil
+	} else if ship.status == UNDER_CONSTRUCTION {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s", original_line)
 		fprintf(log_file, "!!! Item to be repaired is still under construction.\n")
-		return
-	}
-
-	if ship.age < 1 {
+		return nil
+	} else if ship.age < 1 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s", original_line)
 		fprintf(log_file, "!!! Ship or starbase is too new to repair.\n")
-		return
+		return nil
+	} else if ship.item_quantity[DR] == 0 {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! Ship does not have any DRs.\n")
+		return nil
 	}
 
 	/* Get number of damage repair units to use. */
-	if _, ok := get_value(); ok {
-		if value == 0 {
+	value = command.limit // argh. globals.
+	if command.allIn {
+		// repair the ship to as close to age zero as possible.
+		age_reduction = ship.age
+		n = age_reduction * ship.tonnage
+		num_dr_units = (n + 15) / 16
+	} else {
+		if command.limit == 0 {
 			num_dr_units = ship.item_quantity[DR]
 		} else {
-			num_dr_units = value
+			num_dr_units = command.limit
 		}
-
 		age_reduction = (16 * num_dr_units) / ship.tonnage
 		if age_reduction > ship.age {
 			age_reduction = ship.age
 			n = age_reduction * ship.tonnage
 			num_dr_units = (n + 15) / 16
 		}
-	} else {
-		age_reduction = ship.age
-		n = age_reduction * ship.tonnage
-		num_dr_units = (n + 15) / 16
 	}
 
 	/* Check if sufficient units are available. */
@@ -6203,12 +6286,11 @@ func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 		if ship.item_quantity[DR] == 0 {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Ship does not have any DRs!\n")
-			return
+			fprintf(log_file, "!!! Ship does not have any DRs.\n")
+			return nil
 		}
 		fprintf(log_file, "! WARNING: %s", original_line)
-		fprintf(log_file, "! Ship does not have %d DRs. Substituting %d for %d.\n",
-			num_dr_units, ship.item_quantity[DR], num_dr_units)
+		fprintf(log_file, "! Ship does not have %d DRs. Substituting %d for %d.\n", num_dr_units, ship.item_quantity[DR], num_dr_units)
 		num_dr_units = ship.item_quantity[DR]
 	}
 
@@ -6216,13 +6298,12 @@ func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 	age_reduction = (16 * num_dr_units) / ship.tonnage
 	if age_reduction < 1 {
 		if value == 0 {
-			return
+			return nil
 		}
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! %d DRs is not enough to do a repair.\n",
-			num_dr_units)
-		return
+		fprintf(log_file, "!!! %d DRs is not enough to do a repair.\n", num_dr_units)
+		return nil
 	}
 
 	/* Log what was repaired. */
@@ -6246,7 +6327,7 @@ func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 	log_int(ship.age)
 	log_string(".\n")
 
-	return
+	return nil
 
 pool_repair:
 
@@ -6261,6 +6342,7 @@ pool_repair:
 	}
 
 	/* Repair ships, starting with the most heavily damaged. */
+	// continue until we run out of repair units or no more ships are left to repair
 	dr_units_used = 0
 	for total_dr_units > 0 {
 		/* Find most heavily damaged ship. */
@@ -6279,11 +6361,11 @@ pool_repair:
 				damaged_ship = ship
 			}
 		}
-
-		if max_age == 0 {
+		if max_age == 0 { // no more ships to repair
 			break
 		}
 
+		// tag the ship so that we never attempt to repair it twice
 		damaged_ship.special = 99
 
 		age_reduction = max_age - desired_age
@@ -6322,7 +6404,7 @@ pool_repair:
 	}
 
 	if dr_units_used == 0 {
-		return
+		return nil
 	}
 
 	/* Subtract units used from ships at the location. */
@@ -6343,6 +6425,8 @@ pool_repair:
 			break
 		}
 	}
+
+	return nil
 }
 
 //*************************************************************************
