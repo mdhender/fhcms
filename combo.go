@@ -5954,6 +5954,7 @@ func do_RECYCLE_command(s *orders.Section, c *orders.Command) []error {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid item count in RECYCLE command.\n")
+			return nil
 		} else {
 			command.limit = i
 		}
@@ -6180,6 +6181,7 @@ func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid count in REPAIR command.\n")
+			return nil
 		} else {
 			command.limit = i
 		}
@@ -6188,6 +6190,7 @@ func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid x-coordinate in REPAIR command.\n")
+			return nil
 		} else {
 			command.x = x
 		}
@@ -6195,6 +6198,7 @@ func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid y-coordinate in REPAIR command.\n")
+			return nil
 		} else {
 			command.y = y
 		}
@@ -6202,6 +6206,7 @@ func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid z-coordinate in REPAIR command.\n")
+			return nil
 		} else {
 			command.z = z
 		}
@@ -6210,6 +6215,7 @@ func do_REPAIR_command(s *orders.Section, c *orders.Command) []error {
 				fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 				fprintf(log_file, "!!! %s\n", c.OriginalInput)
 				fprintf(log_file, "!!! Invalid desired age limit in REPAIR command.\n")
+				return nil
 			} else {
 				command.desiredAge = desiredAge
 			}
@@ -7302,64 +7308,98 @@ func do_SCAN_command(s *orders.Section, c *orders.Command) []error {
 //*************************************************************************
 // do_send.c
 
+// do_SEND_command transfers economic units to another species. The species
+// must be known and must not be an enemy of the sender.
+// Accepts the following formats
+//   SEND NUMBER SPECIES
+// Where
+//   NUMBER  is a non-negative integer and is the amount to transfer. If zero,
+//           then transfer all available economic units.
+//   SPECIES is the name of the receiving species. It must include the "SP"
+//           code before the name.
 func do_SEND_command(s *orders.Section, c *orders.Command) []error {
-	var n, contact_word_number, contact_bit_number int
-	var num_available, contact_mask, item_count int
-	var nampla1, nampla2 *nampla_data
-
-	/* Get number of EUs to transfer. */
-	_, ok := get_value()
-
-	/* Make sure value is meaningful. */
-	if !ok || value < 0 {
+	if c.Name != "SEND" {
+		return []error{fmt.Errorf("internal error: %q passed to do_SEND_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Invalid item count in SEND command.\n")
-		return
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
 	}
-	item_count = value
+	command := struct {
+		name    string
+		amount  int
+		species string // name of species
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 2:
+		if amount, err := strconv.Atoi(c.Args[0]); err != nil || amount < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid amount in SEND command.\n")
+			return nil
+		} else {
+			command.amount = amount
+		}
+		command.species = c.Args[1]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	var n, num_available, item_count int
+
+	/* Get number of EUs to transfer. */
+	item_count = command.amount
+
+	/* Make sure value is meaningful. */
+	if item_count < 0 {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Invalid amount in SEND command.\n")
+		return nil
+	}
 
 	num_available = species.econ_units
 	if item_count == 0 {
 		item_count = num_available
 	}
 	if item_count == 0 {
-		return
+		return nil
 	}
 	if num_available < item_count {
 		if num_available == 0 {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
-			fprintf(log_file, "!!! You do not have any EUs!\n")
-			return
+			fprintf(log_file, "!!! You do not have any EUs.\n")
+			return nil
 		}
-		fprintf(log_file, "! WARNING: %s", input_line)
-		fprintf(log_file, "! You do not have %d EUs! Substituting %d for %d.\n",
-			item_count, num_available, item_count)
+		fprintf(log_file, "! WARNING: %s\n", input_line)
+		fprintf(log_file, "! You do not have %d EUs! Substituting %d for %d.\n", item_count, num_available, item_count)
 		item_count = num_available
 	}
 
 	/* Get destination of transfer. */
-	found := get_species_name()
+	found := get_species_name(command.species)
 	if !found {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in SEND command.\n")
-		return
-	}
-
-	/* Check if we've met this species and make sure it is not an enemy. */
-	if !species.contact[g_spec_number] {
+		return nil
+	} else if !species.contact[g_spec_number] {
+		/* Check if we've met this species and make sure it is not an enemy. */
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't SEND to a species you haven't met.\n")
-		return
-	}
-	if species.enemy[g_spec_number] {
+		return nil
+	} else if species.enemy[g_spec_number] {
+		/* Check if we've met this species and make sure it is not an enemy. */
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You may not SEND economic units to an ENEMY.\n")
-		return
+		return nil
 	}
 
 	/* Make the transfer and log the result. */
@@ -7377,7 +7417,7 @@ func do_SEND_command(s *orders.Section, c *orders.Command) []error {
 	species.econ_units -= item_count
 
 	if first_pass {
-		return
+		return nil
 	}
 
 	/* Define this transaction. */
@@ -7392,32 +7432,54 @@ func do_SEND_command(s *orders.Section, c *orders.Command) []error {
 	transaction[n].donor = species_number
 	transaction[n].recipient = g_spec_number
 	transaction[n].value = item_count
-	strcpy(transaction[n].name1, species.name)
-	strcpy(transaction[n].name2, g_spec_name)
+	transaction[n].name1 = species.name // warning: was strcpy(transaction[n].name1, species.name)
+	transaction[n].name2 = g_spec_name  // warning: was strcpy(transaction[n].name2, g_spec_name)
 
 	/* Make the transfer to the alien. */
 	spec_data[g_spec_number-1].econ_units += item_count
 	data_modified[g_spec_number-1] = true
+
+	return nil
 }
 
 //*************************************************************************
 // do_shipyard.c
 
+// do_SHIPYARD_command increases the number of shipyards orbiting the
+// production planet. Fails if the required economic units are not available.
+// Accepts the following formats
+//   SHIPYARD
 func do_SHIPYARD_command(s *orders.Section, c *orders.Command) []error {
-	/* Check if this order was preceded by a PRODUCTION order. */
-	if !doing_production {
+	if c.Name != "SHIPYARD" {
+		return []error{fmt.Errorf("internal error: %q passed to do_SHIPYARD_command", c.Name)}
+	} else if !(s.Name == "PRODUCTION") {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	} else if !doing_production {
+		/* Check if this order was preceded by a PRODUCTION order. */
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Missing PRODUCTION order.\n")
+		return nil
+	}
+	switch len(c.Args) {
+	case 0: // no arguments
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
 	}
 
 	/* Make sure this is not a mining or resort colony. */
+	// TODO: this should use isset()
 	if (nampla.status&MINING_COLONY) != 0 || (nampla.status&RESORT_COLONY) != 0 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You may not build shipyards on a mining or resort colony!\n")
-		return
+		return nil
 	}
 
 	/* Check if planet has already built a shipyard. */
@@ -7425,7 +7487,7 @@ func do_SHIPYARD_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Only one shipyard can be built per planet per turn!\n")
-		return
+		return nil
 	}
 
 	/* Check if sufficient funds are available. */
@@ -7434,7 +7496,7 @@ func do_SHIPYARD_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
-		return
+		return nil
 	}
 
 	nampla.shipyards++
@@ -7445,6 +7507,8 @@ func do_SHIPYARD_command(s *orders.Section, c *orders.Command) []error {
 	log_string("    Spent ")
 	log_long(cost)
 	log_string(" to increase shipyard capacity by 1.\n")
+
+	return nil
 }
 
 //*************************************************************************
@@ -7453,14 +7517,14 @@ func do_SHIPYARD_command(s *orders.Section, c *orders.Command) []error {
 func do_siege(bat *battle_data, act *action_data) {
 	var a, d, attacking_species_number, defending_species_number int
 	var defending_nampla *nampla_data
-	var attacking_ship *ship_data
+	var attacking_ship *ship_data_
 	var defending_species, attacking_species *species_data
 
 	for defender_index := 0; defender_index < act.num_units_fighting; defender_index++ {
 		if act.unit_type[defender_index] == BESIEGED_NAMPLA {
-			defending_nampla = act.fighting_unit[defender_index] // cast to *nampla_data
+			defending_nampla = act.fighting_unit[defender_index].nampla // cast to *nampla_data
 
-			defending_nampla.siege_eff = true
+			defending_nampla.siege_eff = 1 // true
 
 			d = act.fighting_species_index[defender_index]
 			defending_species = c_species[d]
@@ -7468,7 +7532,7 @@ func do_siege(bat *battle_data, act *action_data) {
 
 			for attacker_index := 0; attacker_index < act.num_units_fighting; attacker_index++ {
 				if act.unit_type[attacker_index] == SHIP {
-					attacking_ship = act.fighting_unit[attacker_index] // cast to *ship_data
+					attacking_ship = act.fighting_unit[attacker_index].ship // cast to *ship_data
 
 					a = act.fighting_species_index[attacker_index]
 
@@ -7491,10 +7555,10 @@ func do_siege(bat *battle_data, act *action_data) {
 						transaction[i].z = defending_nampla.z
 						transaction[i].pn = defending_nampla.pn
 						transaction[i].number1 = attacking_species_number
-						strcpy(transaction[i].name1, attacking_species.name)
+						transaction[i].name1 = attacking_species.name // warning: was strcpy(transaction[i].name1, attacking_species.name)
 						transaction[i].number2 = defending_species_number
-						strcpy(transaction[i].name2, defending_species.name)
-						strcpy(transaction[i].name3, attacking_ship.name)
+						transaction[i].name2 = defending_species.name // warning: was strcpy(transaction[i].name2, defending_species.name)
+						transaction[i].name3 = attacking_ship.name    // warning: was strcpy(transaction[i].name3, attacking_ship.name)
 					}
 				}
 			}
@@ -7507,47 +7571,86 @@ func do_siege(bat *battle_data, act *action_data) {
 //*************************************************************************
 // do_teach.c
 
+// do_TEACH_command transfers knowledge to another species. The species must
+// be known and must not be a declared enemy.
+// Accepts the following formats
+//   TEACH TECH NUMBER SPECIES
+//   TEACH TECH SPECIES           ; defaults NUMBER to zero
+//   TEACH NUMBER TECH SPECIES
+// Where
+//   NUMBER  is a non-negative integer and is the maximum level to teach.
+//           If zero, teach up to the current tech level. If not given,
+//           default to zero.
+//   SPECIES is the name of the species to teach.
+//   TECH    is the abbreviation of the technology to teach.
 func do_TEACH_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "TEACH" {
+		return []error{fmt.Errorf("internal error: %q passed to do_TEACH_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name    string
+		level   int
+		species string // name of the species
+		tech    string // abbreviation for the tech
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 2:
+		command.tech, command.species = c.Args[0], c.Args[1]
+	case 3:
+		if level, err := strconv.Atoi(c.Args[1]); err == nil {
+			command.level, command.tech = level, c.Args[2]
+		} else if level, err = strconv.Atoi(c.Args[2]); err == nil {
+			command.level, command.tech = level, c.Args[1]
+		} else {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid tech level in TEACH command.\n")
+			return nil
+		}
+		command.species = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	if command.level < 0 {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Invalid tech level in TEACH command.\n")
+		return nil
+	}
+
 	var tech int
-	var need_technology bool
 
 	/* Get technology. */
-	temp_ptr := input_line_pointer
-	if get_class_abbr() != TECH_ID {
-		need_technology = true /* Sometimes players accidentally reverse the arguments. */
-		input_line_pointer = temp_ptr
+	if classAbbr, ok := get_class_abbr(command.tech); !ok || classAbbr.abbr_type != TECH_ID {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Invalid technology in TEACH command.\n")
+		return nil
 	} else {
-		need_technology = false
-		tech = abbr_index
+		tech = classAbbr.abbr_index
 	}
 
 	/* See if a maximum tech level was specified. */
-	max_tech_level, max_level_specified := get_value()
-	if max_level_specified {
-		if max_tech_level > species.tech_level[tech] {
-			max_tech_level = species.tech_level[tech]
-		}
-	} else {
+	max_tech_level := command.level
+	if max_tech_level > species.tech_level[tech] {
 		max_tech_level = species.tech_level[tech]
 	}
 
-	/* Get the technology now if it wasn't obtained above. */
-	if need_technology {
-		if get_class_abbr() != TECH_ID {
-			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s\n", c.OriginalInput)
-			fprintf(log_file, "!!! Invalid or missing technology!\n")
-			return
-		}
-		tech = abbr_index
-	}
-
 	/* Get species to transfer knowledge to. */
-	if !get_species_name() {
+	if !get_species_name(command.species) {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in TEACH command.\n")
-		return
+		return nil
 	}
 
 	/* Check if we've met this species and make sure it is not an enemy. */
@@ -7555,18 +7658,16 @@ func do_TEACH_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't TEACH a species you haven't met.\n")
-		return
-	}
-
-	if species.enemy[g_spec_number] {
+		return nil
+	} else if species.enemy[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't TEACH an ENEMY.\n")
-		return
+		return nil
 	}
 
 	if first_pass {
-		return
+		return nil
 	}
 
 	/* Define this transaction and add to list of transactions. */
@@ -7581,7 +7682,7 @@ func do_TEACH_command(s *orders.Section, c *orders.Command) []error {
 	transaction[i].donor = species_number
 	transaction[i].recipient = g_spec_number
 	transaction[i].value = tech
-	strcpy(transaction[i].name1, species.name)
+	transaction[i].name1 = species.name // warning: was strcpy(transaction[i].name1, species.name)
 	transaction[i].number3 = max_tech_level
 }
 
