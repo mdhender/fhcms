@@ -7684,38 +7684,85 @@ func do_TEACH_command(s *orders.Section, c *orders.Command) []error {
 	transaction[i].value = tech
 	transaction[i].name1 = species.name // warning: was strcpy(transaction[i].name1, species.name)
 	transaction[i].number3 = max_tech_level
+
+	return nil
 }
 
 //*************************************************************************
 // do_tech.c
 
+// do_TECH_command is apparently not used.
+// Accepts the following formats
+//   TECH MAXCOST TECH MAXLEVELS SPECIES
+// Where
+//   MAXCOST   is an integer and is the maximum cost.
+//   MAXLEVELS is an integer and is the maximum level.
 func do_TECH_command(s *orders.Section, c *orders.Command) []error {
-	var tech int
-	var need_technology bool
-
-	/* See if a maximum cost was specified. */
-	max_cost, max_cost_specified := get_value()
-	if !max_cost_specified {
-		max_cost = 0
+	if c.Name != "TECH" {
+		return []error{fmt.Errorf("internal error: %q passed to do_TECH_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
 	}
-
-	/* Get technology. */
-	if get_class_abbr() != TECH_ID {
-		need_technology = true /* Sometimes players accidentally reverse the arguments. */
-	} else {
-		need_technology = false
-		tech = abbr_index
+	command := struct {
+		name     string
+		maxCost  int
+		tech     int
+		maxLevel int
+		species  string
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 4:
+		if maxCost, err := strconv.Atoi(c.Args[0]); err != nil {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Missing maximum cost in TECH command.\n")
+			return nil
+		} else if maxCost < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid maximum cost in TECH command.\n")
+			return nil
+		} else {
+			command.maxCost = maxCost
+		}
+		if tech, ok := get_class_abbr(c.Args[1]); !ok || tech.abbr_type != TECH_ID {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Missing technology in TECH command.\n")
+			return nil
+		} else {
+			command.tech = tech.abbr_index
+		}
+		if maxLevel, err := strconv.Atoi(c.Args[2]); err != nil {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Missing maximum level in TECH command.\n")
+			return nil
+		} else if maxLevel < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid maximum level in TECH command.\n")
+			return nil
+		} else {
+			command.maxLevel = maxLevel
+		}
+		command.species = c.Args[3]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
 	}
-
-	/* See if a maximum tech level was specified. */
-	max_tech_level, max_level_specified := get_value()
 
 	/* Get species to transfer tech to. */
-	if !get_species_name() {
+	if !get_species_name(command.species) {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in TECH command.\n")
-		return
+		return nil
 	}
 
 	/* Check if we've met this species and make sure it is not an enemy. */
@@ -7723,24 +7770,12 @@ func do_TECH_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't transfer tech to a species you haven't met.\n")
-		return
-	}
-	if species.enemy[g_spec_number] {
+		return nil
+	} else if species.enemy[g_spec_number] {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't transfer tech to an ENEMY.\n")
-		return
-	}
-
-	/* Get the technology now if it wasn't obtained above. */
-	if need_technology {
-		if get_class_abbr() != TECH_ID {
-			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s\n", c.OriginalInput)
-			fprintf(log_file, "!!! Invalid or missing technology!\n")
-			return
-		}
-		tech = abbr_index
+		return nil
 	}
 
 	/* Make sure there isn't already a transfer of the same technology from
@@ -7749,7 +7784,7 @@ func do_TECH_command(s *orders.Section, c *orders.Command) []error {
 		if transaction[i].ttype != TECH_TRANSFER {
 			continue
 		}
-		if transaction[i].value != tech {
+		if transaction[i].value != command.tech {
 			continue
 		}
 		if transaction[i].number1 != species_number {
@@ -7762,18 +7797,18 @@ func do_TECH_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! You can't transfer the same tech to the same species more than once!\n")
-		return
+		return nil
 	}
 
 	/* Log the result. */
 	log_string("    Will attempt to transfer ")
-	log_string(tech_name[tech])
+	log_string(tech_name[command.tech])
 	log_string(" technology to SP ")
 	log_string(g_spec_name)
 	log_string(".\n")
 
 	if first_pass {
-		return
+		return nil
 	}
 
 	/* Define this transaction and add to list of transactions. */
@@ -7787,15 +7822,19 @@ func do_TECH_command(s *orders.Section, c *orders.Command) []error {
 	transaction[i].ttype = TECH_TRANSFER
 	transaction[i].donor = species_number
 	transaction[i].recipient = g_spec_number
-	transaction[i].value = tech
-	strcpy(transaction[i].name1, species.name)
-	transaction[i].number1 = max_cost
-	strcpy(transaction[i].name2, g_spec_name)
-	if max_level_specified && (max_tech_level < species.tech_level[tech]) {
-		transaction[i].number3 = max_tech_level
+	transaction[i].value = command.tech
+	transaction[i].name1 = species.name
+	transaction[i].number1 = command.maxCost
+	transaction[i].name2 = g_spec_name
+	if command.maxLevel == 0 {
+		transaction[i].number3 = species.tech_level[command.tech]
+	} else if command.maxLevel < species.tech_level[command.tech] {
+		transaction[i].number3 = command.maxLevel
 	} else {
-		transaction[i].number3 = species.tech_level[tech]
+		transaction[i].number3 = species.tech_level[command.tech]
 	}
+
+	return nil
 }
 
 //*************************************************************************
