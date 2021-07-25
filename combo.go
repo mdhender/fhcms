@@ -5235,30 +5235,63 @@ finish_up:
 //*************************************************************************
 // do_prod.c
 
+// do_PRODUCTION_command sets the active production center.
+// Accepts the following formats
+//   PRODUCTION PLANET
+// Where
+//   PLANET is the name of the homeworld or a colony. In either case, the
+//          name must include the "PL" code.
 func do_PRODUCTION_command(s *orders.Section, c *orders.Command, missing_production_order bool) []error {
-	var (
-		i, j, abbr_type, name_length, alien_number, under_siege  int
-		siege_percent_effectiveness, new_alien, num_siege_ships  int
-		mining_colony, resort_colony, special_colony, ship_index int
-		enemy_on_same_planet, trans_index, production_penalty    int
-		ls_needed, shipyards_for_this_species                    int
+	if c.Name != "PRODUCTION" {
+		return []error{fmt.Errorf("internal error: %q passed to do_PRODUCTION_command", c.Name)}
+	} else if !(s.Name == "PRODUCTION") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name   string
+		planet string // name of homeworld or colony
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.planet = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
 
-		upper_nampla_name [32]byte
+	// shadow globals
+	var abbr_type, name_length, ship_index int
+	var ship *ship_data_
 
-		n, RMs_produced, num_bytes, total_siege_effectiveness        int
-		siege_effectiveness                                          [MAX_SPECIES + 1]int
-		EUs_available_for_siege                                      int
-		EUs_for_distribution, EUs_for_this_species, total_EUs_stolen int
-		special_production                                           int
-		pop_units_here                                               [MAX_SPECIES + 1]int
-		alien_pop_units, total_alien_pop_here, total_besieged_pop    int
-		ib_for_this_species, ab_for_this_species, total_ib, total_ab int
-		total_effective_tonnage                                      int
+	// local variables
+	var i, j, alien_number int
+	var siege_percent_effectiveness, num_siege_ships int
+	var trans_index, production_penalty int
+	var ls_needed, shipyards_for_this_species int
+	var upper_nampla_name string // warning: was [32]byte
+	var n, RMs_produced, total_siege_effectiveness int
+	var siege_effectiveness [MAX_SPECIES + 1]int
+	var EUs_available_for_siege int
+	var EUs_for_distribution, EUs_for_this_species, total_EUs_stolen int
+	var special_production int
+	var pop_units_here [MAX_SPECIES + 1]int
+	var alien_pop_units, total_alien_pop_here, total_besieged_pop int
+	var ib_for_this_species, ab_for_this_species, total_ib, total_ab int
+	var total_effective_tonnage int
+	var alien *species_data
+	var alien_nampla *nampla_data
+	var alien_ship *ship_data_
+	var found bool
 
-		alien                           *species_data
-		alien_nampla_base, alien_nampla *nampla_data
-		alien_ship, ship                *ship_data_
-	)
+	var alien_nampla_base []*nampla_data                                                                // warning: was *nampla_data
+	var enemy_on_same_planet, mining_colony, new_alien, resort_colony, special_colony, under_siege bool // warning: was int
+	var classAbbr *class_abbr
+	var ok bool
 
 	if doing_production {
 		/* Terminate production for previous planet. */
@@ -5284,61 +5317,60 @@ func do_PRODUCTION_command(s *orders.Section, c *orders.Command, missing_product
 	}
 
 	/* Get PL abbreviation. */
-	abbr_type = get_class_abbr()
-
-	if abbr_type != PLANET_ID {
-		fprintf(log_file, "!!! Order ignored:\n")
+	if classAbbr, ok = get_class_abbr(command.planet); !ok {
+		// be nice and plug in the PL
+		command.planet = "PL " + command.planet
+		classAbbr, ok = get_class_abbr(command.planet)
+	}
+	if classAbbr.abbr_type != PLANET_ID {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in PRODUCTION command.\n")
-		return
+		return nil
 	}
+	abbr_type = classAbbr.abbr_type
 
 	/* Get planet name. */
-	name_length = get_name()
+	name_length = get_name(command.planet)
 
 	/* Search all namplas for name. */
-	found := false
+	found = false
 	for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
 		nampla = nampla_base[i]
-
 		if nampla.pn == 99 {
 			continue
 		}
-
 		/* Make upper case copy of nampla name. */
-		for i := 0; i < 32; i++ {
-			upper_nampla_name[i] = toupper(nampla.name[i])
-		}
-
+		upper_nampla_name = strings.ToUpper(nampla.name)
 		/* Compare names. */
-		if strcmp(upper_nampla_name, upper_name) == 0 {
+		if upper_nampla_name == upper_name {
 			found = true
 			break
 		}
 	}
 
 	if !found {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in PRODUCTION command.\n")
-		return
+		return nil
 	}
 
 	/* Check if production was already done for this planet. */
 	if production_done[nampla_index] {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! More than one PRODUCTION command for planet.\n")
-		return
+		return nil
 	}
 	production_done[nampla_index] = true
 
 	/* Check if this colony was disbanded. */
 	if isset(nampla.status, DISBANDED_COLONY) {
-		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Production orders cannot be given for a disbanded colony!\n")
-		return
+		fprintf(log_file, "!!! Production orders cannot be given for a disbanded colony.\n")
+		return nil
 	}
 
 got_nampla:
@@ -5353,7 +5385,7 @@ got_nampla:
 	special_colony = isset(nampla.status, MINING_COLONY|RESORT_COLONY)
 
 	/* Get planet data for this nampla. */
-	planet = planet_base + nampla.planet_index
+	planet = planet_base[nampla.planet_index] // warning: was planet_base + nampla.planet_index
 
 	/* Check if fleet maintenance cost is so high that riots ensued. */
 	i = 0
@@ -5372,7 +5404,7 @@ got_nampla:
 		}
 
 		if resort_colony || !special_colony {
-			if i {
+			if i != 0 {
 				log_string("and ")
 			}
 			log_string("manufacturing base by ")
@@ -5542,8 +5574,7 @@ got_nampla:
 
 		/* Check if alien ship is still at the siege location. */
 		if !found {
-			continue /* It must have jumped away and self-
-			 *      destructed, or was recycled. */
+			continue /* It must have jumped away and self-destructed, or was recycled. */
 		}
 		if alien_ship.x != nampla.x {
 			continue
@@ -5660,15 +5691,14 @@ got_nampla:
 	if under_siege {
 		log_string(".\n")
 	} else {
-		return
+		return nil
 	}
 
 	/* Determine percent effectiveness of the siege. */
 	total_effective_tonnage = 2500 * total_siege_effectiveness
 
 	if nampla.mi_base+nampla.ma_base == 0 {
-		siege_percent_effectiveness = -9999 /* New colony with nothing
-		 *  installed yet. */
+		siege_percent_effectiveness = -9999 /* New colony with nothing installed yet. */
 	} else {
 		siege_percent_effectiveness = total_effective_tonnage / (((species.tech_level[MI] * nampla.mi_base) + (species.tech_level[MA] * nampla.ma_base)) / 10)
 	}
@@ -5677,10 +5707,10 @@ got_nampla:
 		siege_percent_effectiveness = 95
 	} else if siege_percent_effectiveness == -9999 {
 		log_string("      However, although planet is populated, it has no economic base.\n\n")
-		return
+		return nil
 	} else if siege_percent_effectiveness < 1 {
 		log_string("      However, because of the weakness of the siege, it was completely ineffective!\n\n")
-		return
+		return nil
 	}
 
 	if enemy_on_same_planet {
@@ -5703,7 +5733,7 @@ got_nampla:
 		if n < 1 {
 			continue
 		}
-		alien = &spec_data[alien_number-1]
+		alien = spec_data[alien_number-1]
 		EUs_for_this_species = (n * EUs_for_distribution) / total_siege_effectiveness
 		if EUs_for_this_species < 1 {
 			continue
@@ -5741,9 +5771,9 @@ got_nampla:
 		transaction[trans_index].y = nampla.y
 		transaction[trans_index].z = nampla.z
 		transaction[trans_index].number1 = siege_percent_effectiveness
-		strcpy(transaction[trans_index].name1, species.name)
-		strcpy(transaction[trans_index].name2, alien.name)
-		strcpy(transaction[trans_index].name3, nampla.name)
+		transaction[trans_index].name1 = species.name // warning: was strcpy(transaction[trans_index].name1, species.name)
+		transaction[trans_index].name2 = alien.name   // warning: was strcpy(transaction[trans_index].name2, alien.name)
+		transaction[trans_index].name3 = nampla.name  // warning: was strcpy(transaction[trans_index].name3, nampla.name)
 	}
 	log_char('\n')
 
@@ -5758,7 +5788,7 @@ got_nampla:
 	}
 
 	if !enemy_on_same_planet {
-		return
+		return nil
 	}
 
 	/* All ships currently under construction may be detected by the besiegers and destroyed. */
@@ -5782,10 +5812,10 @@ got_nampla:
 
 	/* Check for assimilation. */
 	if isset(nampla.status, HOME_PLANET) {
-		return
+		return nil
 	}
 	if total_alien_pop_here < 1 {
-		return
+		return nil
 	}
 
 	total_besieged_pop = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install + nampla.AUs_to_install
@@ -5796,10 +5826,10 @@ got_nampla:
 	}
 
 	if total_besieged_pop/total_alien_pop_here >= 5 {
-		return
+		return nil
 	}
 	if siege_percent_effectiveness < 95 {
-		return
+		return nil
 	}
 
 	log_string("      PL ")
@@ -5851,8 +5881,8 @@ got_nampla:
 		transaction[trans_index].number1 = ib_for_this_species / 2
 		transaction[trans_index].number2 = ab_for_this_species / 2
 		transaction[trans_index].number3 = shipyards_for_this_species
-		strcpy(transaction[trans_index].name1, species.name)
-		strcpy(transaction[trans_index].name2, nampla.name)
+		transaction[trans_index].name1 = species.name // warning: was strcpy(transaction[trans_index].name1, species.name)
+		transaction[trans_index].name2 = nampla.name  // warning: was strcpy(transaction[trans_index].name2, nampla.name)
 	}
 
 	/* Erase the original colony. */
@@ -5868,13 +5898,15 @@ got_nampla:
 	nampla.siege_eff = 0
 	nampla.status = COLONY
 	nampla.shipyards = 0
-	nampla.hiding = 0
-	nampla.hidden = 0
+	nampla.hiding = false // was 0
+	nampla.hidden = false // was 0
 	nampla.use_on_ambush = 0
 
 	for i := 0; i < MAX_ITEMS; i++ {
 		nampla.item_quantity[i] = 0
 	}
+
+	return nil
 }
 
 //*************************************************************************
@@ -5888,7 +5920,7 @@ func do_RECYCLE_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored:\n")
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		return nil
 	}
 
 	/* Get number of items to recycle. */

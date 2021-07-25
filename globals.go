@@ -147,23 +147,24 @@ var (
 		10, 20, 30, 40, 50, 60, 70, 80,
 		90, 999, 999, 999, 999, 999,
 	}
-	just_opened_file  int
-	last_random       uint32 = 1924085713 /* Random seed. */
-	loc               [MAX_LOCATIONS]sp_loc_data
-	log_file          io.Writer
-	log_indentation   int
-	log_line          [1028]byte
-	log_position      int
-	log_start_of_line bool
-	log_stdout        bool
-	log_summary       bool
-	log_to_file       bool
-	logging_disabled  bool
-	make_enemy        [MAX_SPECIES][MAX_SPECIES]int // species id of the enemy-to-be
-	name_length       int
-	namp_data         [MAX_SPECIES][]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
-	nampla1_base      *nampla_data                // warning: code assumes *nampla_data
-	nampla2_base      *nampla_data                // warning: code assumes *nampla_data
+	just_opened_file     int
+	last_planet_produced bool                // warning: was int
+	last_random          uint32 = 1924085713 /* Random seed. */
+	loc                  [MAX_LOCATIONS]sp_loc_data
+	log_file             io.Writer
+	log_indentation      int
+	log_line             [1028]byte
+	log_position         int
+	log_start_of_line    bool
+	log_stdout           bool
+	log_summary          bool
+	log_to_file          bool
+	logging_disabled     bool
+	make_enemy           [MAX_SPECIES][MAX_SPECIES]int // species id of the enemy-to-be
+	name_length          int
+	namp_data            [MAX_SPECIES][]*nampla_data // warning: code assumes [MAX_SPECIES]*nampla_data
+	nampla1_base         *nampla_data                // warning: code assumes *nampla_data
+	nampla2_base         *nampla_data                // warning: code assumes *nampla_data
 	// by convention, nampla_base[0] is the species home planet
 	nampla_base          []*nampla_data // warning: code assumes *nampla_data
 	nampla_index         int
@@ -186,8 +187,10 @@ var (
 	pn                   int
 	post_arrival_phase   bool // warning: must be initialized to true for PostArrivalMain
 	printing_alien       int
+	production_capacity  int
 	production_done      [1000]bool
 	prompt_gm            bool
+	raw_material_units   int
 	report_file          io.Writer
 	ship1_base           *ship_data_
 	ship2_base           *ship_data_
@@ -458,7 +461,6 @@ extern struct species_data *species;
 extern struct nampla_data * nampla, *nampla_base;
 extern struct ship_data *   ship;
 
-int last_planet_produced = false;
 
 
 extern int nampla_index, doing_production, first_pass, next_nampla_index,
