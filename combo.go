@@ -6611,11 +6611,14 @@ do_cost:
  * occurred. Otherwise, it will return false. */
 
 func do_round(option int, round_number int, bat *battle_data, act *action_data) int {
+	// shadow globals
+	var header_printed int
+	// local globals
 	var i, j, n, unit_index, combat_occurred, total_shots int
 	var attacker_index, defender_index, found, chance_to_hit int
 	var attacker_ml, attacker_gv, defender_ml int
 	var target_index [MAX_SHIPS]int
-	var num_targets, header_printed, num_sp, fj_chance, shields_up int
+	var num_targets, num_sp, fj_chance, shields_up int
 	var FDs_were_destroyed int
 	var di [3]int
 	var start_unit, current_species int
@@ -6623,7 +6626,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 	var aux_shield_power, units_destroyed, tons, percent_decrease int
 	var damage_done, damage_to_ship, damage_to_shields, op1, op2 int
 	var original_cost, recycle_value, economic_units int
-	var attacker_name, defender_name [64]byte
+	var attacker_name, defender_name string // warning: was [64]byte
 	var attacking_species, defending_species *species_data
 	var sh, attacking_ship, defending_ship *ship_data_
 	var attacking_nampla, defending_nampla *nampla_data
@@ -6648,7 +6651,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 				/* Convert all non-combatants, if any, to combatants. */
 				for i := start_unit; i < unit_index; i++ {
 					if act.unit_type[i] == SHIP {
-						sh = act.fighting_unit[i] // cast as *ship_data
+						sh = act.fighting_unit[i].ship // cast as *ship_data
 						sh.special = 0
 					}
 				}
@@ -6658,11 +6661,11 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		}
 
 		n = act.num_shots[unit_index]
-		if act.surprised[unit_index] {
+		if act.surprised[unit_index] != 0 {
 			n = 0
 		}
 		if act.unit_type[unit_index] == SHIP {
-			sh = act.fighting_unit[unit_index] // cast as *ship_data
+			sh = act.fighting_unit[unit_index].ship // cast as *ship_data
 			if sh.special == NON_COMBATANT {
 				n = 0
 			}
@@ -6674,11 +6677,11 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 	total_shots = 0
 	for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
 		n = act.num_shots[unit_index]
-		if act.surprised[unit_index] {
+		if act.surprised[unit_index] != 0 {
 			n = 0
 		}
 		if act.unit_type[unit_index] == SHIP {
-			sh = act.fighting_unit[unit_index] // cast as *ship_data
+			sh = act.fighting_unit[unit_index].ship // cast as *ship_data
 			if sh.special == NON_COMBATANT {
 				n = 0
 			}
@@ -6688,14 +6691,14 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 	}
 
 	/* Handle all shots. */
-	header_printed = false
-	combat_occurred = false
+	header_printed = 0  // false
+	combat_occurred = 0 // false
 	for total_shots > 0 {
 		/* check to make sure we arent in infinite loop
 		 * that usually happens when there are shots remaining
 		 * but the side with the shots has no more ships left*/
 		for i := 0; i < act.num_units_fighting; i++ {
-			attacking_ship = act.fighting_unit[i] // cast as *ship_data
+			attacking_ship = act.fighting_unit[i].ship // cast as *ship_data
 			if attacking_ship.age > 49 || attacking_ship.status == FORCED_JUMP || attacking_ship.status == JUMPED_IN_COMBAT || (attacking_ship.special == NON_COMBATANT && option != GERM_WARFARE) {
 				total_shots -= act.shots_left[i]
 				act.shots_left[i] = 0
@@ -6704,10 +6707,10 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		/* Determine who fires next. */
 		attacker_index = rnd(act.num_units_fighting) - 1
 		if act.unit_type[attacker_index] == SHIP {
-			attacking_ship = act.fighting_unit[attacker_index] // cast as *ship_data
+			attacking_ship = act.fighting_unit[attacker_index].ship // cast as *ship_data
 			i = act.fighting_species_index[attacker_index]
 			ignore_field_distorters = !field_distorted[i]
-			attacker_name = fmt.Sprintf("%s", ship_name(attacking_ship))
+			attacker_name = ship_name(attacking_ship)
 			ignore_field_distorters = false
 
 			/* Check if ship can fight. */
@@ -6724,7 +6727,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 				continue
 			}
 		} else {
-			attacking_nampla = act.fighting_unit[attacker_index] // cast as *nampla_data
+			attacking_nampla = act.fighting_unit[attacker_index].nampla // cast as *nampla_data
 			attacker_name = fmt.Sprintf("PL %s", attacking_nampla.name)
 
 			/* Check if planet still has defenses. */
@@ -6734,7 +6737,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		}
 
 		/* Make sure attacker is not someone who is being taken by surprise this round. */
-		if act.surprised[attacker_index] {
+		if act.surprised[attacker_index] == 0 {
 			continue
 		}
 
@@ -6745,12 +6748,12 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		attacker_gv = c_species[i].tech_level[GV]
 		for defender_index = 0; defender_index < act.num_units_fighting; defender_index++ {
 			j = act.fighting_species_index[defender_index]
-			if !bat.enemy_mine[i][j] {
+			if bat.enemy_mine[i][j] != 0 {
 				continue
 			}
 
 			if act.unit_type[defender_index] == SHIP {
-				defending_ship = act.fighting_unit[defender_index] // cast as *ship_data
+				defending_ship = act.fighting_unit[defender_index].ship // cast as *ship_data
 
 				if defending_ship.age > 49 {
 					continue /* Already destroyed. */
@@ -6765,7 +6768,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 					continue
 				}
 			} else {
-				defending_nampla = act.fighting_unit[defender_index] // cast as *nampla_data
+				defending_nampla = act.fighting_unit[defender_index].nampla // cast as *nampla_data
 
 				if defending_nampla.item_quantity[PD] == 0 && option == PLANET_ATTACK {
 					continue
@@ -6800,21 +6803,21 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		defender_ml = c_species[j].tech_level[ML]
 
 		if act.unit_type[defender_index] == SHIP {
-			defending_ship = act.fighting_unit[defender_index] // cast as *ship_data
+			defending_ship = act.fighting_unit[defender_index].ship // cast as *ship_data
 			ignore_field_distorters = !field_distorted[j]
 			defender_name = fmt.Sprintf("%s", ship_name(defending_ship))
 			ignore_field_distorters = false
 		} else {
-			defending_nampla = act.fighting_unit[defender_index] // cast as *nampla_data
+			defending_nampla = act.fighting_unit[defender_index].nampla // cast as *nampla_data
 			defender_name = fmt.Sprintf("PL %s", defending_nampla.name)
 		}
 
 		/* Print round number. */
-		if !header_printed {
+		if header_printed == 0 {
 			log_string("      Now doing round ")
 			log_int(round_number)
 			log_string(":\n")
-			header_printed = true
+			header_printed = 1 // true
 		}
 		attackerGvMl := attacker_gv + attacker_ml
 		if attackerGvMl <= 0 {
@@ -6829,7 +6832,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 			act.unit_type[attacker_index] == SHIP &&
 			act.unit_type[defender_index] == SHIP {
 			if forced_jump_units_used(attacker_index, defender_index, &total_shots, bat, act) {
-				combat_occurred = true
+				combat_occurred = 1 // true
 				continue
 			}
 		}
@@ -6850,7 +6853,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 
 		/* If a special target has been specified, then there is a 75%
 		 * chance that it will be attacked if it is available. */
-		if bat.special_target[i] && rnd(100) < 76 {
+		if bat.special_target[i] != 0 && rnd(100) < 76 {
 			if bat.special_target[i] == TARGET_PDS {
 				if act.unit_type[defender_index] != SHIP {
 					goto fire
@@ -6893,7 +6896,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		}
 
 		/* Fire! */
-		combat_occurred = true
+		combat_occurred = 1 // true
 		log_string("        ")
 		log_string(attacker_name)
 		log_string(" fires on ")
@@ -6911,11 +6914,11 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		 * attackers ML over the sum of attacker's and defender's ML.
 		 * Double this value if defender is surprised. */
 		chance_to_hit = (150 * attacker_ml) / combinedMl
-		if act.surprised[defender_index] {
+		if act.surprised[defender_index] != 0 {
 			chance_to_hit *= 2
-			shields_up = false
+			shields_up = 0 // false
 		} else {
-			shields_up = true
+			shields_up = 1 // true
 		}
 
 		/* If defending ship is field-distorted, chance-to-hit is reduced by 25%. */
@@ -7004,9 +7007,9 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		/* See if it got through shields. */
 		units_destroyed = 0
 		percent_decrease = 0
-		if !shields_up || act.shield_strength_left[defender_index] < 0 || damage_to_ship > 0 {
+		if shields_up == 0 || act.shield_strength_left[defender_index] < 0 || damage_to_ship > 0 {
 			/* Get net damage to ship or PDs. */
-			if shields_up {
+			if shields_up != 0 {
 				if act.unit_type[defender_index] == SHIP {
 					/* Total damage to ship is direct damage plus damage
 					 *  that shields could not absorb. */
@@ -7033,7 +7036,11 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 
 			if act.unit_type[defender_index] == SHIP {
 				defending_ship.age += percent_decrease / 2
-				units_destroyed = (defending_ship.age > 49)
+				if defending_ship.age > 49 {
+					units_destroyed = 1 // true
+				} else {
+					units_destroyed = 0 // false
+				}
 			} else {
 				units_destroyed = (percent_decrease * act.original_age_or_PDs[defender_index]) / 100
 				if units_destroyed > defending_nampla.item_quantity[PD] {
@@ -7063,8 +7070,8 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		defending_species = c_species[j]
 
 		/* Report if anything was destroyed. */
-		FDs_were_destroyed = false
-		if units_destroyed {
+		FDs_were_destroyed = 0 // false
+		if units_destroyed != 0 {
 			if act.unit_type[defender_index] == SHIP {
 				log_summary = true
 				log_string("        ")
@@ -7124,7 +7131,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 						 *  be announced, but we don't want any cargo to be
 						 *  destroyed. */
 						if i == FD {
-							FDs_were_destroyed = true
+							FDs_were_destroyed = 1 // true
 						}
 						if !this_is_a_hijacking {
 							defending_ship.item_quantity[FD] = 0
@@ -7183,7 +7190,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 					if j > 0 {
 						defending_ship.item_quantity[i] -= j
 						if i == FD {
-							FDs_were_destroyed = true
+							FDs_were_destroyed = 1 // true
 						}
 					}
 				}
@@ -7191,7 +7198,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 		}
 
 		j = act.fighting_species_index[defender_index]
-		if FDs_were_destroyed && field_distorted[j] && defending_ship.dest_x == 0 {
+		if FDs_were_destroyed != 0 && field_distorted[j] && defending_ship.dest_x == 0 {
 			/* Reveal the true name of the ship and the owning species. */
 			log_summary = true
 			if this_is_a_hijacking {
@@ -7206,13 +7213,14 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 			log_string(defending_species.name)
 			log_string(".\n")
 			log_summary = false
+			log.Println("TODO: defending_ship.dest_x is overloaded")
 			defending_ship.dest_x = 127 /* Ship is now exposed. */
 		}
 	}
 
 	/* No more surprises. */
 	for i := 0; i < act.num_units_fighting; i++ {
-		act.surprised[i] = false
+		act.surprised[i] = 0 // false
 	}
 
 	return combat_occurred
@@ -7221,27 +7229,51 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 //*************************************************************************
 // do_scan.c
 
+// do_SCAN_command scans the sector that a ship starts or ends a turn in.
+// Accepts the following formats
+//   SCAN SHIP
+// Where
+//   SHIP is the name of the ship to perform the scan.
 func do_SCAN_command(s *orders.Section, c *orders.Command) []error {
-	found := get_ship()
+	if c.Name != "SCAN" {
+		return []error{fmt.Errorf("internal error: %q passed to do_SCAN_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name string
+		ship string // name of ship
+	}{name: c.Name}
+
+	switch len(c.Args) {
+	case 1:
+		command.ship = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	_, found := get_ship(command.ship, false)
 	if !found {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid ship name in SCAN command.\n")
-		return
-	}
-
-	if ship.status == UNDER_CONSTRUCTION {
+		return nil
+	} else if ship.status == UNDER_CONSTRUCTION {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship is still under construction.\n")
-		return
-	}
-
-	if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
+		return nil
+	} else if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
-		return
+		return nil
 	}
 
 	/* Log the result. */
@@ -7249,7 +7281,7 @@ func do_SCAN_command(s *orders.Section, c *orders.Command) []error {
 		log_string("    A scan will be done by ")
 		log_string(ship_name(ship))
 		log_string(".\n")
-		return
+		return nil
 	}
 
 	/* Write scan of ship's location to log file. */
@@ -7263,6 +7295,8 @@ func do_SCAN_command(s *orders.Section, c *orders.Command) []error {
 	}
 
 	fprintf(log_file, "\n")
+
+	return nil
 }
 
 //*************************************************************************
