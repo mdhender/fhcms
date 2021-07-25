@@ -6432,27 +6432,83 @@ pool_repair:
 //*************************************************************************
 // do_res.c
 
+// do_RESEARCH_command consumes economic units for a chance to increase a
+// technological level. The chance depends on the current level and the
+// number of units expended. There's also a 1 in 6 chance that a level will
+// spontaneously increase by 1.
+// Accepts the following formats
+//   RESEARCH NUMBER TECH
+//   RESEARCH TECH NUMBER
+// Where
+//   NUMBER is a non-negative integer and is the number of units to spend.
+//          If zero, spend all remaining units on research.
+//   TECH   is the code for the technology to research. It must be MI, MA,
+//          ML, GV, LS, or BI. All other values are rejected.
 func do_RESEARCH_command(s *orders.Section, c *orders.Command) []error {
-	var n, tech, initial_level, current_level int
-	var cost, amount_spent, cost_for_one_level, funds_remaining, max_funds_available int
-
-	/* Check if this order was preceded by a PRODUCTION order. */
-	if !doing_production {
+	if c.Name != "RESEARCH" {
+		return []error{fmt.Errorf("internal error: %q passed to do_RESEARCH_command", c.Name)}
+	} else if !(s.Name == "PRODUCTION") {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	} else if !doing_production {
+		/* Check if this order was preceded by a PRODUCTION order. */
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Missing PRODUCTION order.\n")
+		return nil
+	}
+	command := struct {
+		name   string
+		amount int
+		tech   string // tech to research
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 2:
+		if amount, err := strconv.Atoi(c.Args[0]); err == nil {
+			if amount < 0 {
+				fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+				fprintf(log_file, "!!! %s\n", c.OriginalInput)
+				fprintf(log_file, "!!! Invalid amount to spend\n")
+				return nil
+			}
+			command.amount, command.tech = amount, c.Args[1]
+		} else if amount, err = strconv.Atoi(c.Args[1]); err == nil {
+			if amount < 0 {
+				fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+				fprintf(log_file, "!!! %s\n", c.OriginalInput)
+				fprintf(log_file, "!!! Invalid amount to spend\n")
+				return nil
+			}
+			command.amount, command.tech = amount, c.Args[0]
+		} else {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Missing or invalid amount to spend\n")
+			return nil
+		}
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
 	}
 
+	var tech, initial_level, current_level int
+	var cost, amount_spent, cost_for_one_level, funds_remaining, max_funds_available int
+
 	/* Get amount to spend. */
-	_, status := get_value()
-	need_amount_to_spend := (status == false) /* Sometimes players reverse the arguments. */
+	value = command.amount // argh. globals
+
 	/* Get technology. */
-	if get_class_abbr() != TECH_ID {
+	if classAbbr, ok := get_class_abbr(command.tech); !ok || classAbbr.abbr_type != TECH_ID {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing technology.\n")
-		return
+		return nil
+	} else {
+		abbr_index = classAbbr.abbr_index
 	}
 	tech = abbr_index
 
@@ -6460,19 +6516,14 @@ func do_RESEARCH_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Zero level can only be raised via TECH or TEACH.\n")
-		return
+		return nil
 	}
 
-	/* Get amount to spend if it was not obtained above. */
-	if need_amount_to_spend {
-		_, status = get_value()
-	}
-
-	if status == false || value < 0 {
+	if value < 0 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid or missing amount to spend!\n")
-		return
+		return nil
 	}
 
 do_cost:
@@ -6481,7 +6532,7 @@ do_cost:
 		value = balance
 	}
 	if value == 0 {
-		return
+		return nil
 	}
 	cost = value
 
@@ -6494,7 +6545,7 @@ do_cost:
 		max_funds_available += balance
 
 		if max_funds_available > 0 {
-			fprintf(log_file, "! WARNING: %s", input_line)
+			fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
 			fprintf(log_file, "! Insufficient funds. Substituting %d for %d.\n", max_funds_available, cost)
 			value = max_funds_available
 			goto do_cost
@@ -6503,7 +6554,7 @@ do_cost:
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
-		return
+		return nil
 	}
 
 	/* Check if we already have knowledge of this technology. */
@@ -6537,11 +6588,10 @@ do_cost:
 	}
 
 	if funds_remaining == 0 {
-		return
+		return nil
 	}
 
-	/* Increase in experience points is equal to whatever was not spent
-	 *  above. */
+	/* Increase in experience points is equal to whatever was not spent  above. */
 	species.tech_eps[tech] += funds_remaining
 
 	/* Log transaction. */
@@ -6550,6 +6600,8 @@ do_cost:
 	log_string(" on ")
 	log_string(tech_name[tech])
 	log_string(" research.\n")
+
+	return nil
 }
 
 //*************************************************************************
