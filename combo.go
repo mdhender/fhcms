@@ -140,34 +140,74 @@ func disbanded_ship(ship *ship_data_) bool {
 //*************************************************************************
 // do_ally.c
 
+// do_ALLY_command will set the diplomatic status of either a single
+// species or all species to "ally."
+// Accepts the following formats
+//   ALLY SPECIES
+//   ALLY NUMBER
+// Where
+//    SPECIES is the name of a species. Note that it must include the
+//            "SP" code!
+//    NUMBER  is any integer value.
 func do_ALLY_command(s *orders.Section, c *orders.Command) []error {
-	/* Get name of species that is being declared an ally. */
-	if !get_species_name() {
+	if c.Name != "ENEMY" {
+		return []error{fmt.Errorf("internal error: %q passed to do_ALLY_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE" || s.Name == "PRODUCTION") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name    string
+		all     bool   // true only if all species are to be updated
+		species string // name of species to set diplomatic status
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		if _, err := strconv.Atoi(c.Args[0]); err == nil {
+			command.all = true
+		} else {
+			command.all, command.species = false, c.Args[0]
+		}
+	default:
 		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", c.OriginalInput)
-		fprintf(log_file, "!!! Invalid or missing argument in ALLY command.\n")
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
 		return nil
 	}
 
-	/* Get array index and bit mask. */
-	log.Printf("do_ALLY_command: bit_mask is not derived correctly\n")
-	bit_mask := 0
+	/* See if declaration is for all species. */
+	if command.all {
+		// set all ally bits and clear all enemy bits
+		for i := 0; i < MAX_SPECIES; i++ {
+			species.ally[i], species.enemy[i] = true, false
+		}
+	} else {
+		/* Get name of species that is being declared an ally. */
+		if !get_species_name(command.species) {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid or missing argument in ALLY command.\n")
+			return nil
+		}
 
-	/* Check if we've met this species and make sure it is not an enemy. */
-	if !species.contact[g_spec_number] {
-		fprintf(log_file, "!!! Order ignored:\n")
-		fprintf(log_file, "!!! %s", c.OriginalInput)
-		fprintf(log_file, "!!! You can't declare alliance with a species you haven't met.\n")
-		return nil
+		/* Check if we've met this species. */
+		if !species.contact[g_spec_number] {
+			fprintf(log_file, "!!! Order ignored:\n")
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! You can't declare alliance with a species you haven't met.\n")
+			return nil
+		}
+
+		/* Set/clear the appropriate bit. */
+		species.ally[g_spec_number] = true   /* Set ally bit. */
+		species.enemy[g_spec_number] = false /* Clear enemy bit. */
 	}
-
-	/* Set/clear the appropriate bit. */
-	species.ally[g_spec_number] = true   /* Set ally bit. */
-	species.enemy[g_spec_number] = false /* Clear enemy bit. */
 
 	/* Log the result. */
 	log_string("    Alliance was declared with ")
-	if bit_mask == 0 {
+	if command.all {
 		log_string("ALL species")
 	} else {
 		log_string("SP ")
@@ -3255,21 +3295,28 @@ func do_ENEMY_command(s *orders.Section, c *orders.Command) []error {
 	if command.all {
 		// set all enememy bits and clear all ally bits
 		for i := 0; i < MAX_SPECIES; i++ {
-			species.enemy[i] = true
-			species.ally[i] = false
+			species.ally[i], species.enemy[i] = false, true
 		}
 	} else {
 		/* Get name of species that is being declared an enemy. */
 		if !get_species_name(command.species) {
-			fprintf(log_file, "!!! Order ignored:\n")
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid or missing argument in ENEMY command.\n")
 			return nil
 		}
 
+		/* Check if we've met this species. */
+		if !species.contact[g_spec_number] {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! You can't declare enmity towards a species you haven't met.\n")
+			return nil
+		}
+
 		/* Set/clear the appropriate bit. */
-		species.enemy[g_spec_number] = true /* Set enemy bit. */
 		species.ally[g_spec_number] = false /* Clear ally bit. */
+		species.enemy[g_spec_number] = true /* Set enemy bit. */
 	}
 
 	/* Log the result. */
@@ -4917,38 +4964,82 @@ func do_NAME_command(s *orders.Section, c *orders.Command) []error {
 //*************************************************************************
 // do_neutral.c
 
+// do_NEUTRAL_command will set the diplomatic status of either a single
+// species or all species to "neutral."
+// Accepts the following formats
+//   NEUTRAL SPECIES
+//   NEUTRAL NUMBER
+// Where
+//    SPECIES is the name of a species. Note that it must include the
+//            "SP" code!
+//    NUMBER  is any integer value.
 func do_NEUTRAL_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "NEUTRAL" {
+		return []error{fmt.Errorf("internal error: %q passed to do_NEUTRAL_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE" || s.Name == "PRODUCTION") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name    string
+		all     bool   // true only if all species are to be updated
+		species string // name of species to set diplomatic status
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		if _, err := strconv.Atoi(c.Args[0]); err == nil {
+			command.all = true
+		} else {
+			command.all, command.species = false, c.Args[0]
+		}
+	default:
+		fprintf(log_file, "!!! Order ignored:\n")
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	/* See if declaration is for all species. */
-	var allSpecies bool
-	if _, ok := get_value(); ok {
-		allSpecies = true
+	if command.all {
+		// set all enememy bits and clear all ally bits
 		for i := 0; i < MAX_SPECIES; i++ {
-			species.enemy[i] = false /* Clear all enemy bits. */
-			species.ally[i] = false  /* Clear all ally bits. */
+			species.ally[i], species.enemy[i] = false, false
 		}
 	} else {
-		/* Get name of species. */
-		if !get_species_name() {
-			fprintf(log_file, "!!! Order ignored:\n")
+		/* Get name of species that is being declared an enemy. */
+		if !get_species_name(command.species) {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid or missing argument in NEUTRAL command.\n")
-			return
+			return nil
 		}
 
-		/* Clear the appropriate bit. */
-		species.enemy[g_spec_number] = false /* Clear enemy bit. */
+		/* Check if we've met this species. */
+		if !species.contact[g_spec_number] {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! You can't declare neutrality towards a species you haven't met.\n")
+			return nil
+		}
+
+		/* Set/clear the appropriate bit. */
 		species.ally[g_spec_number] = false  /* Clear ally bit. */
+		species.enemy[g_spec_number] = false /* Clear enemy bit. */
 	}
 
 	/* Log the result. */
 	log_string("    Neutrality was declared towards ")
-	if allSpecies {
+	if command.all {
 		log_string("ALL species")
 	} else {
 		log_string("SP ")
 		log_string(g_spec_name)
 	}
 	log_string(".\n")
+
+	return nil
 }
 
 //*************************************************************************
