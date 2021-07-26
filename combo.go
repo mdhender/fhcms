@@ -7840,34 +7840,56 @@ func do_TECH_command(s *orders.Section, c *orders.Command) []error {
 //*************************************************************************
 // do_tel.c
 
+// do_TELESCOPE_command operates a gravitic telescope.
 func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "TELESCOPE" {
+		return []error{fmt.Errorf("internal error: %q passed to do_TELESCOPE_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name     string
+		starbase string // name of starbase to operate
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.starbase = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	var i, n, range_in_parsecs, max_range, alien_index int
 	var alien_number, alien_nampla_index, alien_ship_index int
 	var location_printed, industry, detection_chance, num_obs_locs int
 	var alien_name_printed, loc_index, success_chance, something_found int
 	var max_distance, max_distance_squared int
 	var delta_x, delta_y, delta_z, distance_squared int
-	var planet_ttype [32]byte
-	var obs_x, obs_y, obs_z [MAX_OBS_LOCS]byte
+	var planet_ttype string                   // warning: was [32]byte
+	var obs_x, obs_y, obs_z [MAX_OBS_LOCS]int // warning: was [MAX_OBS_LOCS]byte
 	var alien *species_data
 	var alien_nampla *nampla_data
 	var starbase, alien_ship *ship_data_
 
-	found := get_ship()
+	starbase, found := get_ship(command.starbase, false)
 	if !found || ship.ttype != STARBASE {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid starbase name in TELESCOPE command.\n")
-		return
+		return nil
 	}
-	starbase = ship
 
 	/* Make sure starbase does not get more than one TELESCOPE order per turn. */
 	if starbase.dest_z != 0 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! A starbase may only be given one TELESCOPE order per turn.\n")
-		return
+		return nil
 	}
 	starbase.dest_z = 99
 
@@ -7877,7 +7899,7 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Starbase is not carrying enough gravitic telescope units.\n")
-		return
+		return nil
 	}
 
 	/* Log the result. */
@@ -7891,7 +7913,7 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 		log_string(" will be operated by ")
 		log_string(ship_name(starbase))
 		log_string(".\n")
-		return
+		return nil
 	}
 
 	/* Define range parameters. */
@@ -7982,8 +8004,7 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 			delta_x = x - alien_ship.x
 			delta_y = y - alien_ship.y
 			delta_z = z - alien_ship.z
-			distance_squared = (delta_x * delta_x) + (delta_y * delta_y)
-			+(delta_z * delta_z)
+			distance_squared = (delta_x * delta_x) + (delta_y * delta_y) + (delta_z * delta_z)
 
 			if distance_squared == 0 {
 				continue /* Same loc as telescope. */
@@ -8034,12 +8055,12 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 	log_int(range_in_parsecs)
 	log_string(" parsecs):\n")
 
-	something_found = false
+	something_found = 0 // false
 
 	for loc_index = 0; loc_index < num_obs_locs; loc_index++ {
 		x, y, z := obs_x[loc_index], obs_y[loc_index], obs_z[loc_index]
 
-		location_printed = false
+		location_printed = 0 // false
 
 		for alien_index = 0; alien_index < galaxy.num_species; alien_index++ {
 			if !data_in_memory[alien_index] {
@@ -8051,9 +8072,8 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 				continue
 			}
 
-			alien = &spec_data[alien_index]
-
-			alien_name_printed = false
+			alien = spec_data[alien_index]
+			alien_name_printed = 0 // false
 
 			for alien_nampla_index = 0; alien_nampla_index < alien.num_namplas; alien_nampla_index++ {
 				alien_nampla = namp_data[alien_index][alien_nampla_index]
@@ -8091,23 +8111,23 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 				}
 
 				if isset(alien_nampla.status, HOME_PLANET) {
-					strcpy(planet_ttype, "Home planet")
+					planet_ttype = "Home planet"
 				} else if isset(alien_nampla.status, RESORT_COLONY) {
-					strcpy(planet_ttype, "Resort colony")
+					planet_ttype = "Resort colony"
 				} else if isset(alien_nampla.status, MINING_COLONY) {
-					strcpy(planet_ttype, "Mining colony")
+					planet_ttype = "Mining colony"
 				} else {
-					strcpy(planet_ttype, "Colony")
+					planet_ttype = "Colony"
 				}
 
-				if !alien_name_printed {
-					if !location_printed {
+				if alien_name_printed == 0 {
+					if location_printed == 0 {
 						fprintf(log_file, "\n    %d%3d%3d:\n", x, y, z)
-						location_printed = true
-						something_found = true
+						location_printed = 1 // true
+						something_found = 1  // true
 					}
 					fprintf(log_file, "      SP %s:\n", alien.name)
-					alien_name_printed = true
+					alien_name_printed = 1 // true
 				}
 
 				fprintf(log_file, "\t#%d: %s PL %s (%d)\n", alien_nampla.pn, planet_ttype, alien_nampla.name, industry)
@@ -8148,14 +8168,14 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 					continue
 				}
 
-				if !alien_name_printed {
-					if !location_printed {
+				if alien_name_printed == 0 {
+					if location_printed == 0 {
 						fprintf(log_file, "\n    %d%3d%3d:\n", x, y, z)
-						location_printed = true
-						something_found = true
+						location_printed = 1 // true
+						something_found = 1  // true
 					}
 					fprintf(log_file, "      SP %s:\n", alien.name)
-					alien_name_printed = true
+					alien_name_printed = 1 // true
 				}
 
 				truncate_name = false
@@ -8193,16 +8213,18 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 				transaction[n].y = starbase.y
 				transaction[n].z = starbase.z
 				transaction[n].number1 = alien_number
-				strcpy(transaction[n].name1, ship_name(alien_ship))
+				transaction[n].name1 = ship_name(alien_ship)
 			}
 		}
 	}
 
-	if something_found {
+	if something_found != 0 {
 		log_char('\n')
 	} else {
 		log_string("    No alien ships or planets were detected.\n\n")
 	}
+
+	return nil
 }
 
 //*************************************************************************
