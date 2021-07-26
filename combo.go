@@ -1836,20 +1836,12 @@ do_cost:
 			log_string(ship_name(ship))
 
 			if class == CU && num_items > 0 {
-				if nampla == nampla_base[0] { // by convention, nampla_base[0] is the species home planet
+				ship.loading_point = getLoadingPoint(nampla, nampla_base)
+				if ship.loading_point == 0 {
+					// by convention, nampla_base[0] is the species home planet
 					ship.loading_point = 9999 /* Home planet. */
-				} else {
-					ship.loading_point = -1 // just in case we con't find it
-					// warning: was ship.loading_point = (nampla - nampla_base)
-					for x, np := range nampla_base {
-						if nampla == np {
-							ship.loading_point = x
-							break
-						}
-					}
-					if ship.loading_point == -1 {
-						panic("assert(ship.loading_point != -1)")
-					}
+				} else if ship.loading_point == -1 {
+					panic("assert(ship.loading_point != -1)")
 				}
 			}
 		} else { /* Destination is 'destination_nampla'. */
@@ -3083,6 +3075,8 @@ func do_DEVELOP_command(s *orders.Section, c *orders.Command) []error {
 				ship.item_quantity[AU] += num_AUs
 			}
 
+			// TODO: fix this hack for finding the loading point
+			ship.unloading_point = getLoadingPoint(colony_nampla, nampla_base)
 			n = -1 // warning: was colony_nampla - nampla_base
 			for q := range nampla_base {
 				if colony_nampla == nampla_base[q] {
@@ -3097,9 +3091,11 @@ func do_DEVELOP_command(s *orders.Section, c *orders.Command) []error {
 			}
 			ship.unloading_point = n
 
+			// TODO: fix this hack for finding the loading point
+			ship.loading_point = getLoadingPoint(nampla, nampla_base)
 			n = -1 // warning: was nampla - nampla_base
 			for q := range nampla_base {
-				if colony_nampla == nampla_base[q] {
+				if nampla == nampla_base[q] {
 					n = q
 					break
 				}
@@ -7602,17 +7598,17 @@ func do_TEACH_command(s *orders.Section, c *orders.Command) []error {
 	case 2:
 		command.tech, command.species = c.Args[0], c.Args[1]
 	case 3:
-		if level, err := strconv.Atoi(c.Args[1]); err == nil {
-			command.level, command.tech = level, c.Args[2]
-		} else if level, err = strconv.Atoi(c.Args[2]); err == nil {
+		if level, err := strconv.Atoi(c.Args[0]); err == nil {
 			command.level, command.tech = level, c.Args[1]
+		} else if level, err = strconv.Atoi(c.Args[1]); err == nil {
+			command.level, command.tech = level, c.Args[0]
 		} else {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Invalid tech level in TEACH command.\n")
 			return nil
 		}
-		command.species = c.Args[0]
+		command.species = c.Args[2]
 	default:
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
@@ -8231,21 +8227,49 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 // do_terr.c
 
 func do_TERRAFORM_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "TERRAFORM" {
+		return []error{fmt.Errorf("internal error: %q passed to do_TERRAFORM_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name   string
+		amount int
+		planet string
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 2:
+		if amount, err := strconv.Atoi(c.Args[0]); err != nil || amount < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid or missing amount in TERRAFORM command.\n")
+			return nil
+		} else {
+			command.amount = amount
+		}
+		command.planet = c.Args[1]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	var i, j, ls_needed int
 	var home_planet, colony_planet *planet_data
 
 	/* Get number of TPs to use. */
-	num_plants, ok := get_value()
-	if !ok {
-		num_plants = 0
-	}
+	num_plants := command.amount
 
 	/* Get planet where terraforming is to be done. */
-	if !get_location() || nampla == nil {
+	if _, ok := get_location(command.planet); !ok || nampla == nil {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid planet name in TERRAFORM command.\n")
-		return
+		return nil
 	}
 
 	/* Make sure planet is not a home planet. */
@@ -8253,7 +8277,7 @@ func do_TERRAFORM_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Terraforming may not be done on a home planet.\n")
-		return
+		return nil
 	}
 
 	/* Find out how many terraforming plants are needed. */
@@ -8266,7 +8290,7 @@ func do_TERRAFORM_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Colony does not need to be terraformed.\n")
-		return
+		return nil
 	}
 
 	if num_plants == 0 {
@@ -8282,15 +8306,14 @@ func do_TERRAFORM_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! At least three TPs are needed to terraform.\n")
-		return
+		return nil
 	}
 
 	if num_plants > nampla.item_quantity[TP] {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! PL %s doesn't have that many TPs!\n",
-			nampla.name)
-		return
+		fprintf(log_file, "!!! PL %s doesn't have that many TPs!\n", nampla.name)
+		return nil
 	}
 
 	/* Log results. */
@@ -8383,65 +8406,53 @@ func do_TERRAFORM_command(s *orders.Section, c *orders.Command) []error {
 
 		num_plants -= 3
 	}
+
+	return nil
 }
 
 func fix_gases(pl *planet_data) {
-	var i, j, left int
-	var n int
-
 	total := 0
-	for i = 0; i < 4; i++ {
+	for i := 0; i < 4; i++ {
 		total += pl.gas_percent[i]
 	}
-
 	if total == 100 {
 		return
 	}
-
-	left = 100 - total
+	left := 100 - total
 
 	/* If we have at least one gas that is not the required gas, then we
 	 *  simply need to adjust existing gases. Otherwise, we have to add a
 	 *  neutral gas. */
 	add_neutral := true
-	for i = 0; i < 4; i++ {
+	for i := 0; i < 4; i++ {
 		if pl.gas_percent[i] == 0 {
 			continue
-		}
-
-		if pl.gas[i] == species.required_gas {
+		} else if pl.gas[i] == species.required_gas {
 			continue
 		}
-
 		add_neutral = false
-
 		break
 	}
-
 	if add_neutral {
 		goto add_neutral_gas
 	}
 
-	/* Randomly modify existing non-required gases until total percentage
-	 *  is exactly 100. */
+	/* Randomly modify existing non-required gases until total percentage is exactly 100. */
 	for left != 0 {
-		i = rnd(4) - 1
-
+		i := rnd(4) - 1
 		if pl.gas_percent[i] == 0 {
 			continue
-		}
-
-		if pl.gas[i] == species.required_gas {
+		} else if pl.gas[i] == species.required_gas {
 			continue
 		}
 
+		var j int
 		if left > 0 {
 			if left > 2 {
 				j = rnd(left)
 			} else {
 				j = left
 			}
-
 			pl.gas_percent[i] += j
 			left -= j
 		} else {
@@ -8450,7 +8461,6 @@ func fix_gases(pl *planet_data) {
 			} else {
 				j = -left
 			}
-
 			if j < pl.gas_percent[i] {
 				pl.gas_percent[i] -= j
 				left += j
@@ -8464,15 +8474,13 @@ add_neutral_gas:
 
 	/* If we reach this point, there is either no atmosphere or it contains
 	 *  only the required gas.  In either case, add a random neutral gas. */
-	for i = 0; i < 4; i++ {
+	for i := 0; i < 4; i++ {
 		if pl.gas_percent[i] > 0 {
 			continue
 		}
-
-		j = rnd(6) - 1
+		j := rnd(6) - 1
 		pl.gas[i] = species.neutral_gas[j]
 		pl.gas_percent[i] = left
-
 		break
 	}
 }
@@ -8481,6 +8489,39 @@ add_neutral_gas:
 // do_tran.c
 
 func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "TRANSFER" {
+		return []error{fmt.Errorf("internal error: %q passed to do_TRANSFER_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL" || s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name   string
+		amount int
+		item   string
+		from   string
+		to     string
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 4:
+		if amount, err := strconv.Atoi(c.Args[0]); err != nil || amount < 0 {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid item count in TRANSFER command.\n")
+			return nil
+		} else {
+			command.amount = amount
+		}
+		command.item, command.from, command.to = c.Args[1], c.Args[2], c.Args[3]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	var i, n, item_class, item_count, capacity, transfer_ttype int
 	var attempt_during_siege, siege_1_chance, siege_2_chance int
 	var alien_number, first_try, both_args_present, need_destination int
@@ -8492,70 +8533,39 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 	var ship1, ship2 *ship_data_
 
 	/* Get number of items to transfer. */
-	_, ok := get_value()
-
-	/* Make sure value is meaningful. */
-	if !ok || value < 0 {
-		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s", original_line)
-		fprintf(log_file, "!!! Invalid item count in TRANSFER command.\n")
-		return
-	}
-	original_count = value
-	item_count = value
+	item_count, original_count = command.amount, command.amount
 
 	/* Get class of item. */
-	item_class = get_class_abbr()
-
-	if item_class != ITEM_CLASS {
-		/* Players sometimes accidentally use "MI" for "IU" or "MA" for "AU". */
-		if item_class == TECH_ID && abbr_index == MI {
-			abbr_index = IU
-		} else if item_class == TECH_ID && abbr_index == MA {
-			abbr_index = AU
-		} else {
-			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Invalid item class!\n")
-			return
-		}
+	if classAbbr, ok := get_class_abbr(command.item); !ok || classAbbr.abbr_type == ITEM_CLASS {
+		log.Println("///* Players sometimes accidentally use MI for IU or MA for AU. */")
+		//if item_class == TECH_ID && abbr_index == MI {
+		//	abbr_index = IU
+		//} else if item_class == TECH_ID && abbr_index == MA {
+		//	abbr_index = AU
+		//} else {
+		//	fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		//	fprintf(log_file, "!!! %s", original_line)
+		//	fprintf(log_file, "!!! Invalid item class!\n")
+		//	return
+		//}
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Invalid item class in TRANSFER command.\n")
+		return nil
+	} else {
+		item_class = classAbbr.abbr_index
 	}
-	item_class = abbr_index
 
 	/* Get source of transfer. */
 	nampla1 = nil
 	nampla2 = nil
-	original_line_pointer = input_line_pointer
-	if !get_transfer_point() {
-		/* Check for missing comma or tab after source name. */
-		input_line_pointer = original_line_pointer
-		fix_separator()
-		if !get_transfer_point() {
-			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Invalid source location in TRANSFER command.\n")
-			return
-		}
+	log.Println("todo: get_transfer_point is probably broken")
+	if _, ok := get_transfer_point(command.from); !ok {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Invalid source location in TRANSFER command.\n")
+		return nil
 	}
-
-	/* Test if the order has both a source and a destination.  Sometimes,
-	 *  the player will accidentally omit the source if it's "obvious". */
-	temp_ptr = input_line_pointer
-	both_args_present = false
-	for {
-		c = *temp_ptr
-		temp_ptr++
-
-		if c == ';' || c == '\n' {
-			break /* End of order. */
-		}
-		if isalpha(c) {
-			both_args_present = true
-			break
-		}
-	}
-
-	need_destination = true
 
 	/* Make sure everything makes sense. */
 	if abbr_type == SHIP_CLASS {
@@ -8563,16 +8573,16 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 
 		if ship1.status == UNDER_CONSTRUCTION {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! %s is still under construction!\n", ship_name(ship1))
-			return
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! %s is still under construction.\n", ship_name(ship1))
+			return nil
 		}
 
 		if ship1.status == FORCED_JUMP || ship1.status == JUMPED_IN_COMBAT {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
-			return
+			return nil
 		}
 
 		x1 = ship1.x
@@ -8587,19 +8597,19 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 			item_count = num_available
 		}
 		if item_count == 0 {
-			return
+			return nil
 		}
 
 		if num_available < item_count {
-			if both_args_present { /* Change item count to "0". */
+			if both_args_present != 0 { /* Change item count to "0". */
 				if num_available == 0 {
 					fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-					fprintf(log_file, "!!! %s", original_line)
-					fprintf(log_file, "!!! %s does not have specified item(s)!\n", ship_name(ship1))
-					return
+					fprintf(log_file, "!!! %s\n", c.OriginalInput)
+					fprintf(log_file, "!!! %s does not have specified item(s)\n", ship_name(ship1))
+					return nil
 				}
 
-				fprintf(log_file, "! WARNING: %s", original_line)
+				fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
 				fprintf(log_file, "! Ship does not have %d units. Substituting %d for %d!\n", item_count, num_available, item_count)
 				item_count = 0
 				goto check_ship_items
@@ -8610,8 +8620,7 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 			 *  the destination. We'll look first for a planet that the
 			 *  ship is actually landed on or orbiting. If that fails,
 			 *  then we'll look for a planet in the same sector. */
-
-			first_try = true
+			first_try = 1 // true
 
 		next_ship_try:
 
@@ -8627,7 +8636,7 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 				if nampla1.z != ship1.z {
 					continue
 				}
-				if first_try {
+				if first_try != 0 {
 					if nampla1.pn != ship1.pn {
 						continue
 					}
@@ -8642,20 +8651,20 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 				transfer_ttype = 1     /* Source = planet. */
 				abbr_type = SHIP_CLASS /* Destination ttype. */
 
-				need_destination = false
+				need_destination = 0 // false
 
 				goto get_destination
 			}
 
-			if first_try {
-				first_try = false
+			if first_try != 0 {
+				first_try = 0 // false
 				goto next_ship_try
 			}
 
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! %s does not have specified item(s)!\n", ship_name(ship1))
-			return
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! %s does not have specified item(s).\n", ship_name(ship1))
+			return nil
 		}
 
 		transfer_ttype = 0 /* Source = ship. */
@@ -8674,20 +8683,20 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 			item_count = num_available
 		}
 		if item_count == 0 {
-			return
+			return nil
 		}
 
 		if num_available < item_count {
-			if both_args_present { /* Change item count to "0". */
+			if both_args_present != 0 { /* Change item count to "0". */
 				if num_available == 0 {
 					fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-					fprintf(log_file, "!!! %s", original_line)
-					fprintf(log_file, "!!! PL %s does not have specified item(s)!\n", nampla1.name)
-					return
+					fprintf(log_file, "!!! %s\n", c.OriginalInput)
+					fprintf(log_file, "!!! PL %s does not have specified item(s).\n", nampla1.name)
+					return nil
 				}
 
-				fprintf(log_file, "! WARNING: %s", original_line)
-				fprintf(log_file, "! Planet does not have %d units. Substituting %d for %d!\n", item_count, num_available, item_count)
+				fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
+				fprintf(log_file, "! Planet does not have %d units. Substituting %d for %d.\n", item_count, num_available, item_count)
 				item_count = 0
 				goto check_planet_items
 			}
@@ -8719,15 +8728,15 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 				transfer_ttype = 1    /* Source = planet. */
 				abbr_type = PLANET_ID /* Destination ttype. */
 
-				need_destination = false
+				need_destination = 0 // false
 
 				goto get_destination
 			}
 
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! PL %s does not have specified item(s)!\n", nampla1.name)
-			return
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! PL %s does not have specified item(s).\n", nampla1.name)
+			return nil
 		}
 
 		transfer_ttype = 1 /* Source = planet. */
@@ -8736,12 +8745,12 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 get_destination:
 
 	/* Get destination of transfer. */
-	if need_destination {
-		if !get_transfer_point() {
+	if need_destination != 0 {
+		if _, ok := get_transfer_point(command.to); !ok {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s", original_line)
 			fprintf(log_file, "!!! Invalid destination location.\n")
-			return
+			return nil
 		}
 	}
 
@@ -8751,16 +8760,16 @@ get_destination:
 
 		if ship2.status == UNDER_CONSTRUCTION {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! %s is still under construction!\n", ship_name(ship2))
-			return
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! %s is still under construction.\n", ship_name(ship2))
+			return nil
 		}
 
 		if ship2.status == FORCED_JUMP || ship2.status == JUMPED_IN_COMBAT {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s", original_line)
 			fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
-			return
+			return nil
 		}
 
 		/* Check if destination ship has sufficient carrying capacity. */
@@ -8784,12 +8793,12 @@ get_destination:
 				item_count = i
 			}
 			if item_count == 0 {
-				return
+				return nil
 			}
 		}
 
 		if capacity < item_count*item_carry_capacity[item_class] {
-			fprintf(log_file, "! WARNING: %s", original_line)
+			fprintf(log_file, "! WARNING: %s\n", c.OriginalInput)
 			fprintf(log_file, "! %s does not have sufficient carrying capacity!", ship_name(ship2))
 			fprintf(log_file, " Changed %d to 0.\n", original_count)
 			original_count = 0
@@ -8812,18 +8821,18 @@ get_destination:
 		 *      is populated. */
 		if post_arrival_phase && !isset(nampla2.status, POPULATED) {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
 			fprintf(log_file, "!!! Destination planet must be populated for post-arrival TRANSFERs.\n")
-			return
+			return nil
 		}
 	}
 
 	/* Check if source and destination are in same system. */
 	if x1 != x2 || y1 != y2 || z1 != z2 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Source and destination are not at same 'x y z' in TRANSFER command.\n")
-		return
+		return nil
 	}
 
 	/* Check for siege. */
@@ -8843,15 +8852,15 @@ get_destination:
 			siege_2_chance = -nampla2.siege_eff
 		}
 
-		attempt_during_siege = true
+		attempt_during_siege = 1 // true
 	} else {
-		attempt_during_siege = false
+		attempt_during_siege = 0 // false
 	}
 
 	/* Make the transfer and log the result. */
 	log_string("    ")
 
-	if attempt_during_siege && first_pass {
+	if attempt_during_siege != 0 && first_pass {
 		log_string("An attempt will be made to transfer ")
 	}
 
@@ -8859,7 +8868,7 @@ get_destination:
 	log_char(' ')
 	log_string(item_name[item_class])
 
-	if attempt_during_siege && first_pass {
+	if attempt_during_siege != 0 && first_pass {
 		if item_count > 1 {
 			log_char('s')
 		}
@@ -8886,10 +8895,11 @@ get_destination:
 		nampla1.item_quantity[item_class] -= item_count
 		ship2.item_quantity[item_class] += item_count
 		if item_class == CU {
-			if nampla1 == nampla_base {
+			ship2.loading_point = getLoadingPoint(nampla1, nampla_base)
+			if ship2.loading_point == 0 { // warning: home planet trick
 				ship2.loading_point = 9999 /* Home planet. */
-			} else {
-				ship2.loading_point = (nampla1 - nampla_base)
+			} else if ship2.loading_point == -1 {
+				panic("assert(nampla - nampla_base != -1)")
 			}
 		}
 		log_string("PL ")
@@ -8916,7 +8926,7 @@ get_destination:
 		log_string(nampla1.name)
 		log_string(" to PL ")
 		log_string(nampla2.name)
-		if attempt_during_siege {
+		if attempt_during_siege != 0 {
 			log_string(" despite the siege")
 		}
 		log_char('.')
@@ -8934,7 +8944,7 @@ get_destination:
 		nampla2.item_quantity[item_class] -= item_count
 
 		for i = 0; i < MAX_SPECIES; i++ {
-			already_notified[i] = false
+			already_notified[i] = 0 // false
 		}
 
 		for i = 0; i < num_transactions; i++ {
@@ -8960,7 +8970,7 @@ get_destination:
 
 			alien_number = transaction[i].number1
 
-			if already_notified[alien_number-1] {
+			if already_notified[alien_number-1] != 0 {
 				continue
 			}
 
@@ -8979,35 +8989,37 @@ get_destination:
 			if siege_1_chance > siege_2_chance {
 				/* Besieged planet is the source of the transfer. */
 				transaction[n].value = 4
-				strcpy(transaction[n].name1, nampla1.name)
-				strcpy(transaction[n].name2, nampla2.name)
+				transaction[n].name1 = nampla1.name
+				transaction[n].name2 = nampla2.name
 			} else {
 				/* Besieged planet is the destination of the transfer. */
 				transaction[n].value = 5
-				strcpy(transaction[n].name1, nampla2.name)
-				strcpy(transaction[n].name2, nampla1.name)
+				transaction[n].name1 = nampla2.name
+				transaction[n].name2 = nampla1.name
 			}
-			strcpy(transaction[n].name3, species.name)
+			transaction[n].name3 = species.name
 			transaction[n].number3 = alien_number
 
-			already_notified[alien_number-1] = true
+			already_notified[alien_number-1] = 1 // true
 		}
 
 		break
 
 	default: /* Internal error. */
-		fprintf(stderr, "\n\n\tInternal error: transfer ttype!\n\n")
+		fprintf(stderr, "\n\n\tInternal error: transfer type!\n\n")
 		exit(-1)
 	}
 
 	log_char('\n')
 
-	if nampla1 != NULL {
+	if nampla1 != nil {
 		check_population(nampla1)
 	}
-	if nampla2 != NULL {
+	if nampla2 != nil {
 		check_population(nampla2)
 	}
+
+	return nil
 }
 
 //*************************************************************************
@@ -11544,6 +11556,18 @@ func get_order_data() (errors []error) {
 		}
 	}
 	return errors
+}
+
+func getLoadingPoint(nampla *nampla_data, base []*nampla_data) int {
+	for q := range nampla_base {
+		if nampla == base[q] {
+			if q == 0 { // warning: home planet hack
+				return 9999
+			}
+			return q
+		}
+	}
+	return -1 // not found
 }
 
 // my_ship_name will return SHIP_CLASS NAME.
