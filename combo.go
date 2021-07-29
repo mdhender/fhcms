@@ -9025,31 +9025,60 @@ get_destination:
 //*************************************************************************
 // do_unl.c
 
+// do_UNLOAD_command transfers all AU, CU, and IU units from a ship or
+// starbase to the planet it is orbiting. It then installs as many IU
+// and AU units as possible. (In general, the limit is on the number of
+// available CU units.)
+// Accepts the following formats
+//   UNLOAD SHIP
+// Where
+//   SHIP is the name of a ship (or starbase).
 func do_UNLOAD_command(s *orders.Section, c *orders.Command) []error {
-	var i, found, item_count, recovering_home_planet, alien_index int
+	if c.Name != "UNLOAD" {
+		return []error{fmt.Errorf("internal error: %q passed to do_UNLOAD_command", c.Name)}
+	} else if !(s.Name == "PRE-DEPARTURE") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	}
+	command := struct {
+		name string
+		ship string // name of ship or starbase
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.ship = c.Args[0]
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
+	var i, item_count, alien_index int
+	var found, recovering_home_planet bool // was int
 	var n, reb, current_pop int
 	var alien_home_nampla *nampla_data
 
 	/* Get the ship. */
-	if !get_ship() {
+	if sh, ok := get_ship(command.ship, false); !ok || sh == nil {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid ship name in UNLOAD command.\n")
-		return
+		return nil
 	}
-
 	if ship.status == UNDER_CONSTRUCTION {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship is still under construction.\n")
-		return
+		return nil
 	}
-
 	if ship.status == FORCED_JUMP || ship.status == JUMPED_IN_COMBAT {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship jumped during combat and is still in transit.\n")
-		return
+		return nil
 	}
 
 	/* Find which planet the ship is at. */
@@ -9076,7 +9105,7 @@ func do_UNLOAD_command(s *orders.Section, c *orders.Command) []error {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship is not at a named planet.\n")
-		return
+		return nil
 	}
 
 	/* Make sure this is not someone else's populated homeworld. */
@@ -9088,7 +9117,7 @@ func do_UNLOAD_command(s *orders.Section, c *orders.Command) []error {
 			continue
 		}
 
-		alien_home_nampla = namp_data[alien_index]
+		alien_home_nampla = namp_data[alien_index][0] // warning: home planet index trick
 
 		if alien_home_nampla.x != nampla.x {
 			continue
@@ -9108,16 +9137,15 @@ func do_UNLOAD_command(s *orders.Section, c *orders.Command) []error {
 
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! You may not colonize someone else's populated home planet!\n")
+		fprintf(log_file, "!!! You may not colonize someone else's populated home planet.\n")
 
-		return
+		return nil
 	}
 
 	/* Make sure it's not a healthy home planet. */
 	recovering_home_planet = false
 	if isset(nampla.status, HOME_PLANET) {
-		n = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install +
-			nampla.AUs_to_install
+		n = nampla.mi_base + nampla.ma_base + nampla.IUs_to_install + nampla.AUs_to_install
 		reb = species.hp_original_base - n
 
 		if reb > 0 {
@@ -9125,8 +9153,8 @@ func do_UNLOAD_command(s *orders.Section, c *orders.Command) []error {
 		} else {
 			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 			fprintf(log_file, "!!! %s\n", c.OriginalInput)
-			fprintf(log_file, "!!! Installation not allowed on a healthy home planet!\n")
-			return
+			fprintf(log_file, "!!! Installation not allowed on a healthy home planet.\n")
+			return nil
 		}
 	}
 
@@ -9221,12 +9249,67 @@ func do_UNLOAD_command(s *orders.Section, c *orders.Command) []error {
 	log_string(" began on the planet.\n")
 
 	check_population(nampla)
+
+	return nil
 }
 
 //*************************************************************************
 // do_upg.c
 
+// do_UPGRADE_command spends economic units to lower the effective age of
+// a ship or starbase. If the player omits the number of economic units to
+// spend, the engine will spend as many points as needed to reduce the
+// effective age to zero. If those points aren't available, it will spend
+// as many as it can.
+// Accepts the following formats
+//   UPGRADE SHIP
+//   UPGRADE SHIP NUMBER
+// Where
+//   NUMBER is the maximum number of economic units to spend on the ship
+//          or starbase.
+//   SHIP   is the name of a ship or starbase that is in the same sector
+//          as the production colony.
 func do_UPGRADE_command(s *orders.Section, c *orders.Command) []error {
+	if c.Name != "UPGRADE" {
+		return []error{fmt.Errorf("internal error: %q passed to do_UPGRADE_command", c.Name)}
+	} else if !(s.Name == "POST-ARRIVAL") {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
+		return nil
+	} else if !doing_production {
+		/* Check if this order was preceded by a PRODUCTION order. */
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Missing PRODUCTION order.\n")
+		return nil
+	}
+	command := struct {
+		name  string
+		allIn bool   // if set, use all available units to reduce the age
+		limit int    // maximum number of units to spend
+		ship  string // name of the ship or starbase
+	}{name: c.Name}
+	switch len(c.Args) {
+	case 1:
+		command.allIn, command.ship = true, c.Args[0]
+	case 2:
+		command.ship = c.Args[0]
+		if limit, err := strconv.Atoi(c.Args[1]); err == nil {
+			command.limit = limit
+		} else {
+			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+			fprintf(log_file, "!!! %s\n", c.OriginalInput)
+			fprintf(log_file, "!!! Invalid limit in UPGRADE command.\n")
+			return nil
+		}
+	default:
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		return nil
+	}
+
 	var age_reduction int
 	var amount_to_spend, original_cost, max_funds_available int
 
@@ -9234,53 +9317,47 @@ func do_UPGRADE_command(s *orders.Section, c *orders.Command) []error {
 	if !doing_production {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Missing PRODUCTION order!\n")
-		return
+		fprintf(log_file, "!!! Missing PRODUCTION order.\n")
+		return nil
 	}
 
 	/* Get the ship to be upgraded. */
 	original_line_pointer := input_line_pointer
-	if !get_ship() {
-		/* Check for missing comma or tab after ship name. */
-		input_line_pointer = original_line_pointer
-		fix_separator()
-		if !get_ship() {
-			fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-			fprintf(log_file, "!!! %s", original_line)
-			fprintf(log_file, "!!! Ship to be upgraded does not exist.\n")
-			return
-		}
+	if sh, ok := get_ship(command.ship, false); !ok || sh == nil {
+		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! Ship to be upgraded does not exist.\n")
+		return nil
 	}
 
 	/* Make sure it didn't just jump. */
-	if ship.just_jumped {
+	if ship.just_jumped != 0 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship just jumped and is still in transit.\n")
-		return
+		return nil
 	}
 
 	/* Make sure it's in the same sector as the producing planet. */
-	if ship.x != nampla.x || ship.y != nampla.y ||
-		ship.z != nampla.z {
+	if ship.x != nampla.x || ship.y != nampla.y || ship.z != nampla.z {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Item to be upgraded is not in the same sector as the production planet.\n")
-		return
+		return nil
 	}
 
 	if ship.status == UNDER_CONSTRUCTION {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Item to be upgraded is still under construction.\n")
-		return
+		return nil
 	}
 
 	if ship.age < 1 {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Ship or starbase is too new to upgrade.\n")
-		return
+		return nil
 	}
 
 	/* Calculate the original cost of the ship. */
@@ -9311,12 +9388,12 @@ try_again:
 
 	if age_reduction < 1 {
 		if value == 0 {
-			return
+			return nil
 		}
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s", original_line)
+		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Amount specified is not enough to do an upgrade.\n")
-		return
+		return nil
 	}
 
 	if age_reduction > ship.age {
@@ -9334,9 +9411,9 @@ try_again:
 
 		if max_funds_available > 0 {
 			if value_specified {
-				fprintf(log_file, "! WARNING: %s", input_line)
-				fprintf(log_file, "! Insufficient funds. Substituting %d for %d.\n",
-					max_funds_available, value)
+				// TODO: this can do the 0 for 0 bug
+				fprintf(log_file, "! WARNING: %s\n", input_line)
+				fprintf(log_file, "! Insufficient funds. Substituting %d for %d.\n", max_funds_available, value)
 			}
 			amount_to_spend = max_funds_available
 			age_reduction = (40 * amount_to_spend) / original_cost
@@ -9346,7 +9423,7 @@ try_again:
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Insufficient funds to execute order.\n")
-		return
+		return nil
 	}
 
 	/* Log what was upgraded. */
@@ -9360,6 +9437,8 @@ try_again:
 	log_string(" at a cost of ")
 	log_long(amount_to_spend)
 	log_string(".\n")
+
+	return nil
 }
 
 //*************************************************************************
@@ -9379,14 +9458,15 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) b
 	// shadow globals
 	var ship_index, nampla_index, x, y, z, pn, species_index int
 	// locals
-	var i, j, found, ttype, num_sp, unit_index int
+	var i, j, ttype, num_sp, unit_index int
 	var sp1, sp2, n_shots int
 	var engage_option, engage_location int
 	var num_fighting_units, tons int
 	var ml, ls, unit_power, offensive_power, defensive_power int
 	var sh *ship_data_
 	var nam *nampla_data
-	var attacking_ships_here, defending_ships_here, attacking_pds_here, defending_pds_here, use_this_ship bool // was int
+	var attacking_ships_here, defending_ships_here, attacking_pds_here, use_this_ship bool // was int
+	var defending_pds_here, found bool                                                     // was int
 
 	/* Add fighting units to "act" arrays. At the same time, check if
 	 *  a fight of the current option ttype will occur at the current
@@ -9525,7 +9605,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) b
 
 						found = false
 						for nampla_index = 0; nampla_index < c_species[species_index].num_namplas; nampla_index++ {
-							nam = c_nampla[species_index] + nampla_index
+							nam = c_nampla[species_index][nampla_index]
 
 							if nam.x != x {
 								continue
@@ -9569,12 +9649,12 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) b
 				}
 			}
 
-		add_ship:
+			//add_ship: // warning: mdhender commented out this unused label
 			if use_this_ship {
 				/* Add data for this ship to action array. */
 				act.fighting_species_index[num_fighting_units] = species_index
 				act.unit_type[num_fighting_units] = SHIP
-				act.fighting_unit[num_fighting_units] = sh // warning: cast to *char
+				act.fighting_unit[num_fighting_units].ship = sh // warning: cast to *char
 				act.original_age_or_PDs[num_fighting_units] = sh.age
 				num_fighting_units++
 			}
@@ -9697,7 +9777,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) b
 		sp1 = act.fighting_species_index[i]
 		for j = 0; j < num_fighting_units; j++ {
 			sp2 = act.fighting_species_index[j]
-			if bat.enemy_mine[sp1][sp2] {
+			if bat.enemy_mine[sp1][sp2] != 0 {
 				goto next_step
 			}
 		}
@@ -9714,10 +9794,10 @@ next_step:
 	for unit_index = 0; unit_index < act.num_units_fighting; unit_index++ {
 		ttype = act.unit_type[unit_index]
 		if ttype == SHIP {
-			sh = act.fighting_unit[unit_index] // warning: cast to *ship_data
+			sh = act.fighting_unit[unit_index].ship // warning: cast to *ship_data
 			tons = sh.tonnage
 		} else {
-			nam = act.fighting_unit[unit_index] // warning: cast to *nampla_data
+			nam = act.fighting_unit[unit_index].nampla // warning: cast to *nampla_data
 			tons = nam.item_quantity[PD] / 200
 			if tons < 1 && nam.item_quantity[PD] > 0 {
 				tons = 1
@@ -9804,10 +9884,10 @@ next_step:
 		act.bomb_damage[unit_index] = 0
 
 		/* Set flag for individual unit if species can be surprised. */
-		if bat.can_be_surprised[species_index] {
-			act.surprised[unit_index] = true
+		if bat.can_be_surprised[species_index] != 0 {
+			act.surprised[unit_index] = 1 // true
 		} else {
-			act.surprised[unit_index] = false
+			act.surprised[unit_index] = 0 // false
 		}
 	}
 
@@ -9843,7 +9923,7 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
 	var attacking_ship, defending_ship *ship_data_
 
 	/* Make sure attacking unit is a starbase. */
-	attacking_ship = act.fighting_unit[attacker_index] // warning: cast to *ship_data
+	attacking_ship = act.fighting_unit[attacker_index].ship // warning: cast to *ship_data
 	if attacking_ship.ttype != STARBASE {
 		return (false)
 	}
@@ -9880,7 +9960,7 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
 	defender_gv = c_species[def_sp_index].tech_level[GV]
 
 	/* Check if sufficient units are available. */
-	defending_ship = act.fighting_unit[defender_index] // warning: cast to *ship_data
+	defending_ship = act.fighting_unit[defender_index].ship // warning: cast to *ship_data
 	if number < defending_ship.tonnage {
 		return (false)
 	}
@@ -9894,9 +9974,13 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
 	success_chance = 2 * ((number - defending_ship.tonnage) + (attacker_gv - defender_gv))
 
 	/* See if it worked. */
-	failure = rnd(100) > success_chance
-
-	log_summary = !failure
+	if xx := rnd(100); xx > success_chance {
+		failure = 1 // true
+		log_summary = false
+	} else {
+		failure = 0 // false
+		log_summary = true
+	}
 
 	log_string("        ")
 	log_string(ship_name(attacking_ship))
@@ -9908,7 +9992,7 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
 	log_string(ship_name(defending_ship))
 	ignore_field_distorters = false
 
-	if failure {
+	if failure != 0 {
 		log_string(", but fails.\n")
 		return (true)
 	}

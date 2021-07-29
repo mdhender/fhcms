@@ -63,7 +63,7 @@ var (
 	correct_spelling_required bool
 	data_in_memory            [MAX_SPECIES]bool
 	data_modified             [MAX_SPECIES]bool
-	deep_space_defense        int
+	deep_space_defense        bool // was int
 	defending_ML              int
 	doing_production          bool
 	EU_spending_limit         int
