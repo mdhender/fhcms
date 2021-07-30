@@ -10053,15 +10053,7 @@ func forced_jump_units_used(attacker_index, defender_index int, total_shots *int
 // gam_abo.c
 
 func gamemaster_abort_option() {
-	var answer [16]byte
-
-	/* Give the gamemaster a chance to abort. */
-	printf("*** Gamemaster safe-abort option ... ttype q or Q to quit: ")
-	fflush(stdout)
-	fgets(answer, 16, stdin)
-	if answer[0] == 'q' || answer[0] == 'Q' {
-		exit(0)
-	}
+	panic("assert(gamemaster_abort_option should not be called)")
 }
 
 //*************************************************************************
@@ -10073,6 +10065,9 @@ func gamemaster_abort_option() {
  * location is valid, true will be returned, otherwise false will be
  * returned. */
 
+// get_location inconsistently sets the globals
+//   x, y, z, pn, star, nampla
+//
 func get_location(s string) (*nampla_data, bool) {
 	panic("this is borked because it wants access to the original input, not the command")
 	var i, n, temp_nampla_index, first_try, name_length, best_score, next_best_score, best_nampla_index, minimum_score int
@@ -10091,12 +10086,12 @@ func get_location(s string) (*nampla_data, bool) {
 	x = value
 
 	if _, ok := get_value(); !ok {
-		return (false)
+		return nampla, false
 	}
 	y = value
 
 	if _, ok := get_value(); !ok {
-		return (false)
+		return nampla, false
 	}
 	z = value
 
@@ -10107,7 +10102,7 @@ func get_location(s string) (*nampla_data, bool) {
 	}
 
 	if pn == 0 {
-		return (true)
+		return nampla, true
 	}
 
 	/* Get star. Check if planet exists. */
@@ -10125,14 +10120,15 @@ func get_location(s string) (*nampla_data, bool) {
 			continue
 		}
 
+		// TODO: location sometimes returns a star
 		if pn > star.num_planets {
-			return false
+			return nil, false
 		} else {
-			return true
+			return nil, true
 		}
 	}
 
-	return false
+	return nil, false
 
 get_planet:
 
