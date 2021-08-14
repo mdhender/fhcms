@@ -63,7 +63,7 @@ var (
 	correct_spelling_required bool
 	data_in_memory            [MAX_SPECIES]bool
 	data_modified             [MAX_SPECIES]bool
-	deep_space_defense        bool // was int
+	deep_space_defense        int
 	defending_ML              int
 	doing_production          bool
 	EU_spending_limit         int
@@ -172,7 +172,6 @@ var (
 	next_nampla_index    int
 	next_nampla          *nampla_data
 	num_combat_options   int
-	num_intercepts       int
 	num_locs             int
 	num_new_namplas      [MAX_SPECIES]int // zero based
 	num_new_ships        [MAX_SPECIES]int // zero based
@@ -186,6 +185,7 @@ var (
 	planet_data_modified bool
 	pn                   int
 	post_arrival_phase   bool // warning: must be initialized to true for PostArrivalMain
+	print_LSN            bool
 	printing_alien       int
 	production_capacity  int
 	production_done      [1000]bool
@@ -276,6 +276,12 @@ var (
 	x_attacked_y  [MAX_SPECIES][MAX_SPECIES]bool // was char
 	y             int
 	z             int
+
+	num_intercepts int
+	intercept      [MAX_INTERCEPTS]struct {
+		x, y, z      int
+		amount_spent int
+	}
 )
 
 /*
@@ -388,10 +394,6 @@ extern struct nampla_data * nampla;
 
 int num_intercepts;
 
-struct {
-    char x, y, z;
-    long amount_spent;
-} intercept[MAX_INTERCEPTS];
 
 extern int doing_production, first_pass, abbr_index,
            species_number, num_transactions;

@@ -49,8 +49,11 @@ func (o *Orders) NoOrders() bool {
 }
 
 // ALLY declare species "sp" to be an ally
-type ALLY struct {
-	SP int // species ID
+type Ally struct {
+	Line    int
+	All     bool
+	Species string
+	Errors  []error
 }
 
 // AMBUSH spend "n" in preparation for ambush
@@ -85,6 +88,17 @@ type BATTLE struct {
 //|BUILD           |ship            |Build "ship"
 //|BUILD           |ship,n          |Start building "ship", spend only "n"
 //|BUILD           |base,n          |Start building starbase "base", spend "n"
+type Build struct {
+	Line           int
+	Item           string // code of item to build
+	Ship           string // name of ship or starbase to build
+	Limit          int    // maximum amount to spend this turn
+	LimitSpecified bool   // true if the player specified any amount, even zero
+	Species        string // set only when building for another species
+	Continuation   bool   // set only when continuing an existing build
+	Errors         []error
+}
+
 //|CONTINUE        |ship            |Finish construction of "ship"
 //|CONTINUE        |ship,n          |Continue construction on "ship", spend only "n"
 //|CONTINUE        |base,n          |Increase size of starbase "base", spend "n"
@@ -97,8 +111,21 @@ type BATTLE struct {
 //|END             |                |End current section of the order form
 //|ENEMY           |sp              |Declare species "sp" to be an enemy
 //|ENEMY           |n               |Declare all species to be enemies
+type Enemy struct {
+	Line    int
+	All     bool
+	Species string
+	Errors  []error
+}
+
 //|ENGAGE          |n [p]           |Specify combat engagement option "n" and optional planet number "p"
 //|ESTIMATE        |sp              |Estimate tech levels of species "sp"
+type Estimate struct {
+	Line    int
+	Species string
+	Errors  []error
+}
+
 //|HAVEN           |x y x           |Set rendezvous point for ships that withdraw from combat
 //|HIDE            |                |Actively hide this planet from alien observation
 //|HIDE            |ship            |Keep "ship" out of combat unless you start to lose the battle
@@ -108,6 +135,7 @@ type BATTLE struct {
 //|IBUILD          |sp,n ab         |Build "n" items of class "ab" for species "sp"
 //|IBUILD          |sp,ship         |Build "ship" for species "sp"
 //|IBUILD          |sp,base,n       |Build starbase "base" for species "sp", spend "n"
+
 //|ICONTINUE       |sp ship         |Finish construction of "ship" for species "sp"
 //|ICONTINUE       |sp base,n       |Increase size of starbase "base" for species "sp", spend "n"
 //|INSTALL         |n ab pl         |Install "n" IUs or AUs on planet "pl"
@@ -116,12 +144,45 @@ type BATTLE struct {
 //|JUMP            |ship,loc        |Have "ship" jump to destination "loc"
 //|LAND            |ship,pl         |Have "ship" land on planet in same star system
 //|MESSAGE         |sp              |Send a message to species "sp"
+type Message struct {
+	Line         int
+	Species      string
+	Text         []string
+	Unterminated bool // set only on error when parsing
+	Errors       []error
+}
+
 //|MOVE            |ship, x y z     |Move "ship" up to one parsec
 //|MOVE            |base, x y z     |Tow starbase "base" up to one parsec
 //|NAME            |x y z p PL name |Give "name" to planet "p" at location "x y z"
+type Name struct {
+	Line           int
+	X, Y, Z, Orbit int
+	Planet         string // name for planet, includes the PL code
+	Errors         []error
+}
+
 //|NEUTRAL         |sp              |Declare neutrality towards species "sp"
 //|NEUTRAL         |n               |Declare neutrality towards all species
+type Neutral struct {
+	Line    int
+	All     bool
+	Species string
+	Errors  []error
+}
+
 //|ORBIT           |ship,pl         |Have "ship" orbit planet in same star system
+type Orbit struct {
+	Line            int
+	Ship            string
+	X, Y, Z, Orbit  int
+	Planet          string // name for planet, includes the PL code
+	CoordsSpecified bool
+	OrbitSpecified  bool
+	PlanetSpecified bool
+	Errors          []error
+}
+
 //|PJUMP           |ship,loc,bas    |Have "ship" jump to destination "loc" via jump portals on starbase "bas"
 //|PRODUCTION      |PL name         |Start production on planet "name"
 //|RECYCLE         |n ab            |Recycle "n" items of class "ab"
@@ -143,10 +204,24 @@ type BATTLE struct {
 //|TRANSFER        |n ab s,d        |Transfer "n" items of class "ab" from "s" to "d"
 //|UNLOAD          |ship            |Transfer all CUs, IUs, and AUs from "ship" or
 //|UNLOAD          |base            |starbase "base" to the planet it is at and install as many IUs and AUs as possible
+type Unload struct {
+	Line   int
+	Ship   string // ship or starbase to unload
+	Errors []error
+}
+
 //|UPGRADE         |ship            |Upgrade "ship" to age zero
 //|UPGRADE         |base            |Upgrade starbase "base" to age zero
 //|UPGRADE         |ship,n          |Upgrade "ship", spend "n"
 //|UPGRADE         |base,n          |Upgrade starbase "base", spend "n"
+type Upgrade struct {
+	Line           int
+	Ship           string // ship or starbase to upgrade
+	Limit          int    // maximum number of units to spend
+	LimitSpecified bool   // true if user gave any value for the limit, even zero
+	Errors         []error
+}
+
 //|VISITED         |x y z           |Mark a star system as having been visited, even if you have not actually been there.
 //|WITHDRAW        |n1 n2 n3        |Set conditions for withdrawing from combat
 //|WORMHOLE        |ship [,pl]      |Have "ship" jump to opposite end of wormhole and orbit planet "pl" on arrival

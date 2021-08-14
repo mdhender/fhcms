@@ -94,8 +94,8 @@ type nampla_data struct {
 	AUs_needed     int            /* Incoming ship with only CUs on board. */
 	auto_AUs       int            /* Number of AUs to be automatically installed. */
 	auto_IUs       int            /* Number of IUs to be automatically installed. */
-	hidden         bool           /* Colony is hidden. */
-	hiding         bool           /* HIDE order given. */
+	hidden         int            /* Colony is hidden. */
+	hiding         int            /* HIDE order given. */
 	AUs_to_install int            /* Colonial manufacturing units to be installed. */
 	IUs_to_install int            /* Colonial mining units to be installed. */
 	IUs_needed     int            /* Incoming ship with only CUs on board. */
@@ -113,6 +113,7 @@ type nampla_data struct {
 }
 
 type planet_data struct {
+	x, y, z, orbit    int
 	diameter          int    /* Diameter in thousands of kilometers. */
 	gas               [4]int /* Gas in atmosphere. Zero if none. */
 	gas_percent       [4]int /* Percentage of gas in atmosphere. */
