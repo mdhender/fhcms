@@ -185,6 +185,12 @@ type Orbit struct {
 
 //|PJUMP           |ship,loc,bas    |Have "ship" jump to destination "loc" via jump portals on starbase "bas"
 //|PRODUCTION      |PL name         |Start production on planet "name"
+type Production struct {
+	Line   int
+	Planet string
+	Errors []error
+}
+
 //|RECYCLE         |n ab            |Recycle "n" items of class "ab"
 //|RECYCLE         |ship            |Recycle "ship"
 //|RECYCLE         |base            |Recycle starbase "base"

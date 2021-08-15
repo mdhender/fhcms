@@ -4636,11 +4636,9 @@ func do_NAME_command(s *orders.Section, c *orders.Name) []error {
 	upperName := strings.ToUpper(c.Planet)
 
 	// shadow global values
-	var name_length int
 	var planet *planet_data
 
 	// local vars
-	var upper_nampla_name string // warning: was [32]byte
 	var unused_nampla *nampla_data
 
 	/* Search existing namplas for name and location. */
@@ -4920,31 +4918,29 @@ func do_ORBIT_command(s *orders.Section, c *orders.Orbit) []error {
 // Where
 //   PLANET is the name of the homeworld or a colony. In either case, the
 //          name must include the "PL" code.
-func do_PRODUCTION_command(s *orders.Section, c *orders.Command, missing_production_order bool) []error {
-	if c.Name != "PRODUCTION" {
-		return []error{fmt.Errorf("internal error: %q passed to do_PRODUCTION_command", c.Name)}
-	} else if !(s.Name == "PRODUCTION") {
+func do_PRODUCTION_command(s *orders.Section, c *orders.Production, missing_production_order bool) []error {
+	if !(s.Name == "PRODUCTION") {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, c.Name)
-		return nil
-	}
-	command := struct {
-		name   string
-		planet string // name of homeworld or colony
-	}{name: c.Name}
-	switch len(c.Args) {
-	case 1:
-		command.planet = c.Args[0]
-	default:
-		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! %q: invalid command format.\n", c.Name)
+		fprintf(log_file, "!!! %q does not implement %q.\n", s.Name, "production")
 		return nil
 	}
 
+	/* Terminate production for previous planet. */
+	if doing_production {
+		if last_planet_produced {
+			transfer_balance()
+			last_planet_produced = false
+		}
+
+		/* Give gamemaster option to abort. */
+		if first_pass {
+			gamemaster_abort_option()
+		}
+		log_char('\n')
+	}
+
 	// shadow globals
-	var abbr_type, name_length, ship_index int
+	var ship_index int
 	var ship *ship_data_
 
 	// local variables
@@ -4952,7 +4948,6 @@ func do_PRODUCTION_command(s *orders.Section, c *orders.Command, missing_product
 	var siege_percent_effectiveness, num_siege_ships int
 	var trans_index, production_penalty int
 	var ls_needed, shipyards_for_this_species int
-	var upper_nampla_name string // warning: was [32]byte
 	var n, RMs_produced, total_siege_effectiveness int
 	var siege_effectiveness [MAX_SPECIES + 1]int
 	var EUs_available_for_siege int
@@ -4969,85 +4964,39 @@ func do_PRODUCTION_command(s *orders.Section, c *orders.Command, missing_product
 
 	var alien_nampla_base []*nampla_data                                                                // warning: was *nampla_data
 	var enemy_on_same_planet, mining_colony, new_alien, resort_colony, special_colony, under_siege bool // warning: was int
-	var classAbbr *class_abbr
-	var ok bool
 
-	if doing_production {
-		/* Terminate production for previous planet. */
-		if last_planet_produced {
-			transfer_balance()
-			last_planet_produced = false
-		}
-
-		/* Give gamemaster option to abort. */
-		if first_pass {
-			gamemaster_abort_option()
-		}
-		log_char('\n')
-	}
+	var np *nampla_data
 
 	doing_production = true
-
 	if missing_production_order {
 		nampla = next_nampla
 		nampla_index = next_nampla_index
-
 		goto got_nampla
 	}
 
 	/* Get PL abbreviation. */
-	if classAbbr, ok = get_class_abbr(command.planet); !ok {
-		// be nice and plug in the PL
-		command.planet = "PL " + command.planet
-		classAbbr, ok = get_class_abbr(command.planet)
-	}
-	if classAbbr.abbr_type != PLANET_ID {
-		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Invalid planet name in PRODUCTION command.\n")
-		return nil
-	}
-	abbr_type = classAbbr.abbr_type
-
-	/* Get planet name. */
-	name_length = get_name(command.planet)
-
 	/* Search all namplas for name. */
-	found = false
-	for nampla_index = 0; nampla_index < species.num_namplas; nampla_index++ {
-		nampla = nampla_base[i]
-		if nampla.pn == 99 {
-			continue
-		}
-		/* Make upper case copy of nampla name. */
-		upper_nampla_name = strings.ToUpper(nampla.name)
-		/* Compare names. */
-		if upper_nampla_name == upper_name {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	np = species.getNamedPlanet(c.Planet)
+	if np == nil {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! Invalid planet name in PRODUCTION command.\n")
+		fprintf(log_file, "!!! production %s\n", c.Planet)
+		fprintf(log_file, "!!! Unknown planet %q in PRODUCTION command.\n", c.Planet)
 		return nil
 	}
 
 	/* Check if production was already done for this planet. */
-	if production_done[nampla_index] {
+	if production_done[np.name] {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s\n", c.OriginalInput)
-		fprintf(log_file, "!!! More than one PRODUCTION command for planet.\n")
+		fprintf(log_file, "!!! production %s\n", c.Planet)
+		fprintf(log_file, "!!! More than one PRODUCTION command for planet %q.\n", c.Planet)
 		return nil
 	}
-	production_done[nampla_index] = true
+	production_done[np.name] = true
 
 	/* Check if this colony was disbanded. */
 	if isset(nampla.status, DISBANDED_COLONY) {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
-		fprintf(log_file, "!!! %s\n", c.OriginalInput)
+		fprintf(log_file, "!!! production %s\n", c.Planet)
 		fprintf(log_file, "!!! Production orders cannot be given for a disbanded colony.\n")
 		return nil
 	}
@@ -5577,8 +5526,8 @@ got_nampla:
 	nampla.siege_eff = 0
 	nampla.status = COLONY
 	nampla.shipyards = 0
-	nampla.hiding = false // was 0
-	nampla.hidden = false // was 0
+	nampla.hiding = 0
+	nampla.hidden = 0
 	nampla.use_on_ambush = 0
 
 	for i := 0; i < MAX_ITEMS; i++ {
@@ -6300,7 +6249,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 	var header_printed int
 	// local globals
 	var i, j, n, unit_index, combat_occurred, total_shots int
-	var attacker_index, defender_index, found, chance_to_hit int
+	var attacker_index, defender_index, chance_to_hit int
 	var attacker_ml, attacker_gv, defender_ml int
 	var target_index [MAX_SHIPS]int
 	var num_targets, num_sp, fj_chance, shields_up int
@@ -6308,7 +6257,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 	var di [3]int
 	var start_unit, current_species int
 	var this_is_a_hijacking bool
-	var aux_shield_power, units_destroyed, tons, percent_decrease int
+	var units_destroyed, percent_decrease int
 	var damage_done, damage_to_ship, damage_to_shields, op1, op2 int
 	var original_cost, recycle_value, economic_units int
 	var attacker_name, defender_name string // warning: was [64]byte
@@ -6668,7 +6617,7 @@ func do_round(option int, round_number int, bat *battle_data, act *action_data) 
 
 		/* Subtract damage from defender's shields, if they're up. */
 		damage_to_ship = 0
-		if shields_up {
+		if shields_up != 0 {
 			if act.unit_type[defender_index] == SHIP {
 				damage_to_shields = (defending_ship.dest_y * damage_done) / 100
 				damage_to_ship = damage_done - damage_to_shields
@@ -7061,8 +7010,8 @@ func do_SEND_command(s *orders.Section, c *orders.Command) []error {
 	}
 
 	/* Get destination of transfer. */
-	found := get_species_name(command.species)
-	if !found {
+	sp, found := get_species_name(command.species)
+	if sp == nil || !found {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in SEND command.\n")
@@ -7325,7 +7274,7 @@ func do_TEACH_command(s *orders.Section, c *orders.Command) []error {
 	}
 
 	/* Get species to transfer knowledge to. */
-	if !get_species_name(command.species) {
+	if spd, ok := get_species_name(command.species); spd == nil || !ok {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in TEACH command.\n")
@@ -7437,7 +7386,7 @@ func do_TECH_command(s *orders.Section, c *orders.Command) []error {
 	}
 
 	/* Get species to transfer tech to. */
-	if !get_species_name(command.species) {
+	if spd, ok := get_species_name(command.species); spd == nil || !ok {
 		fprintf(log_file, "!!! Order ignored: line %d\n", c.Line)
 		fprintf(log_file, "!!! %s\n", c.OriginalInput)
 		fprintf(log_file, "!!! Invalid species name in TECH command.\n")
@@ -7775,7 +7724,7 @@ func do_TELESCOPE_command(s *orders.Section, c *orders.Command) []error {
 				success_chance = species.tech_level[GV]
 				success_chance += starbase.item_quantity[GT]
 				success_chance += (industry - 500) / 20
-				if alien_nampla.hiding || alien_nampla.hidden {
+				if alien_nampla.hiding != 0 || alien_nampla.hidden != 0 {
 					success_chance /= 10
 				}
 
@@ -8208,8 +8157,7 @@ func do_TRANSFER_command(s *orders.Section, c *orders.Command) []error {
 	var i, n, item_class, item_count, capacity, transfer_ttype int
 	var attempt_during_siege, siege_1_chance, siege_2_chance int
 	var alien_number, first_try, both_args_present, need_destination int
-	var c, x1, x2, y1, y2, z1, z2 byte
-	var original_line_pointer, temp_ptr *byte
+	var x1, x2, y1, y2, z1, z2 int
 	var already_notified [MAX_SPECIES]byte
 	var num_available, original_count int
 	var nampla1, nampla2, temp_nampla *nampla_data
@@ -9125,7 +9073,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) b
 	defending_ships_here = false
 	attacking_pds_here = false
 	defending_pds_here := false // was int
-	deep_space_defense = false
+	deep_space_defense = 0
 	num_sp = bat.num_species_here
 
 	for species_index = 0; species_index < num_sp; species_index++ {
@@ -9193,7 +9141,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) b
 					}
 					defending_ships_here = true
 					use_this_ship = true
-					deep_space_defense = true
+					deep_space_defense = 1
 					if c_species[species_index].tech_level[ML] > defending_ML {
 						defending_ML = c_species[species_index].tech_level[ML]
 					}
@@ -9379,7 +9327,7 @@ func fighting_params(option, location int, bat *battle_data, act *action_data) b
 			/* Add data for this nampla to action array. */
 			act.fighting_species_index[num_fighting_units] = species_index
 			act.unit_type[num_fighting_units] = NAMPLA
-			act.fighting_unit[num_fighting_units] = nam // warning: cast to *char
+			act.fighting_unit[num_fighting_units].nampla = nam // warning: cast to *char
 			act.original_age_or_PDs[num_fighting_units] = nam.item_quantity[PD]
 			num_fighting_units++
 		}
@@ -10728,7 +10676,7 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 	 *  withdraw. If so, it will set the ship's status to JUMPED_IN_COMBAT.
 	 *  The actual jump will be handled by the Jump program. */
 
-	var ship_index, species_index, percent_loss int
+	var species_index, percent_loss int
 	var num_ships_gone, num_ships_total [MAX_SPECIES]int
 	var withdraw_age int
 	var sh *ship_data_
@@ -10945,18 +10893,28 @@ func (s *species_data) getOrders() []error {
 	return s.orders.data.Errors
 }
 
+func (s *species_data) getNamedPlanet(name string) *nampla_data {
+	if verbose_mode {
+		log.Printf("species: locating named planet %q\n", name)
+	}
+	name = strings.ToUpper(name)
+	for _, np := range s.namplas {
+		if name == strings.ToUpper(np.name) {
+			return np
+		}
+	}
+	return nil
+}
+
 func (s *species_data) getPlanet(name string) *planet_data {
 	if verbose_mode {
 		log.Printf("species: locating planet %q\n", name)
 	}
-	name = strings.ToUpper(name)
-	for _, np := range s.namplas {
-		if name != strings.ToUpper(np.name) {
-			continue
-		}
-		return getPlanetByCoords(np.x, np.y, np.z, np.pn)
+	np := s.getNamedPlanet(name)
+	if np == nil {
+		return nil
 	}
-	return nil
+	return getPlanetByCoords(np.x, np.y, np.z, np.pn)
 }
 
 // addShip updates the species' ships array.

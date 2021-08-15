@@ -188,7 +188,7 @@ var (
 	print_LSN            bool
 	printing_alien       int
 	production_capacity  int
-	production_done      [1000]bool
+	production_done      map[string]bool // warning: was [1000]int
 	prompt_gm            bool
 	raw_material_units   int
 	report_file          io.Writer
