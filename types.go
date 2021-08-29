@@ -18,7 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
-import "github.com/mdhender/fhcms/orders"
+import (
+	"github.com/mdhender/fhcms/parser"
+)
 
 type action_data struct {
 	bomb_damage            [MAX_SHIPS]int
@@ -180,7 +182,7 @@ type species_data struct {
 	id      int
 	namplas []*nampla_data
 	orders  struct {
-		data     *orders.Orders
+		data     *parser.Node
 		filename string
 		errors   []error
 	}

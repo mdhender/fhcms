@@ -22,14 +22,12 @@ import (
 	"bytes"
 	"io/ioutil"
 	"log"
-	"path/filepath"
 )
 
 var _parser_debug = false
 
-func Parse(name string) (*Node, error) {
-	log.Printf("parse:: parsing orders file %q\n", filepath.Base(name))
-	_parser_debug = filepath.Base(name) == "sp18.ordx"
+func Parse(name string, debug bool) (*Node, error) {
+	_parser_debug = debug //filepath.Base(name) == "sp18.ordx"
 	b, err := loadFile(name)
 	if err != nil {
 		return nil, err

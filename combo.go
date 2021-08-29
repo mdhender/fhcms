@@ -10803,9 +10803,9 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 //*************************************************************************
 // mdhender: created
 
-func get_order_data() (errors []error) {
+func get_order_data(verbose, debug bool) (errors []error) {
 	for species_number := 1; species_number <= num_species; species_number++ {
-		if ee := spec_data[species_number-1].getOrders(); ee != nil {
+		if ee := spec_data[species_number-1].getOrders(verbose, debug); ee != nil {
 			errors = append(errors, ee...)
 		}
 	}
@@ -10871,58 +10871,60 @@ func (s *ship_data_) copyFrom(src *ship_data_) {
 	s.z = src.z
 }
 
-func (s *species_data) getOrders() []error {
-	if verbose_mode {
+func (s *species_data) getOrders(verbose, debug bool) []error {
+	if verbose {
 		log.Printf("orders: loading orders file %q\n", filepath.Base(s.orders.filename))
 	}
-	_, err := parser.Parse(s.orders.filename)
-	if err != nil {
+	// parser returns a raw parse tree. we will evaluate it later, maybe.
+	if tree, err := parser.Parse(s.orders.filename, debug); err != nil {
 		s.orders.errors = append(s.orders.errors, err)
 		return s.orders.errors
-	} else if s.orders.data == nil {
+	} else if tree == nil {
 		s.orders.errors = append(s.orders.errors, fmt.Errorf("parser failed to return orders"))
 		return s.orders.errors
+	} else {
+		s.orders.data = tree
 	}
-	if verbose_mode && s.orders.data.Errors == nil {
-		fmt.Printf(";; SP%02d TURN %3d\n", s.id, __jdb.Galaxy.TurnNumber)
-		fmt.Println("START COMBAT")
-		for _, o := range s.orders.data.Combat {
-			if o != nil {
-			}
-		}
-		fmt.Println("END ;; COMBAT")
-		fmt.Println("START PRE-DEPARTURE")
-		for _, o := range s.orders.data.PreDeparture {
-			if o != nil {
-			}
-		}
-		fmt.Println("END ;; PRE-DEPARTURE")
-		fmt.Println("START JUMPS")
-		for _, o := range s.orders.data.Jumps {
-			if o != nil {
-			}
-		}
-		fmt.Println("END ;; JUMPS")
-		fmt.Println("START PRODUCTION")
-		for _, o := range s.orders.data.Production {
-			if o != nil {
-			}
-		}
-		fmt.Println("END ;; PRODUCTION")
-		fmt.Println("START POST-ARRIVAL")
-		for _, o := range s.orders.data.PostArrival {
-			if o != nil {
-			}
-		}
-		fmt.Println("END ;; POST-ARRIVAL")
-		fmt.Println("START STRIKES")
-		for _, o := range s.orders.data.Strikes {
-			if o != nil {
-			}
-		}
-		fmt.Println("END ;; STRIKES")
-	}
-	return s.orders.data.Errors
+	//if verbose_mode {
+	//	fmt.Printf(";; SP%02d TURN %3d\n", s.id, __jdb.Galaxy.TurnNumber)
+	//	fmt.Println("START COMBAT")
+	//	for _, o := range s.orders.data.Combat {
+	//		if o != nil {
+	//		}
+	//	}
+	//	fmt.Println("END ;; COMBAT")
+	//	fmt.Println("START PRE-DEPARTURE")
+	//	for _, o := range s.orders.data.PreDeparture {
+	//		if o != nil {
+	//		}
+	//	}
+	//	fmt.Println("END ;; PRE-DEPARTURE")
+	//	fmt.Println("START JUMPS")
+	//	for _, o := range s.orders.data.Jumps {
+	//		if o != nil {
+	//		}
+	//	}
+	//	fmt.Println("END ;; JUMPS")
+	//	fmt.Println("START PRODUCTION")
+	//	for _, o := range s.orders.data.Production {
+	//		if o != nil {
+	//		}
+	//	}
+	//	fmt.Println("END ;; PRODUCTION")
+	//	fmt.Println("START POST-ARRIVAL")
+	//	for _, o := range s.orders.data.PostArrival {
+	//		if o != nil {
+	//		}
+	//	}
+	//	fmt.Println("END ;; POST-ARRIVAL")
+	//	fmt.Println("START STRIKES")
+	//	for _, o := range s.orders.data.Strikes {
+	//		if o != nil {
+	//		}
+	//	}
+	//	fmt.Println("END ;; STRIKES")
+	//}
+	return nil
 }
 
 //				for _, command := range section.Commands {

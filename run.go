@@ -45,7 +45,11 @@ func run(cfg *config.Config) (errors []error) {
 		spec_data[species_number-1].orders.filename = filepath.Join(cfg.Data.Orders, fmt.Sprintf("sp%02d.ord", spec_data[species_number-1].id))
 	}
 	get_transaction_data()
-	get_order_data()
+	if errors := get_order_data(verbose_mode, false); errors != nil {
+		for _, err := range errors {
+			log.Printf("error: %+v\n", err)
+		}
+	}
 	num_locs = len(__jdb.Locations)
 
 	// no-orders if not the first turn
