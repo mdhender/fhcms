@@ -5302,23 +5302,22 @@ package main
 //	avg_production = (all_production + m) / n_species
 //	printf("Average total production per species = %d (min = %d, max = %d)\n", avg_production, min_production, max_production)
 //}
-//
-////*************************************************************************
-//// TurnNumber.c
-//
-//func TurnNumberMain(argc int, argv []string) {
-//	/* Check for valid command line. */
-//	if argc != 1 {
-//		fprintf(stderr, "\n\tUsage: TurnNumber\n\n")
-//		exit(0)
-//	}
-//
-//	/* Get galaxy data. */
-//	get_galaxy_data()
-//
-//	/* Print the current turn number. */
-//	printf("%d\n", galaxy.turn_number)
-//
-//	exit(0)
-//}
-//
+
+//*************************************************************************
+// TurnNumber.c
+
+func TurnNumberMain(argc int, argv []string) {
+	/* Check for valid command line. */
+	if argc != 1 {
+		fprintf(stderr, "\n\tUsage: TurnNumber\n\n")
+		exit(0)
+	}
+
+	/* Get galaxy data. */
+	get_galaxy_data()
+
+	/* Print the current turn number. */
+	printf("%d\n", galaxy.turn_number)
+
+	exit(0)
+}

@@ -24,6 +24,7 @@ import (
 	"github.com/mdhender/fhcms/agrep"
 	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/orders"
+	"github.com/mdhender/fhcms/orders/scanner"
 	"io/ioutil"
 	"log"
 	"os"
@@ -9990,7 +9991,7 @@ func get_species_name(name string) (*species_data, bool) {
 // get_transact.c
 
 func get_transaction_data() {
-	panic("get_transaction_data not implemented")
+	log.Printf("get_transaction_data not implemented\n")
 	//var i, trans_fd, num_bytes int
 	//
 	///* Open file for reading. */
@@ -10874,7 +10875,25 @@ func (s *species_data) getOrders() []error {
 	if verbose_mode {
 		log.Printf("orders: loading %q\n", s.orders.filename)
 	}
-	s.orders.data = orders.Parse(s.orders.filename)
+	b, err := ioutil.ReadFile(s.orders.filename)
+	if err != nil {
+		s.orders.data.Errors = append(s.orders.data.Errors, err)
+		return s.orders.data.Errors
+	}
+	sc, err := scanner.NewScanner(b)
+	if err != nil {
+		s.orders.data.Errors = append(s.orders.data.Errors, err)
+		return s.orders.data.Errors
+	}
+	tokens, err := sc.Scan()
+	if err != nil {
+		s.orders.data.Errors = append(s.orders.data.Errors, err)
+		return s.orders.data.Errors
+	}
+	for _, t := range tokens {
+		fmt.Println(*t)
+	}
+	s.orders.data = orders.Parse(tokens)
 	if verbose_mode && s.orders.data.Errors == nil {
 		fmt.Printf(";; SP%02d TURN %3d\n", s.id, __jdb.Galaxy.TurnNumber)
 		for _, section := range []*orders.Section{s.orders.data.Combat, s.orders.data.PreDeparture, s.orders.data.Jumps, s.orders.data.Production, s.orders.data.PostArrival, s.orders.data.Strikes} {

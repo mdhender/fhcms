@@ -20,17 +20,11 @@ package orders
 
 import (
 	"fmt"
-	"io/ioutil"
+	"github.com/mdhender/fhcms/orders/scanner"
 )
 
-func Parse(name string) *Orders {
+func Parse(tokens []*scanner.Token) *Orders {
 	orders := &Orders{}
-	b, err := ioutil.ReadFile(name)
-	if err != nil {
-		orders.Errors = append(orders.Errors, err)
-		return orders
-	}
-
 	var commands []*Command
 	var command *Command
 	scanner := NewScanner(b)

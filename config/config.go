@@ -20,7 +20,7 @@ package config
 
 import (
 	"flag"
-	"github.com/peterbourgon/ff/v3"
+	ff "github.com/peterbourgon/ff/v3"
 	"log"
 	"os"
 	"path/filepath"
@@ -62,7 +62,7 @@ func (cfg *Config) Load() error {
 	debug := fs.Bool("debug", cfg.Debug, "log debug information (optional)")
 	dataJDB := fs.String("jdb-path", cfg.Data.JDB, "path to read json data")
 	dataLog := fs.String("data", cfg.Data.Log, "path to create log files")
-	dataOrders := fs.String("data", cfg.Data.Orders, "path to read orders files")
+	dataOrders := fs.String("orders", cfg.Data.Orders, "path to read orders files")
 	logVerbose := fs.Bool("verbose", cfg.Log.Verbose, "log extra information to the console")
 
 	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("FH"), ff.WithConfigFileFlag("config"), ff.WithConfigFileParser(ff.JSONParser)); err != nil {

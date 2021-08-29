@@ -66,7 +66,8 @@ func get_planet_data() {
 // Additional memory must be allocated for routines that build ships or
 // name planets.
 func get_species_data() {
-	/* Allocate enough memory for all species. */ // uhhh, spec_data is a constant size, no need to allocate
+	/* Allocate enough memory for all species. */
+	// uhhh, spec_data is a constant size, no need to allocate
 	num_species = len(__jdb.Species)
 	for id, species := range __jdb.Species {
 		s := &species_data{
@@ -96,14 +97,14 @@ func get_species_data() {
 			tech_knowledge:     species.TechKnowledge,
 			tech_level:         species.TechLevel,
 		}
-		for _, id := range species.Ally {
-			s.ally[id] = true
+		for _, i := range species.Ally {
+			s.ally[i] = true
 		}
-		for _, id := range species.Contact {
-			s.contact[id] = true
+		for _, i := range species.Contact {
+			s.contact[i] = true
 		}
-		for _, id := range species.Enemy {
-			s.enemy[id] = true
+		for _, i := range species.Enemy {
+			s.enemy[i] = true
 		}
 		namp_data[id] = s.namplas
 		for k := range species.Namplas {
@@ -112,8 +113,6 @@ func get_species_data() {
 				AUs_to_install: species.Namplas[k].AUsToInstall,
 				auto_AUs:       species.Namplas[k].AutoAUs,
 				auto_IUs:       species.Namplas[k].AutoIUs,
-				hidden:         species.Namplas[k].Hidden != 0,
-				hiding:         species.Namplas[k].Hiding != 0,
 				IUs_needed:     species.Namplas[k].IUsNeeded,
 				IUs_to_install: species.Namplas[k].IUsToInstall,
 				ma_base:        species.Namplas[k].MaBase,
@@ -132,14 +131,20 @@ func get_species_data() {
 				y:              species.Namplas[k].Y,
 				z:              species.Namplas[k].Z,
 			}
+			if species.Namplas[k].Hidden != 0 {
+				n.hidden = 1
+			}
+			if species.Namplas[k].Hiding != 0 {
+				n.hiding = 1
+			}
 			for item, qty := range species.Namplas[k].ItemQuantity {
 				n.item_quantity[item] = qty
 			}
 			namp_data[id][k] = &n
 		}
-		ship_data[species_index] = s.ships
+		ship_data[id] = s.ships
 		for k := range species.Ships {
-			s := ship_data_{
+			sd := &ship_data_{
 				age:                  species.Ships[k].Age,
 				arrived_via_wormhole: species.Ships[k].ArrivedViaWormhole != 0,
 				class:                species.Ships[k].Class,
@@ -147,7 +152,6 @@ func get_species_data() {
 				dest_x:               species.Ships[k].DestX,
 				dest_y:               species.Ships[k].DestY,
 				dest_z:               species.Ships[k].DestZ,
-				just_jumped:          species.Ships[k].JustJumped != 0,
 				loading_point:        species.Ships[k].LoadingPoint,
 				pn:                   species.Ships[k].Pn,
 				remaining_cost:       species.Ships[k].RemainingCost,
@@ -160,16 +164,19 @@ func get_species_data() {
 				y:                    species.Ships[k].Y,
 				z:                    species.Ships[k].Z,
 			}
-			for item, qty := range species.Ships[k].ItemQuantity {
-				s.item_quantity[item] = qty
+			if species.Ships[k].JustJumped != 0 {
+				sd.just_jumped = 1
 			}
-			ship_data[id][k] = &s
+			for item, qty := range species.Ships[k].ItemQuantity {
+				sd.item_quantity[item] = qty
+			}
+			ship_data[id][k] = sd
 		}
 		spec_data[id] = s
+		data_in_memory[id] = true
+		num_new_namplas[id] = 0
+		num_new_ships[id] = 0
 	}
-	data_in_memory[species_index] = true
-	num_new_namplas[species_index] = 0
-	num_new_ships[species_index] = 0
 }
 
 //*************************************************************************

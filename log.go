@@ -21,7 +21,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
+	"io/ioutil"
 )
 
 /* The following routines will post an item to standard output and to
@@ -120,22 +120,11 @@ func log_long(value int) {
 }
 
 func log_message(message_filename string) {
-	var message_line [256]byte
-	var message_file io.Writer
-
-	/* Open message file. */
-	message_file = fopen(message_filename, "r")
-	if message_file == nil {
-		fprintf(stderr, "\n\tWARNING! utils.c: cannot open message file '%s'!\n\n", message_filename)
-		return
+	buf, err := ioutil.ReadFile(message_filename)
+	if err != nil {
+		panic(err)
 	}
-
-	/* Copy message to log file. */
-	for fgets(message_line, 256, message_file) != nil {
-		fputs(message_line, log_file)
-	}
-
-	fclose(message_file)
+	fputs(string(buf), log_file)
 }
 
 func log_string(s string) {

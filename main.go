@@ -44,4 +44,20 @@ func main() {
 		}
 		os.Exit(2)
 	}
+	//
+	//b, err := ioutil.ReadFile("D:\\GoLand\\fhcms\\testdata\\t07\\sp18.ord")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//s, err := scanner.NewScanner(b)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//tokens, err := s.Scan()
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//for _, t := range tokens {
+	//	fmt.Println(*t)
+	//}
 }
