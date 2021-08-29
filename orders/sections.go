@@ -17,3 +17,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
 package orders
+
+type Section struct {
+	Line     int
+	Name     string
+	Commands []*Command
+}
+
+type Command struct {
+	Line          int
+	Name          string
+	Args          []string
+	OriginalInput string
+}

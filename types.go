@@ -182,6 +182,7 @@ type species_data struct {
 	orders  struct {
 		data     *orders.Orders
 		filename string
+		errors   []error
 	}
 	ships []*ship_data_
 }

@@ -19,11 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package parser
 
 import (
+	"fmt"
 	"unicode"
 	"unicode/utf8"
 )
-
-const cr, lf = '\r', '\n'
 
 type position struct {
 	p    []byte
@@ -32,29 +31,6 @@ type position struct {
 
 func (p *position) Line() int {
 	return p.line
-}
-
-func (p *position) accept(word []byte) []byte {
-	if len(word) == 0 {
-		return nil
-	}
-	raw := p.next()
-	for tok := raw; !(len(tok) == 0 || len(word) == 0); {
-		wr, ww := utf8.DecodeRune(word)
-		if wr == utf8.RuneError {
-			return nil
-		}
-		tr, tw := utf8.DecodeRune(tok)
-		if !(tr == wr || unicode.ToUpper(tr) == unicode.ToUpper(wr)) {
-			return nil
-		}
-		tok, word = tok[tw:], word[ww:]
-	}
-	if len(word) != 0 {
-		return nil
-	}
-	p.p = p.p[len(raw):]
-	return raw
 }
 
 func (p *position) clone() *position {
@@ -114,25 +90,6 @@ func (p *position) hasWord(word []byte) bool {
 	}
 	p.skip(len(word))
 	return true
-}
-
-// next returns the next word up to a space, comment, end of line or
-// end of input. it returns nil if it starts at end of input. it
-// returns an empty slice if it starts on a space, comment, or
-// end of line.
-func (p *position) next() []byte {
-	if p == nil || p.eof() {
-		return nil
-	}
-	n := 0
-	for n < len(p.p) {
-		r, w := utf8.DecodeRune(p.p[n:])
-		if unicode.IsSpace(r) || r == ';' {
-			break
-		}
-		n += w
-	}
-	return p.p[:n]
 }
 
 func (p *position) peek(n int) rune {
@@ -201,4 +158,145 @@ func (p *position) slug() string {
 		s += string(p.get())
 	}
 	return s
+}
+
+func tolower(r rune) rune {
+	return unicode.ToLower(r)
+}
+
+// split returns a copy of the input split into things that may be of interest.
+func split(b []byte) []string {
+	//// trim comments
+	//if off := bytes.IndexByte(p, ';'); off != 0 {
+	//	p = p[:off]
+	//}
+	//// convert commas to tabs
+	//for i := 0; i < len(p); i++ {
+	//	if p[i] == ',' {
+	//		p[i] = '\t'
+	//	}
+	//}
+	//// compress runs of tabs
+	//var b []byte
+	//for len(p) != 0 {
+	//	if p[0] == '\t' {
+	//		if len(b) != 0 && b[len(b)-1] != '\t' {
+	//			b = append(b, '\t')
+	//		}
+	//	} else {
+	//		b = append(b, p[0])
+	//	}
+	//	p = p[1:]
+	//}
+	//p = b
+	//// trim leading and trailing spaces
+	//p = bytes.TrimSpace(p)
+
+	var errors []error
+	p := position{p: b, line: 1}
+	// split into words
+	var words []string
+	state := "start"
+	for !p.eof() {
+		if p.skipSpaces() || p.skipComment() {
+			continue
+		}
+		switch state {
+		case "start":
+			if !p.hasWord([]byte{'s', 't', 'a', 'r', 't'}) {
+				p.flushLine() // ignore all lines that are outside a section
+				continue
+			}
+			state = "section"
+		case "section":
+			for _, v := range []struct {
+				section string
+				pfx     []byte
+			}{
+				{"COMBAT", []byte{'c', 'o', 'm', 'b', 'a', 't'}},
+				{"PRE-DEPARTURE", []byte{'p', 'r', 'e', '-', 'd', 'e', 'p', 'a', 'r', 't', 'u', 'r', 'e'}},
+				{"JUMPS", []byte{'j', 'u', 'm', 'p', 's'}},
+				{"PRODUCTION", []byte{'p', 'r', 'o', 'd', 'u', 'c', 't', 'i', 'o', 'n'}},
+				{"POST-ARRIVAL", []byte{'p', 'o', 's', 't', '-', 'a', 'r', 'r', 'i', 'v', 'a', 'l'}},
+				{"STRIKES", []byte{'s', 't', 'r', 'i', 'k', 'e', 's'}},
+			} {
+				if !p.hasWord(v.pfx) {
+					continue
+				}
+				state = "eol-before-command-or-end"
+				break
+			}
+		case "eol-before-command-or-end":
+			if p.get() != '\n' {
+				errors = append(errors, fmt.Errorf("%d: expected eol after start section", p.Line()))
+				p.flushLine()
+			}
+			state = "command-or-end"
+		case "command-or-end":
+			if p.hasPrefix([]byte{'s', 't', 'a', 'r', 't'}) {
+				if unicode.IsSpace(p.peek(5)) {
+					p.skip(5)
+					state = "section"
+					continue
+				}
+			}
+		case "uhm":
+			for _, v := range []struct {
+				word string
+				pfx  []byte
+			}{
+				{"PL", []byte{'p', 'l'}},
+				{"SP", []byte{'s', 'p'}},
+			} {
+				if p.hasPrefix(v.pfx) {
+					if unicode.IsSpace(p.peek(len(v.pfx))) {
+						p.skip(len(v.pfx))
+						words = append(words, v.word)
+						state = "name"
+						continue
+					}
+				}
+			}
+			for _, v := range []struct {
+				word string
+				pfx  []byte
+			}{
+				{"ALLY", []byte{'a', 'l', 'l', 'y'}},
+				{"AMBUSH", []byte{'a', 'm', 'b', 'u', 's', 'h'}},
+			} {
+				if p.hasPrefix(v.pfx) {
+					if unicode.IsSpace(p.peek(len(v.pfx))) {
+						p.skip(len(v.pfx))
+						words = append(words, v.word)
+						state = "command"
+						continue
+					}
+				}
+			}
+		case "command":
+		case "name":
+		default:
+			panic(fmt.Sprintf("unknown state %q", state))
+		}
+		panic(fmt.Sprintf("unknown %q in state %q", p.slug(), state))
+	}
+
+	return words
+}
+
+// tabify returns a copy of the input with commas replaced by
+// tabs and runs of tabs compressed to a single tab.
+func tabify(p []byte) []byte {
+	var line []byte
+	for len(p) != 0 {
+		if p[0] == ',' || p[0] == '\t' {
+			if len(line) != 0 && line[len(line)-1] != '\t' {
+				line = append(line, '\t')
+			}
+		} else {
+			line = append(line, p[0])
+		}
+		p = p[1:]
+	}
+	return line
 }

@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package scanner
+package parser
 
 import (
 	"bytes"
@@ -72,7 +72,7 @@ type Scanner struct {
 	keywords map[string]TokenType
 }
 
-func NewScanner(src []byte) (*Scanner, error) {
+func NewScanner(src []byte) *Scanner {
 	s := &Scanner{
 		line:     1,
 		keywords: make(map[string]TokenType),
@@ -130,7 +130,7 @@ func NewScanner(src []byte) (*Scanner, error) {
 		s.keywords[fmt.Sprintf("TR%d", trClass)] = Transport
 		s.keywords[fmt.Sprintf("TR%dS", trClass)] = Transport
 	}
-	return s, nil
+	return s
 }
 
 func (s *Scanner) Scan() ([]*Token, error) {
@@ -159,7 +159,13 @@ func (s *Scanner) advance() (rune, []byte) {
 	if len(s.buffer) == 0 {
 		s.slug = "***eof***"
 		return eof, nil
+	} else if s.buffer[0] == cr {
+		panic(fmt.Sprintf("assert(input.Line %d does not contain CR", s.line))
+	} else if s.buffer[0] == lf {
+		s.buffer, s.line = s.buffer[1:], s.line+1
+		return lf, []byte{lf}
 	}
+
 	r, w := utf8.DecodeRune(s.buffer)
 	b := s.buffer[:w]
 	s.buffer = s.buffer[w:]
@@ -169,26 +175,6 @@ func (s *Scanner) advance() (rune, []byte) {
 		s.slug = s.slug[:20]
 	}
 
-	// CR, CR+LF, LF, and LF+CR are all accepted as end of line markers.
-	// All are translated to LF in the token.
-	if r == cr {
-		s.line = s.line + 1
-		if len(s.buffer) != 0 {
-			if s.buffer[0] == lf {
-				s.buffer = s.buffer[1:]
-			}
-		}
-		return lf, []byte{lf}
-	} else if r == lf {
-		s.line = s.line + 1
-		if len(s.buffer) != 0 {
-			if s.buffer[0] == cr {
-				s.buffer = s.buffer[1:]
-			}
-		}
-		return lf, []byte{lf}
-	}
-
 	return r, b
 }
 
@@ -196,21 +182,19 @@ func (s *Scanner) peek() rune {
 	if len(s.buffer) == 0 {
 		return eof
 	}
-	r, _ := utf8.DecodeRune(s.buffer)
-	// CR, CR+LF, LF, and LF+CR are all accepted as end of line markers.
-	// All are translated to LF in the token.
-	if r == cr || r == lf {
+	if s.buffer[0] == lf {
 		return lf
 	}
+	r, _ := utf8.DecodeRune(s.buffer)
 	return r
 }
 
 func (s *Scanner) scanToken() *Token {
 	// ignore leading whitespace, comments, and (get this) commas
-	for r := s.peek(); r != '\n' && (r == ';' || r == ',' || unicode.IsSpace(r)); r = s.peek() {
+	for r := s.peek(); r != lf && (r == ';' || r == ',' || unicode.IsSpace(r)); r = s.peek() {
 		s.advance()   // skip past the space, comma, or semi-colon
 		if r == ';' { // read to end of line (but not past it) for comments
-			for r = s.peek(); r != eof && r != '\n'; r = s.peek() {
+			for r = s.peek(); r != eof && r != lf; r = s.peek() {
 				s.advance()
 			}
 		}
@@ -219,16 +203,17 @@ func (s *Scanner) scanToken() *Token {
 		return &Token{Type: EOF, Line: s.line}
 	}
 
+	line := s.line
 	if s.peek() == lf {
 		s.advance()
-		return &Token{Type: EOL, Line: s.line - 1}
+		return &Token{Type: EOL, Line: line}
 	}
 
 	// check for numbers and coordinates
 	if '0' <= s.buffer[0] && s.buffer[0] <= '9' {
 		// is word a set of planet or system coordinates?
 		if pc := isPlanetCoordinates(s.buffer); pc || isSystemCoordinates(s.buffer) {
-			tk := &Token{Line: s.line}
+			tk := &Token{Line: line}
 			if pc {
 				tk.Type = PlanetCoordinates
 			} else {
@@ -273,7 +258,7 @@ func (s *Scanner) scanToken() *Token {
 		}
 		// is word a number
 		if isNumber(s.buffer) {
-			tk := &Token{Type: Number, Line: s.line}
+			tk := &Token{Type: Number, Line: line}
 			var oc []byte
 			for r := s.peek(); '0' <= r && r <= '9'; r = s.peek() {
 				tk.Number = tk.Number*10 + int(r-'0')
@@ -287,7 +272,7 @@ func (s *Scanner) scanToken() *Token {
 	if isSectionStart(s.buffer, "COMBAT", "PRE-DEPARTURE", "JUMPS", "PRODUCTION", "POST-ARRIVAL", "STRIKES") {
 		var oc []byte
 		// start
-		for r := s.peek(); r != ' ' && r != '\t' && r != ',' && r != ';' && r != cr && r != lf && r != eof; r = s.peek() {
+		for r := s.peek(); r != ' ' && r != '\t' && r != ',' && r != ';' && r != lf && r != eof; r = s.peek() {
 			_, b := s.advance()
 			oc = append(oc, b...)
 		}
@@ -297,17 +282,32 @@ func (s *Scanner) scanToken() *Token {
 			s.advance()
 		}
 		// section name
-		for r := s.peek(); r != ' ' && r != '\t' && r != ',' && r != ';' && r != cr && r != lf && r != eof; r = s.peek() {
+		for r := s.peek(); r != ' ' && r != '\t' && r != ',' && r != ';' && r != lf && r != eof; r = s.peek() {
 			_, b := s.advance()
 			oc = append(oc, b...)
 		}
-		return &Token{Type: Section, Line: s.line, Abbr: strings.ToUpper(strings.TrimSpace(string(oc)))}
+		abbr := strings.ToUpper(strings.TrimSpace(string(oc)))
+		switch abbr {
+		case "START COMBAT":
+			return &Token{Type: StartCombat, Line: line, Abbr: abbr}
+		case "START JUMPS":
+			return &Token{Type: StartJumps, Line: line, Abbr: abbr}
+		case "START POST-ARRIVAL":
+			return &Token{Type: StartPostArrival, Line: line, Abbr: abbr}
+		case "START PRE-DEPARTURE":
+			return &Token{Type: StartPreDeparture, Line: line, Abbr: abbr}
+		case "START PRODUCTION":
+			return &Token{Type: StartProduction, Line: line, Abbr: abbr}
+		case "START STRIKES":
+			return &Token{Type: StartStrikes, Line: line, Abbr: abbr}
+		}
+		panic(fmt.Sprintf("assert(scanner.SectionStart != %q)", abbr))
 	}
 
 	// fetch a word from the input.
-	// words are terminated by space, tab, comma, semi-colon, cr, lf, or eof.
+	// words are terminated by space, tab, comma, semi-colon, lf, or eof.
 	var oc []byte
-	for r := s.peek(); r != ' ' && r != '\t' && r != ',' && r != ';' && r != cr && r != lf && r != eof; r = s.peek() {
+	for r := s.peek(); r != ' ' && r != '\t' && r != ',' && r != ';' && r != lf && r != eof; r = s.peek() {
 		_, b := s.advance()
 		oc = append(oc, b...)
 	}
@@ -320,7 +320,7 @@ func (s *Scanner) scanToken() *Token {
 	// is word a message?
 	if word == "MESSAGE" {
 		// expectation is that the buffer contains MESSAGE Species EOL Line+ ZZZ, but we don't enforce that here
-		tk := &Token{Type: Message, Line: s.line}
+		tk := &Token{Type: Message, Line: line}
 		oc = nil
 		// skip spaces and tabs following the word
 		for r := s.peek(); r == ' ' || r == '\t'; r = s.peek() {
@@ -360,17 +360,19 @@ func (s *Scanner) scanToken() *Token {
 	// is word a planet?
 	if word == "PL" {
 		name := s.scanName()
-		return &Token{Type: Planet, Line: s.line, Abbr: "PL", Value: strings.TrimSpace(string(name))}
+		return &Token{Type: Planet, Line: line, Abbr: "PL", Value: strings.TrimSpace(string(name))}
 	}
 
 	// is word a species?
 	if word == "SP" {
 		name := s.scanName()
-		return &Token{Type: Species, Line: s.line, Abbr: "SP", Value: strings.TrimSpace(string(name))}
+		return &Token{Type: Species, Line: line, Abbr: "SP", Value: strings.TrimSpace(string(name))}
 	}
 
 	// is word a command, item, ship, tech, or transport?
-	if kind, ok := s.keywords[word]; ok {
+	if word == "PRODUCTION" {
+		return &Token{Type: Production, Line: line, Abbr: word}
+	} else if kind, ok := s.keywords[word]; ok {
 		switch kind {
 		case Ship:
 			// skip spaces between word and name
@@ -378,16 +380,16 @@ func (s *Scanner) scanToken() *Token {
 				s.advance()
 			}
 			name := s.scanName()
-			return &Token{Type: Ship, Line: s.line, Abbr: word, Value: strings.TrimSpace(string(name))}
+			return &Token{Type: Ship, Line: line, Abbr: word, Value: strings.TrimSpace(string(name))}
 		case Transport:
 			// skip spaces between word and name
 			for s.peek() == ' ' {
 				s.advance()
 			}
 			name := s.scanName()
-			return &Token{Type: Transport, Line: s.line, Abbr: word, Value: strings.TrimSpace(string(name))}
+			return &Token{Type: Transport, Line: line, Abbr: word, Value: strings.TrimSpace(string(name))}
 		default:
-			return &Token{Type: kind, Line: s.line, Abbr: word}
+			return &Token{Type: kind, Line: line, Abbr: word}
 		}
 	}
 
@@ -395,15 +397,15 @@ func (s *Scanner) scanToken() *Token {
 	for r := s.peek(); !(r == lf || r == eof); r = s.peek() {
 		s.advance()
 	}
-	return &Token{Type: Unknown, Line: s.line, Value: string(oc)}
+	return &Token{Type: Unknown, Line: line, Value: string(oc)}
 }
 
 // scanName returns the next name in the source.
-// names are terminated by tab, comma, semi-colon, cr, lf, or eof.
+// names are terminated by tab, comma, semi-colon, lf, or eof.
 // the caller must strip leading and trailing spaces as needed.
 func (s *Scanner) scanName() []byte {
 	var oc []byte
-	for r := s.peek(); r != '\t' && r != ',' && r != ';' && r != cr && r != lf && r != eof; r = s.peek() {
+	for r := s.peek(); r != '\t' && r != ',' && r != ';' && r != lf && r != eof; r = s.peek() {
 		_, b := s.advance()
 		oc = append(oc, b...)
 	}
@@ -415,7 +417,7 @@ func (s *Scanner) scanName() []byte {
 }
 
 // isNumber returns true if the first word in the source is an integer
-// followed by a valid delimiter (space, tab, comma, semi-colon, cr, lf, or eof).
+// followed by a valid delimiter (space, tab, comma, semi-colon, lf, or eof).
 func isNumber(p []byte) bool {
 	if len(p) == 0 {
 		return false
@@ -423,12 +425,12 @@ func isNumber(p []byte) bool {
 	for len(p) != 0 && '0' <= p[0] && p[0] <= '9' {
 		p = p[1:]
 	}
-	return len(p) == 0 || (p[0] == ' ' || p[0] == '\t' || p[0] == ',' || p[0] == ';' || p[0] == cr || p[0] == lf)
+	return len(p) == 0 || (p[0] == ' ' || p[0] == '\t' || p[0] == ',' || p[0] == ';' || p[0] == lf)
 }
 
 // isPlanetCoordinates returns true if the first four words in the source
 // are integers separated by spaces followed by a valid delimiter (space,
-// tab, comma, semi-colon, cr, lf, or eof).
+// tab, comma, semi-colon, lf, or eof).
 func isPlanetCoordinates(p []byte) bool {
 	// get x
 	if len(p) == 0 {
@@ -490,7 +492,7 @@ func isSectionStart(p []byte, names ...string) bool {
 	var oc []byte
 	for len(p) != 0 {
 		r, w := utf8.DecodeRune(p)
-		if r == ' ' || r == '\t' || r == ',' || r == ';' || r == cr || r == lf {
+		if r == ' ' || r == '\t' || r == ',' || r == ';' || r == lf {
 			break
 		}
 		oc = append(oc, p[:w]...)

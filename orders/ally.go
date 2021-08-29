@@ -47,3 +47,10 @@ package orders
 //
 //	}
 //}
+
+type Ally struct {
+	Line    int
+	All     bool
+	Species string
+	Errors  []error
+}

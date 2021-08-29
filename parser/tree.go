@@ -16,4 +16,42 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package orders
+package parser
+
+type Node struct {
+	Parent   *Node
+	Children []*Node
+	Token    *Token
+}
+
+func (n *Node) firstChildOfType(t TokenType) *Node {
+	if n != nil {
+		for _, c := range n.Children {
+			if c.Token.Type == t {
+				return c
+			}
+		}
+	}
+	return nil
+}
+
+func (n *Node) String() string {
+	return n.prettyPrint(1)
+}
+
+func (n *Node) prettyPrint(l int) string {
+	var s string
+	for i := 0; i < l; i++ {
+		s += " "
+	}
+	if n.Token != nil {
+		s += n.Token.String()
+	}
+	if n.Children != nil {
+		s += "\n"
+		for _, c := range n.Children {
+			s += c.prettyPrint(l + 3)
+		}
+	}
+	return s + "\n"
+}

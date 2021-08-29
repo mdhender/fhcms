@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package scanner
+package parser
 
 import "fmt"
 
@@ -69,11 +69,16 @@ const (
 	Repair
 	Research
 	Scan
-	Section //
 	Send
 	Ship //
 	Shipyard
-	Species           //
+	Species //
+	StartCombat
+	StartJumps
+	StartPostArrival
+	StartPreDeparture
+	StartProduction
+	StartStrikes
 	SystemCoordinates //
 	Summary
 	Surrender
@@ -123,9 +128,9 @@ func (tk TokenType) String() string {
 	case Disband:
 		return "disband"
 	case EOF:
-		return "eOF"
+		return "eof"
 	case EOL:
-		return "eOL"
+		return "eol"
 	case End:
 		return "end"
 	case Enemy:
@@ -184,8 +189,6 @@ func (tk TokenType) String() string {
 		return "research"
 	case Scan:
 		return "scan"
-	case Section:
-		return "section"
 	case Send:
 		return "send"
 	case Ship:
@@ -194,6 +197,18 @@ func (tk TokenType) String() string {
 		return "shipyard"
 	case Species:
 		return "species"
+	case StartCombat:
+		return "start combat"
+	case StartJumps:
+		return "start jumps"
+	case StartPostArrival:
+		return "start post-arrival"
+	case StartPreDeparture:
+		return "start pre-departure"
+	case StartProduction:
+		return "start production"
+	case StartStrikes:
+		return "start strikes"
 	case SystemCoordinates:
 		return "systemCoordinates"
 	case Summary:
@@ -214,6 +229,8 @@ func (tk TokenType) String() string {
 		return "transfer"
 	case Transport:
 		return "transport"
+	case Unknown:
+		return "unknown"
 	case Unload:
 		return "unload"
 	case Upgrade:

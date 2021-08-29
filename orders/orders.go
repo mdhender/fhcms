@@ -18,42 +18,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package orders
 
+type CombatOrder interface{}
+type JumpOrder interface{}
+type PostArrivalOrder interface{}
+type PreDepartureOrder interface{}
+type ProductionOrder interface{}
+type StrikeOrder interface{}
+
 type Orders struct {
-	Combat       *Section
-	PreDeparture *Section
-	Jumps        *Section
-	Production   *Section
-	PostArrival  *Section
-	Strikes      *Section
+	Combat       []CombatOrder
+	PreDeparture []PreDepartureOrder
+	Jumps        []JumpOrder
+	Production   []ProductionOrder
+	PostArrival  []PostArrivalOrder
+	Strikes      []StrikeOrder
 	Errors       []error
-}
-
-type Section struct {
-	Line     int
-	Name     string
-	Commands []*Command
-}
-
-type Command struct {
-	Line          int
-	Name          string
-	Args          []string
-	OriginalInput string
 }
 
 func (o *Orders) NoOrders() bool {
 	if o == nil {
 		return true
+	} else if len(o.Combat) != 0 {
+		return false
+	} else if len(o.PreDeparture) != 0 {
+		return false
+	} else if len(o.Jumps) != 0 {
+		return false
+	} else if len(o.PostArrival) != 0 {
+		return false
+	} else if len(o.Strikes) != 0 {
+		return false
 	}
-	return o.Combat == nil && o.PreDeparture == nil && o.Jumps == nil && o.Production == nil && o.PostArrival == nil && o.Strikes == nil
-}
-
-// ALLY declare species "sp" to be an ally
-type Ally struct {
-	Line    int
-	All     bool
-	Species string
-	Errors  []error
+	return true
 }
 
 // AMBUSH spend "n" in preparation for ambush

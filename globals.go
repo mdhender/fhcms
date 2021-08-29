@@ -271,7 +271,7 @@ var (
 	type_char     = []byte(" dD g")
 	upper_name    string // warning: was []byte
 	value         int
-	verbose_mode  bool
+	verbose_mode  = false
 	x             int
 	x_attacked_y  [MAX_SPECIES][MAX_SPECIES]bool // was char
 	y             int

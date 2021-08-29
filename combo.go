@@ -24,7 +24,7 @@ import (
 	"github.com/mdhender/fhcms/agrep"
 	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/orders"
-	"github.com/mdhender/fhcms/orders/scanner"
+	"github.com/mdhender/fhcms/parser"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10873,44 +10873,65 @@ func (s *ship_data_) copyFrom(src *ship_data_) {
 
 func (s *species_data) getOrders() []error {
 	if verbose_mode {
-		log.Printf("orders: loading %q\n", s.orders.filename)
+		log.Printf("orders: loading orders file %q\n", filepath.Base(s.orders.filename))
 	}
-	b, err := ioutil.ReadFile(s.orders.filename)
+	_, err := parser.Parse(s.orders.filename)
 	if err != nil {
-		s.orders.data.Errors = append(s.orders.data.Errors, err)
-		return s.orders.data.Errors
+		s.orders.errors = append(s.orders.errors, err)
+		return s.orders.errors
+	} else if s.orders.data == nil {
+		s.orders.errors = append(s.orders.errors, fmt.Errorf("parser failed to return orders"))
+		return s.orders.errors
 	}
-	sc, err := scanner.NewScanner(b)
-	if err != nil {
-		s.orders.data.Errors = append(s.orders.data.Errors, err)
-		return s.orders.data.Errors
-	}
-	tokens, err := sc.Scan()
-	if err != nil {
-		s.orders.data.Errors = append(s.orders.data.Errors, err)
-		return s.orders.data.Errors
-	}
-	for _, t := range tokens {
-		fmt.Println(*t)
-	}
-	s.orders.data = orders.Parse(tokens)
 	if verbose_mode && s.orders.data.Errors == nil {
 		fmt.Printf(";; SP%02d TURN %3d\n", s.id, __jdb.Galaxy.TurnNumber)
-		for _, section := range []*orders.Section{s.orders.data.Combat, s.orders.data.PreDeparture, s.orders.data.Jumps, s.orders.data.Production, s.orders.data.PostArrival, s.orders.data.Strikes} {
-			if section != nil {
-				fmt.Printf("START %q\n", section.Name)
-				for _, command := range section.Commands {
-					fmt.Printf("    %-18s", command.Name)
-					for _, arg := range command.Args {
-						fmt.Printf(" %q", arg)
-					}
-					fmt.Printf("\n")
-				}
+		fmt.Println("START COMBAT")
+		for _, o := range s.orders.data.Combat {
+			if o != nil {
 			}
 		}
+		fmt.Println("END ;; COMBAT")
+		fmt.Println("START PRE-DEPARTURE")
+		for _, o := range s.orders.data.PreDeparture {
+			if o != nil {
+			}
+		}
+		fmt.Println("END ;; PRE-DEPARTURE")
+		fmt.Println("START JUMPS")
+		for _, o := range s.orders.data.Jumps {
+			if o != nil {
+			}
+		}
+		fmt.Println("END ;; JUMPS")
+		fmt.Println("START PRODUCTION")
+		for _, o := range s.orders.data.Production {
+			if o != nil {
+			}
+		}
+		fmt.Println("END ;; PRODUCTION")
+		fmt.Println("START POST-ARRIVAL")
+		for _, o := range s.orders.data.PostArrival {
+			if o != nil {
+			}
+		}
+		fmt.Println("END ;; POST-ARRIVAL")
+		fmt.Println("START STRIKES")
+		for _, o := range s.orders.data.Strikes {
+			if o != nil {
+			}
+		}
+		fmt.Println("END ;; STRIKES")
 	}
 	return s.orders.data.Errors
 }
+
+//				for _, command := range section.Commands {
+//					fmt.Printf("    %-18s", command.Name)
+//					for _, arg := range command.Args {
+//						fmt.Printf(" %q", arg)
+//					}
+//					fmt.Printf("\n")
+//				}
 
 func (s *species_data) getNamedPlanet(name string) *nampla_data {
 	if verbose_mode {

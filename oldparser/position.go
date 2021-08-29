@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package orders
+package oldparser
 
 import (
 	"unicode"
@@ -32,6 +32,29 @@ type position struct {
 
 func (p *position) Line() int {
 	return p.line
+}
+
+func (p *position) accept(word []byte) []byte {
+	if len(word) == 0 {
+		return nil
+	}
+	raw := p.next()
+	for tok := raw; !(len(tok) == 0 || len(word) == 0); {
+		wr, ww := utf8.DecodeRune(word)
+		if wr == utf8.RuneError {
+			return nil
+		}
+		tr, tw := utf8.DecodeRune(tok)
+		if !(tr == wr || unicode.ToUpper(tr) == unicode.ToUpper(wr)) {
+			return nil
+		}
+		tok, word = tok[tw:], word[ww:]
+	}
+	if len(word) != 0 {
+		return nil
+	}
+	p.p = p.p[len(raw):]
+	return raw
 }
 
 func (p *position) clone() *position {
@@ -91,6 +114,25 @@ func (p *position) hasWord(word []byte) bool {
 	}
 	p.skip(len(word))
 	return true
+}
+
+// next returns the next word up to a space, comment, end of line or
+// end of input. it returns nil if it starts at end of input. it
+// returns an empty slice if it starts on a space, comment, or
+// end of line.
+func (p *position) next() []byte {
+	if p == nil || p.eof() {
+		return nil
+	}
+	n := 0
+	for n < len(p.p) {
+		r, w := utf8.DecodeRune(p.p[n:])
+		if unicode.IsSpace(r) || r == ';' {
+			break
+		}
+		n += w
+	}
+	return p.p[:n]
 }
 
 func (p *position) peek(n int) rune {
