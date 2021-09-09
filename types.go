@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"bytes"
 	"github.com/mdhender/fhcms/parser"
 )
 
@@ -154,26 +155,27 @@ type sp_loc_data struct {
 }
 
 type species_data struct {
-	name               string /* Name of species. */ // warning: code expects [32]byte
-	x, y, z, pn        int    /* Coordinates of home planet. */
-	auto_orders        bool   /* AUTO command was issued. */
-	econ_units         int    /* Number of economic units. */
-	fleet_cost         int    /* Total fleet maintenance cost. */
-	fleet_percent_cost int    /* Fleet maintenance cost as a percentage times one hundred. */
-	govt_name          string /* Name of government. */ // warning: code expects [32]byte
-	govt_type          string /* Type of government. */ // warning: code expects [32]byte
-	hp_original_base   int    /* If non-zero, home planet was bombed either by bombardment or germ warfare and has not yet fully recovered. Value is total economic base before bombing. */
-	init_tech_level    [6]int /* Tech levels at start of turn. */
-	neutral_gas        [6]int /* Gases neutral to species. */
-	num_namplas        int    /* Number of named planets, including home planet and colonies. */
-	num_ships          int    /* Number of ships. */
-	poison_gas         [6]int /* Gases poisonous to species. */
-	required_gas       int    /* Gas required by species. */
-	required_gas_max   int    /* Maximum allowed percentage. */
-	required_gas_min   int    /* Minimum needed percentage. */
-	tech_eps           [6]int /* Experience points for tech levels. */
-	tech_knowledge     [6]int /* Unapplied tech level knowledge. */
-	tech_level         [6]int /* Actual tech levels. */
+	name               string        /* Name of species. */ // warning: code expects [32]byte
+	x, y, z, pn        int           /* Coordinates of home planet. */
+	auto_orders        bool          /* AUTO command was issued. */
+	econ_units         int           /* Number of economic units. */
+	fleet_cost         int           /* Total fleet maintenance cost. */
+	fleet_percent_cost int           /* Fleet maintenance cost as a percentage times one hundred. */
+	govt_name          string        /* Name of government. */ // warning: code expects [32]byte
+	govt_type          string        /* Type of government. */ // warning: code expects [32]byte
+	hp_original_base   int           /* If non-zero, home planet was bombed either by bombardment or germ warfare and has not yet fully recovered. Value is total economic base before bombing. */
+	init_tech_level    [6]int        /* Tech levels at start of turn. */
+	log_file           *bytes.Buffer // a buffer needs no initialization and acts like an io.Writer
+	neutral_gas        [6]int        /* Gases neutral to species. */
+	num_namplas        int           /* Number of named planets, including home planet and colonies. */
+	num_ships          int           /* Number of ships. */
+	poison_gas         [6]int        /* Gases poisonous to species. */
+	required_gas       int           /* Gas required by species. */
+	required_gas_max   int           /* Maximum allowed percentage. */
+	required_gas_min   int           /* Minimum needed percentage. */
+	tech_eps           [6]int        /* Experience points for tech levels. */
+	tech_knowledge     [6]int        /* Unapplied tech level knowledge. */
+	tech_level         [6]int        /* Actual tech levels. */
 	// warning: code expects [NUM_CONTACT_WORDS]int for ally, contact, and enemy
 	ally    [MAX_SPECIES]bool /* A bit is set if corresponding species is considered an ally. */
 	contact [MAX_SPECIES]bool /* A bit is set if corresponding species has been met. */
@@ -186,7 +188,8 @@ type species_data struct {
 		filename string
 		errors   []error
 	}
-	ships []*ship_data_
+	ships          []*ship_data_
+	species_jumped bool
 }
 
 type star_color_code struct {

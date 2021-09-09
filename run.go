@@ -19,10 +19,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/mdhender/fhcms/config"
+	"github.com/mdhender/fhcms/prng"
 	"github.com/mdhender/fhcms/store/jsondb"
 	"log"
+	"os"
 	"path/filepath"
 )
 
@@ -34,23 +37,36 @@ func run(cfg *config.Config) (errors []error) {
 	// globals. argh.
 	__jdb = jdb
 	__jdb.SetLocations()
-
-	verbose_mode = cfg.Log.Verbose
+	g := &globals{
+		__defaultPRNG:     prng.New(1924085713),
+		log_start_of_line: true,
+		num_locs:          len(jdb.Locations),
+		stdout:            os.Stdout,
+		stderr:            os.Stderr,
+		verbose_mode:      cfg.Log.Verbose,
+	}
 
 	/* Get commonly used data. */
-	get_galaxy_data()
-	get_planet_data()
-	get_species_data()
+	if err := g.get_galaxy_data(jdb); err != nil {
+		return []error{err}
+	}
+	if err := g.get_planet_data(jdb); err != nil {
+		return []error{err}
+	}
+	if err := g.get_species_data(jdb); err != nil {
+		return []error{err}
+	}
 	for species_number := 1; species_number <= num_species; species_number++ {
-		spec_data[species_number-1].orders.filename = filepath.Join(cfg.Data.Orders, fmt.Sprintf("sp%02d.ord", spec_data[species_number-1].id))
+		g.sp_num = append(g.sp_num, species_number)
+		g.spec_data[species_number-1].orders.filename = filepath.Join(cfg.Data.Orders, fmt.Sprintf("sp%02d.ord", g.spec_data[species_number-1].id))
+		g.spec_data[species_number-1].log_file = &bytes.Buffer{}
 	}
-	get_transaction_data()
-	if errors := get_order_data(verbose_mode, false); errors != nil {
-		for _, err := range errors {
-			log.Printf("error: %+v\n", err)
-		}
+	if err := g.get_transaction_data(jdb); err != nil {
+		return []error{err}
 	}
-	num_locs = len(__jdb.Locations)
+	for _, err := range g.get_order_data() {
+		log.Printf("error: %+v\n", err)
+	}
 
 	// no-orders if not the first turn
 	log.Printf("[orders] skipping NoOrders\n")
@@ -58,6 +74,9 @@ func run(cfg *config.Config) (errors []error) {
 	log.Printf("[orders] skipping Combat\n")
 	log.Printf("[orders] skipping PreDeparture\n")
 	log.Printf("[orders] skipping Jumps\n")
+	for _, err := range g.executeJumpOrders() {
+		log.Printf("error: %+v\n", err)
+	}
 	log.Printf("[orders] skipping Production\n")
 	log.Printf("[orders] skipping PostArrival\n")
 	__jdb.SetLocations()

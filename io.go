@@ -28,20 +28,23 @@ var planet_base []*planet_data // warning: code assumes *planet_data
 
 //*************************************************************************
 // get_galaxy_data: get_gal.c
-func get_galaxy_data() {
-	galaxy.d_num_species = __jdb.Galaxy.DNumSpecies
-	galaxy.num_species = __jdb.Galaxy.NumSpecies
-	galaxy.radius = __jdb.Galaxy.Radius
-	galaxy.turn_number = __jdb.Galaxy.TurnNumber
+func (g *globals) get_galaxy_data(jdb *jsondb.Store) error {
+	g.galaxy = &galaxy_data{
+		d_num_species: jdb.Galaxy.DNumSpecies,
+		num_species:   jdb.Galaxy.NumSpecies,
+		radius:        jdb.Galaxy.Radius,
+		turn_number:   jdb.Galaxy.TurnNumber,
+	}
+	return nil
 }
 
 //*************************************************************************
 // get_planet_data: get_plan.c
-func get_planet_data() {
-	/* Allocate enough memory for all planets. */
-	num_planets = len(__jdb.Planets)
-	planet_base = make([]*planet_data, num_planets, num_planets) // warning: was num_planets + NUM_EXTRA_PLANETS
-	for id, planet := range __jdb.Planets {
+// get_planet_data will copy data for all planets into globals
+func (g *globals) get_planet_data(jdb *jsondb.Store) error {
+	g.num_planets = len(jdb.Planets)
+	//g.planet_base = make([]*planet_data, g.num_planets, g.num_planets) // warning: was num_planets + NUM_EXTRA_PLANETS
+	for _, planet := range jdb.Planets {
 		p := &planet_data{
 			diameter:          planet.Diameter,
 			econ_efficiency:   planet.EconEfficiency,
@@ -55,9 +58,9 @@ func get_planet_data() {
 			special:           planet.Special,
 			temperature_class: planet.TemperatureClass,
 		}
-		planet_base[id] = p
+		g.planet_base = append(g.planet_base, p)
 	}
-	planet_data_modified = false
+	return nil
 }
 
 //*************************************************************************
@@ -65,11 +68,11 @@ func get_planet_data() {
 // get_species_data will read in data files for all species.
 // Additional memory must be allocated for routines that build ships or
 // name planets.
-func get_species_data() {
+func (g *globals) get_species_data(jdb *jsondb.Store) error {
 	/* Allocate enough memory for all species. */
 	// uhhh, spec_data is a constant size, no need to allocate
-	num_species = len(__jdb.Species)
-	for id, species := range __jdb.Species {
+	g.num_species = len(jdb.Species)
+	for id, species := range jdb.Species {
 		s := &species_data{
 			id:                 species.Id,
 			x:                  species.X,
@@ -106,7 +109,7 @@ func get_species_data() {
 		for _, i := range species.Enemy {
 			s.enemy[i] = true
 		}
-		namp_data[id] = s.namplas
+		g.namp_data[id] = s.namplas
 		for k := range species.Namplas {
 			n := nampla_data{
 				AUs_needed:     species.Namplas[k].AUsNeeded,
@@ -140,9 +143,9 @@ func get_species_data() {
 			for item, qty := range species.Namplas[k].ItemQuantity {
 				n.item_quantity[item] = qty
 			}
-			namp_data[id][k] = &n
+			g.namp_data[id][k] = &n
 		}
-		ship_data[id] = s.ships
+		g.ship_data[id] = s.ships
 		for k := range species.Ships {
 			sd := &ship_data_{
 				age:                  species.Ships[k].Age,
@@ -170,13 +173,14 @@ func get_species_data() {
 			for item, qty := range species.Ships[k].ItemQuantity {
 				sd.item_quantity[item] = qty
 			}
-			ship_data[id][k] = sd
+			g.ship_data[id][k] = sd
 		}
-		spec_data[id] = s
-		data_in_memory[id] = true
-		num_new_namplas[id] = 0
-		num_new_ships[id] = 0
+		g.spec_data[id] = s
+		g.num_new_namplas[id] = 0
+		g.num_new_ships[id] = 0
 	}
+
+	return nil
 }
 
 //*************************************************************************

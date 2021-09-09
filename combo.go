@@ -25,6 +25,8 @@ import (
 	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/orders"
 	"github.com/mdhender/fhcms/parser"
+	"github.com/mdhender/fhcms/prng"
+	"github.com/mdhender/fhcms/store/jsondb"
 	"io/ioutil"
 	"log"
 	"os"
@@ -9990,7 +9992,7 @@ func get_species_name(name string) (*species_data, bool) {
 //*************************************************************************
 // get_transact.c
 
-func get_transaction_data() {
+func (g *globals) get_transaction_data(jdb *jsondb.Store) error {
 	log.Printf("get_transaction_data not implemented\n")
 	//var i, trans_fd, num_bytes int
 	//
@@ -10020,6 +10022,7 @@ func get_transaction_data() {
 	//num_transactions = i
 	//
 	//close(trans_fd)
+	return nil
 }
 
 //*************************************************************************
@@ -10399,7 +10402,22 @@ func scan(x, y, z int) {
  * of the congruential and shift-register methods. */
 
 func rnd(max int) int {
+	if __defaultPRNG == nil {
+		__defaultPRNG = prng.New(0xBADC0FFEE)
+	}
 	return __defaultPRNG.Roll(max)
+}
+func rndGetSeed() uint64 {
+	if __defaultPRNG == nil {
+		__defaultPRNG = prng.New(0xBADC0FFEE)
+	}
+	return __defaultPRNG.GetSeed()
+}
+func rndSetSeed(s uint64) {
+	if __defaultPRNG == nil {
+		__defaultPRNG = prng.New(s)
+	}
+	__defaultPRNG.Seed(s)
 }
 
 // *      "save_species_data" will write all data that has been modified, and
@@ -10803,13 +10821,19 @@ func withdrawal_check(bat *battle_data, act *action_data) {
 //*************************************************************************
 // mdhender: created
 
-func get_order_data(verbose, debug bool) (errors []error) {
+func (g *globals) get_order_data() (errors []error) {
 	for species_number := 1; species_number <= num_species; species_number++ {
-		if ee := spec_data[species_number-1].getOrders(verbose, debug); ee != nil {
+		if ee := spec_data[species_number-1].getOrders(g.verbose_mode, false); ee != nil {
 			errors = append(errors, ee...)
 		}
 	}
 	return errors
+}
+
+func (g *globals) setSpecies(id int) {
+	g.species = g.spec_data[id]
+	g.nampla_base = g.namp_data[id]
+	g.ship_base = g.ship_data[id]
 }
 
 func getLoadingPoint(nampla *nampla_data, base []*nampla_data) int {

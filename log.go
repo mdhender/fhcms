@@ -135,3 +135,18 @@ func log_string(s string) {
 		log_char(s[i])
 	}
 }
+
+func (g *globals) log(format string, a ...interface{}) {
+	if g.logging_disabled {
+		return
+	}
+	if g.log_stdout && g.stdout != nil {
+		_, _ = fmt.Fprintf(g.stdout, format, a...)
+	}
+	if g.log_summary && g.summary_file != nil {
+		_, _ = fmt.Fprintf(g.summary_file, format, a...)
+	}
+	if g.log_to_file && g.log_file != nil {
+		_, _ = fmt.Fprintf(g.log_file, format, a...)
+	}
+}

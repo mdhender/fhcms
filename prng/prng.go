@@ -59,6 +59,11 @@ func SeedFromTime() {
 	defaultPRNG.SeedFromTime()
 }
 
+// GetSeed returns the current seed from the default generator.
+func (p *PRNG) GetSeed() uint64 {
+	return p.seed
+}
+
 func (p *PRNG) Roll(max int) int {
 	if max < 1 {
 		return 1
