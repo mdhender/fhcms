@@ -27,11 +27,11 @@ import (
 )
 
 type ClusterData struct {
-	Turn    int // current turn number
-	Radius  int // radius of the cluster
-	Systems map[string]*SystemData
-	Planets map[string]*PlanetData
-	Species map[string]*SpeciesData
+	Turn    int                     `json:"turn"`   // current turn number
+	Radius  int                     `json:"radius"` // radius of the cluster
+	Systems map[string]*SystemData  `json:"systems"`
+	Planets map[string]*PlanetData  `json:"planets"`
+	Species map[string]*SpeciesData `json:"species"`
 }
 
 type SystemData struct {
@@ -70,49 +70,49 @@ type PlanetData struct {
 // SpeciesData is used for the exported data.
 // TODO: Scan should track the scan results since the planet attributes can change during play.
 type SpeciesData struct {
-	Name       string // name of the species
+	Name       string `json:"name"` // name of the species
 	Government struct {
-		Name string
-		Type string
-	}
-	HomeWorld  string // coordinates of the home world
-	Ally       []string
-	AutoOrders bool
-	Colonies   []string // coordinates of the planet containing the colony
-	Contact    []string
-	EconUnits  int
-	Enemy      []string
+		Name string `json:"name"`
+		Type string `json:"type"`
+	} `json:"government"`
+	HomeWorld  string   `json:"home_world"` // coordinates of the home world
+	Ally       []string `json:"ally"`
+	AutoOrders bool     `json:"auto_orders,omitempty"`
+	Colonies   []string `json:"colonies"` // coordinates of the planet containing the colony
+	Contact    []string `json:"contact"`
+	EconUnits  int      `json:"econ_units"`
+	Enemy      []string `json:"enemy"`
 	Fleet      struct {
-		Cost           int
-		MaintenancePct int // percentage of production applied to fleet maintenance
-	}
+		Cost           int `json:"cost"`
+		MaintenancePct int `json:"maintenance_pct"` // percentage of production applied to fleet maintenance
+	} `json:"fleet"`
 	Gases struct {
 		Required struct {
-			Code   string
-			MinPct int
-			MaxPct int
-		}
-		Neutral []string
-		Poison  []string
-	}
-	HPOriginalBase int
-	NamedPlanets   map[string]*NamedPlanetData // key is name of planet, converted to upper case
-	Scanned        []string                    // coordinates of all systems that have been scanned
-	Ships          map[string]*ShipData        // key is name of ship, converted to upper case
+			Code   string `json:"code"`
+			MinPct int    `json:"min_pct"`
+			MaxPct int    `json:"max_pct"`
+		} `json:"required"`
+		Neutral []string `json:"neutral"`
+		Poison  []string `json:"poison"`
+	} `json:"gases"`
+	HPOriginalBase int                         `json:"hp_original_base"`
+	NamedPlanets   map[string]*NamedPlanetData `json:"named_planets"` // key is name of planet, converted to upper case
+	Scanned        []string                    `json:"scanned"`       // coordinates of all systems that have been scanned
+	Ships          map[string]*ShipData        `json:"ships"`         // key is name of ship, converted to upper case
 	Tech           struct {
-		MI TechLevelData
-		MA TechLevelData
-		ML TechLevelData
-		GV TechLevelData
-		LS TechLevelData
-		BI TechLevelData
-	}
-	Visited []string // coordinates of all systems that have been visited
+		MI TechLevelData `json:"mi"`
+		MA TechLevelData `json:"ma"`
+		ML TechLevelData `json:"ml"`
+		GV TechLevelData `json:"gv"`
+		LS TechLevelData `json:"ls"`
+		BI TechLevelData `json:"bi"`
+	} `json:"tech"`
+	Visited []string `json:"visited"` // coordinates of all systems that have been visited
 }
 
 type NamedPlanetData struct {
-	Planet      string // coordinates of the planet being named
-	DisplayName string // original name of the planet
+	Planet      string `json:"planet"`       // coordinates of the planet being named
+	DisplayName string `json:"display_name"` // original name of the planet
 }
 
 type ColonyData struct {
