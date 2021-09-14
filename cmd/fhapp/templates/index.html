@@ -1,0 +1,253 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <title>{{ .Site.Title }}</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta property="og:title" content="">
+  <meta property="og:type" content="">
+  <meta property="og:url" content="">
+  <meta property="og:image" content="">
+
+  <link rel="manifest" href="static/site.webmanifest">
+  <link rel="apple-touch-icon" href="static/icon.png">
+  <!-- Place favicon.ico in the root directory -->
+
+  <link rel="stylesheet" href="static/css/normalize.css">
+  <link rel="stylesheet" href="static/css/main.css">
+  <link rel="stylesheet" href="static/css/daleri-mega.css">
+
+  <meta name="theme-color" content="#fafafa">
+</head>
+
+<body>
+
+<div id="top">
+  <p id="skiplinks">Skip to: <a href="#content">content</a> | <a href="#sidebar">sidebar</a></p>
+  <div id="sitetitle">
+    <h1><a href="/">{{ .Site.Title }}</a></h1>
+    <p>{{ .Site.Slug }}</p>
+  </div>
+  <hr class="clear" />
+</div>
+
+<div id="wrap">
+  <div id="mainmenu">
+    <dl class="nav">
+      <dt>Main pages</dt>
+      <dd><a href="/static/rules.html">Rules</a></dd>
+      {{ if .User.IsAuthenticated }}
+      <dd><a href="/turn/{{.Site.Turn}}">Last Turn Results</a></dd>
+      <dd><a href="https://farhorizons.dev/sp{{.User.Species.Id}}-{{.User.Species.Key}}/index.html">Archives</a></dd>
+      {{ end }}
+    </dl>
+    <dl class="nav">
+      <dt>Community</dt>
+      <dd><a href="https://groups.io/g/farhorizons/topics" target="_blank">Groups.io</a></dd>
+      <dd><a href="https://playbymail.net/mybb/forumdisplay.php?fid=45" target="_blank">PlayByMail.net</a></dd>
+      <dd><a href="https://discord.gg/UpExM6Bdr5" target="_blank">Discord #fhgeneral</a></dd>
+    </dl>
+    <dl class="nav">
+      <dt>Lorem Ipsum</dt>
+      <dd>Members</dd>
+      <dd>Games</dd>
+    </dl>
+    <dl class="nav">
+      <dt>Extras</dt>
+      {{ if .User.IsAuthenticated }}
+      <dd><a href="https://farhorizons.dev/map.beta/index.html" target="_blank">Cluster Viz (beta)</a></dd>
+      {{ end }}
+    </dl>
+    <dl class="introduction">
+      {{ if .User.IsAuthenticated }}
+        <dt>Raven's Beta</dt>
+        <dd>You are logged in as Species {{.User.Species.Id}} on Raven's 32-bit beta.</dd>
+        <dd>The Galaxy Turn Number is {{ .DS.Galaxy.TurnNumber}}.</dd>
+        <dd>The last posted turn results are for turn {{ .Site.Turn }}.</dd>
+      {{ else }}
+        <dt>Login</dt>
+        <dd>
+          <form action="/api/authenticate" method="post">
+            <table>
+              <tr><td align="right">Username&nbsp;</td><td><input type="text" name="username"></td></tr>
+              <tr><td align="right">Password&nbsp;</td><td><input type="password" name="password"></td></tr>
+              <tr><td>&nbsp;</td><td align="right"><input type="submit" value="Login"></td></tr>
+            </table>
+          </form>
+        </dd>
+      {{ end }}
+    </dl>
+    <hr class="clear" />
+  </div>
+
+  <div id="content">
+    <h2>Far Horizons Landing Page</h2>
+    <p class="introtext">The Landing Page is a work in progress.</p>
+    {{ if .User.IsAuthenticated }}
+      {{ if .Files }}
+        <table border="2">
+          <thead><tr><td>&nbsp;Turn&nbsp;</td><td>&nbsp;Report</td><td>&nbsp;Orders&nbsp;</td><td>&nbsp;Combat&nbsp;</td><td>&nbsp;Date&nbsp;</td></tr></thead>
+          <tbody>
+          {{ range .Files }}
+          <tr>
+            <td align="right">&nbsp;{{.Turn}}&nbsp;</td>
+            <td>&nbsp;{{if .Report }}<a href="/turn/{{.Turn}}/report">report.txt</a>{{ else }}missing{{ end }}&nbsp;</td>
+            <td>&nbsp;{{if .Orders }}<a href="/turn/{{.Turn}}/orders">orders.txt</a>{{ else }}missing{{ end }}&nbsp;</td>
+            <td>&nbsp;not yet implemented&nbsp;</td>
+            <td>&nbsp;{{.Date}}&nbsp;</td>
+          </tr>
+          {{ end }}
+          </tbody>
+        </table>
+      {{ else }}
+        <p>There are no reports or orders for this species.</p>
+      {{ end }}
+    {{ else }}
+        <p>Please log in to access the system.</p>
+    {{ end }}
+
+    <hr />
+
+    {{ with .User }}
+      {{ with .Species }}
+        <div class="trio1">
+          <h3>Colony Summary</h3>
+          {{ with .Namplas }}
+            <table border="2">
+              <thead><tr><td>&nbsp;Colony&nbsp;</td><td>&nbsp;Coordinates&nbsp;</td><td>&nbsp;Shipyards&nbsp;</td></tr></thead>
+              <tbody>
+              {{ range . }}
+              <tr>
+                <td>&nbsp;{{.Name}}&nbsp;</td>
+                <td>&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Pn}}&nbsp;</td>
+                <td align="right">&nbsp;{{.Shipyards}}&nbsp;</td>
+              </tr>
+              {{ end }}
+              </tbody>
+            </table>
+          {{ else }}
+            <p>The species has no colonies.</p>
+          {{ end }}
+        </div>
+
+        <div class="trio2">
+          <h3>Ship Summary</h3>
+          {{ with .Warships }}
+            <table border="2">
+              <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td></tr></thead>
+              <tbody>
+              {{ range . }}
+                <tr>
+                  <td>&nbsp;{{.code}}&nbsp;</td>
+                  <td align="right">{{.Age}}&nbsp;</td>
+                  <td align="right">{{.Tonnage}},000&nbsp;</td>
+                </tr>
+              {{ end }}
+              </tbody>
+            </table>
+          {{ else }}
+            <p>The species has no warships.</p>
+          {{ end }}
+        </div>
+
+        <div class="trio3">
+          <h3>Transport Summary</h3>
+          {{ with .Transports }}
+            <table border="2">
+              <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
+              <tbody>
+              {{ range . }}
+              <tr>
+                <td>&nbsp;{{.Code}}&nbsp;</td>
+                <td align="right">{{.Age}}&nbsp;</td>
+                <td align="right">{{.Tonnage}},000&nbsp;</td>
+                <td>&nbsp&nbsp;</td>
+              </tr>
+              {{ end }}
+              </tbody>
+            </table>
+          {{ else }}
+            <p>The species has no transports.</p>
+          {{ end }}
+        </div>
+      {{ end }}
+    {{ end }}
+    <hr class="clear" />
+  </div>
+
+  <div id="sidebar">
+    <h2>Turn 18</h2>
+    <p>Orders for Turn 18 Orders are due Monday, September 13th by 7PM MDT.
+      MDT is 6 hours behind London.</p>
+
+    <div class="left">
+      {{ with .User.Species }}
+        <h2>{{ .Code }} {{ .Name }}</h2>
+        <p>{{ .GovtName }}</p>
+        <table>
+          <tbody>
+          <tr><td align="right">MI:&nbsp;</td><td align="right">{{ index .TechLevel 0 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 0 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 0 }} ({{ . }} xp){{ end }}</td></tr>
+          <tr><td align="right">MA:&nbsp;</td><td align="right">{{ index .TechLevel 1 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 1 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 1 }} ({{ . }} xp){{ end }}</td></tr>
+          <tr><td align="right">ML:&nbsp;</td><td align="right">{{ index .TechLevel 2 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 2 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 2 }} ({{ . }} xp){{ end }}</td></tr>
+          <tr><td align="right">GV:&nbsp;</td><td align="right">{{ index .TechLevel 3 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 3 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 3 }} ({{ . }} xp){{ end }}</td></tr>
+          <tr><td align="right">LS:&nbsp;</td><td align="right">{{ index .TechLevel 4 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 4 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 4 }} ({{ . }} xp){{ end }}</td></tr>
+          <tr><td align="right">BI:&nbsp;</td><td align="right">{{ index .TechLevel 5 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 5 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 5 }} ({{ . }} xp){{ end }}</td></tr>
+          </tbody>
+        </table>
+      {{ end }}
+
+      {{ with .Stats }}
+      <h2>Statistics</h2>
+      <table>
+        <tbody>
+        <tr><td align="right">Production:&nbsp;</td><td align="right">{{ .Production }}</td><td>&nbsp;EU</td></tr>
+        <tr><td align="right">Banked:&nbsp;</td><td align="right">{{ .BankedEu }}</td><td>&nbsp;EU</td></tr>
+        <tr><td align="right">Colonies:&nbsp;</td><td align="right">{{ .Colonies }}</td></tr>
+        <tr><td align="right">Ships:&nbsp;</td><td align="right">{{ .Ships }}</td></tr>
+        <tr><td align="right">Shipyards:&nbsp;</td><td align="right">{{ .Shipyards }}</td></tr>
+        <tr><td align="right">Offensive Power:&nbsp;</td><td align="right">{{ .OffensivePower }}</td></tr>
+        <tr><td align="right">Defensive Power:&nbsp;</td><td align="right">{{ .DefensivePower }}</td></tr>
+        </tbody>
+      </table>
+      {{ end }}
+    </div>
+
+    <div class="right">
+      <h2>Colonies</h2>
+      <ul class="sidemenu">
+        <li>Sixth page</li>
+        <li>Seventh page</li>
+        <li>Another page</li>
+        <li>The last one</li>
+      </ul>
+
+      <h2>Ships</h2>
+      <ul>
+        <li>Sample link 1</li>
+        <li>Sample link 2</li>
+        <li>Sample link 3</li>
+        <li>Sample link 4</li>
+      </ul>
+    </div>
+    <hr class="clear" />
+  </div>
+  <hr class="clear" />
+</div>
+
+<div id="footer">
+  <div class="left">
+    <p><a href="https://github.com/mdhender/fhapp">fhapp v{{ .Engine.Semver }}</a> &copy; {{ .Site.Copyright.Year }} {{ .Site.Copyright.Author }} | All times are MDT?</p>
+  </div>
+  <div class="right textright">
+    {{ if .User.IsAuthenticated }}
+    <p>Raven's Beta | Species {{ .User.Species.Id }} | <a href="/api/logout">Logout</a></p>
+    {{ end }}
+    <p class="hide"><a href="#top">Return to top</a></p>
+  </div>
+</div>
+
+</body>
+</html>

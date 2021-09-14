@@ -1,0 +1,17 @@
+*~
+*.exe
+*.gz
+*.swp
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+.DS_Store
+.archive/
+.backup/
+.bin
+.env
+.env.*
+.idea/
+.vscode/
+bin/
