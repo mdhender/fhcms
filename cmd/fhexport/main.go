@@ -19,114 +19,94 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/mdhender/fhcms/store/jsondb"
+	"github.com/mdhender/fhcms/internal/cluster"
+	"github.com/mdhender/fhcms/internal/dat32"
 	"io/ioutil"
 	"log"
 	"os"
-	"sort"
+	"path/filepath"
 )
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC) // force logs to be UTC
 
-	if err := run(); err != nil {
-		log.Printf("%+v\n", err)
+	// byte order is the order in the data file, not the computer we're running on!
+	bigendian := false
+
+	root := "."
+	err := run(root, "galaxy.dat", "stars.dat", "planets.dat", bigendian)
+	if err != nil {
+		fmt.Printf("%+v\n", err)
 		os.Exit(2)
 	}
 
 	os.Exit(0)
 }
 
-func run() error {
-	jdb, err := jsondb.Read("D:\\FarHorizons\\testdata\\t17\\galaxy.json")
+func run(root, gFile, sFile, pFile string, bigendian bool) error {
+	var bo binary.ByteOrder
+	if bigendian {
+		bo = binary.BigEndian
+	} else {
+		bo = binary.LittleEndian
+	}
+
+	galaxy, err := dat32.ReadGalaxy(filepath.Join(root, gFile), bo)
 	if err != nil {
 		return err
 	}
-	for _, sp := range jdb.Species {
-		if sp.Id != 18 {
-			continue
-		}
-		e, err := export(jdb, sp, visited)
+
+	stars, err := dat32.ReadStars(filepath.Join(root, sFile), bo)
+	if err != nil {
+		return err
+	}
+
+	planets, err := dat32.ReadPlanets(filepath.Join(root, pFile), bo)
+	if err != nil {
+		return err
+	}
+
+	var species []*dat32.Species
+	for n := 1; n <= galaxy.NumSpecies; n++ {
+		sp, err := dat32.ReadSpecies(filepath.Join(root, fmt.Sprintf("sp%02d.dat", n)), n, bo)
 		if err != nil {
-			return fmt.Errorf("species %d: %w", sp, err)
-		}
-		if b, err := json.MarshalIndent(e, "", "  "); err != nil {
-			return err
-		} else if err = ioutil.WriteFile("D:\\FarHorizons\\testdata\\t17\\sp18.export.json", b, 0600); err != nil {
 			return err
 		}
+		species = append(species, sp)
 	}
-	return nil
-}
 
-func export(ds *jsondb.Store, sp *jsondb.SpeciesData, visited []Coords) (*Export, error) {
-	e := Export{TurnNumber: ds.Galaxy.TurnNumber}
-	for _, star := range ds.Stars {
-		hasVisited := false
-		for _, v := range visited {
-			if star.X == v.X && star.Y == v.Y && star.Z == v.Z {
-				hasVisited = true
-				break
-			}
-		}
-
-		system := &SystemData{Id: fmt.Sprintf("%d.%d.%d", star.X, star.Y, star.Z), Coords: Coords{X: star.X, Y: star.Y, Z: star.Z}}
-		system.Name = fmt.Sprintf("%d %d %d", star.X, star.Y, star.Z)
-		system.Color = jsondb.IntToStarColor(star.Color)
-		system.Size = star.Size
-		system.Type = jsondb.IntToStarType(star.Type)
-		e.Systems = append(e.Systems, system)
-
-		if hasVisited {
-			system.Wormhole = &Coords{X: star.X, Y: star.Y, Z: star.Z}
-			for pn := 0; pn < star.NumPlanets; pn++ {
-				//p := ds.Planets[pn+star.PlanetIndex]
-				planet := &PlanetData{Coords{X: star.X, Y: star.Y, Z: star.Z, Orbit: pn + 1}}
-				system.Planets = append(system.Planets, planet)
-			}
+	if err := write(filepath.Join(root, "galaxy.json"), galaxy); err != nil {
+		return err
+	}
+	if err := write(filepath.Join(root, "stars.json"), stars); err != nil {
+		return err
+	}
+	if err := write(filepath.Join(root, "planets.json"), planets); err != nil {
+		return err
+	}
+	for _, sp := range species {
+		if err := write(filepath.Join(root, fmt.Sprintf("sp%02d.json", sp.Id)), sp); err != nil {
+			return err
 		}
 	}
-	sort.Sort(e.Systems)
 
-	species := &SpeciesData{
-		Id:       sp.Id,
-		Name:     sp.Name,
-		GovtName: sp.GovtName,
+	c, err := cluster.ConvertDat32ToCluster(galaxy, stars, planets, species)
+	if err != nil {
+		return err
+	} else if err = write(filepath.Join(root, "cluster.json"), c); err != nil {
+		return err
 	}
-	e.Species = species
 
-	return &e, nil
+	return err
 }
 
-var visited = []Coords{
-	{X: 23, Y: 48, Z: 22},
-	{X: 23, Y: 48, Z: 22},
-	{X: 23, Y: 48, Z: 22},
-	{X: 23, Y: 48, Z: 22},
-	{X: 25, Y: 41, Z: 24},
-	{X: 25, Y: 41, Z: 24},
-	{X: 25, Y: 41, Z: 24},
-	{X: 26, Y: 37, Z: 29},
-	{X: 27, Y: 43, Z: 18},
-	{X: 27, Y: 43, Z: 18},
-	{X: 27, Y: 43, Z: 18},
-	{X: 27, Y: 43, Z: 18},
-	{X: 27, Y: 43, Z: 18},
-	{X: 28, Y: 41, Z: 28},
-	{X: 30, Y: 33, Z: 28},
-	{X: 30, Y: 41, Z: 26},
-	{X: 30, Y: 41, Z: 26},
-	{X: 30, Y: 41, Z: 26},
-	{X: 30, Y: 48, Z: 28},
-	{X: 30, Y: 48, Z: 28},
-	{X: 30, Y: 48, Z: 28},
-	{X: 30, Y: 48, Z: 28},
-	{X: 30, Y: 48, Z: 28},
-	{X: 30, Y: 48, Z: 28},
-	{X: 30, Y: 48, Z: 28},
-	{X: 30, Y: 48, Z: 28},
-	{X: 30, Y: 48, Z: 28},
-	{X: 33, Y: 38, Z: 27},
+func write(name string, data interface{}) error {
+	b, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(name, b, 0644)
 }
