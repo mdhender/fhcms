@@ -63,10 +63,9 @@
     </dl>
     <dl class="introduction">
       {{ if .User.IsAuthenticated }}
-        <dt>Raven's Beta</dt>
-        <dd>You are logged in as Species {{.User.Species.Id}} on Raven's 32-bit beta.</dd>
-        <dd>The Galaxy Turn Number is {{ .DS.Galaxy.TurnNumber}}.</dd>
-        <dd>The last posted turn results are for turn {{ .Site.Turn }}.</dd>
+        <dt>{{.Game.Title}}</dt>
+        <dd>You are logged in as Species {{.User.Species.Id}}.</dd>
+        <dd>Turn Number is {{.Game.Turn}}.</dd>
       {{ else }}
         <dt>Login</dt>
         <dd>
@@ -179,9 +178,8 @@
   </div>
 
   <div id="sidebar">
-    <h2>Turn 18</h2>
-    <p>Orders for Turn 18 Orders are due Monday, September 13th by 7PM MDT.
-      MDT is 6 hours behind London.</p>
+    <h2>Turn {{.Game.Turn}}</h2>
+    <p>Orders for Turn {{.Game.NextTurn}} are due {{.Game.OrdersDue}}</p>
 
     <div class="left">
       {{ with .User.Species }}
@@ -243,7 +241,7 @@
   </div>
   <div class="right textright">
     {{ if .User.IsAuthenticated }}
-    <p>Raven's Beta | Species {{ .User.Species.Id }} | <a href="/api/logout">Logout</a></p>
+    <p>{{.Game.Title}} | Species {{ .User.Species.Id }} | <a href="/api/logout">Logout</a></p>
     {{ end }}
     <p class="hide"><a href="#top">Return to top</a></p>
   </div>

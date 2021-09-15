@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/mdhender/fhcms/cmd/fhapp/internal/jdb"
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
 	"io/ioutil"
 	"log"
@@ -66,6 +67,11 @@ func run(addr, data, players string) error {
 	s.MaxHeaderBytes = 1 << 20 // 1mb?
 
 	// load data
+	if ds, err := jdb.Load("D:\\FarHorizons\\testdata\\t19"); err != nil {
+		return err
+	} else {
+		s.data.Cluster = ds.Cluster
+	}
 	s.data.Engine = &Engine{Semver: "7.5.2"}
 	s.data.DS = &JDB{}
 	if err = loader(filepath.Join(data, "galaxy.json"), s.data.DS); err != nil {
@@ -227,7 +233,7 @@ func run(addr, data, players string) error {
 	// link in some stuff required for managing sessions
 	s.sessions.players = s.data.Players
 	s.sessions.species = s.data.DS.Species
-	if err = loader(filepath.Join(data, "sessions.json"), s.sessions); err != nil {
+	if err = loader("D:\\GoLand\\fhcms\\cmd\\fhapp\\testdata\\sessions.json", s.sessions); err != nil {
 		return err
 	}
 	for id, sess := range s.sessions.sessions {

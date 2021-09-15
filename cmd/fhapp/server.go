@@ -23,6 +23,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
+	"github.com/mdhender/fhcms/internal/cluster"
 	"log"
 	"net/http"
 )
@@ -32,6 +33,7 @@ type Server struct {
 	router *way.Router
 	data   struct {
 		Engine  *Engine
+		Cluster *cluster.Cluster
 		DS      *JDB
 		Site    *Site
 		Players []*PlayerData
