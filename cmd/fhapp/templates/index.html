@@ -40,7 +40,7 @@
       <dt>Main pages</dt>
       <dd><a href="/static/rules.html">Rules</a></dd>
       {{ if .User.IsAuthenticated }}
-      <dd><a href="/turn/{{.Site.Turn}}">Last Turn Results</a></dd>
+      <dd><a href="/turn/{{.Game.Turn}}">Turn {{.Game.Turn}} Results</a></dd>
       <dd><a href="https://farhorizons.dev/sp{{.User.Species.Id}}-{{.User.Species.Key}}/index.html">Archives</a></dd>
       {{ end }}
     </dl>
@@ -63,9 +63,9 @@
     </dl>
     <dl class="introduction">
       {{ if .User.IsAuthenticated }}
-        <dt>{{.Game.Title}}</dt>
+        <dt>{{.Game.Title}} :: Turn {{.Game.Turn}}</dt>
         <dd>You are logged in as Species {{.User.Species.Id}}.</dd>
-        <dd>Turn Number is {{.Game.Turn}}.</dd>
+        <dd>Orders for Turn {{.Game.NextTurn}} are due {{.Game.OrdersDue}}.</dd>
       {{ else }}
         <dt>Login</dt>
         <dd>
@@ -178,13 +178,15 @@
   </div>
 
   <div id="sidebar">
-    <h2>Turn {{.Game.Turn}}</h2>
-    <p>Orders for Turn {{.Game.NextTurn}} are due {{.Game.OrdersDue}}</p>
+    {{with .User.Species}}
+    <h2>{{ .Code }} {{ .Name }}</h2>
+    <p>{{ .GovtName }}</p>
+    <hr />
+    {{end}}
 
     <div class="left">
-      {{ with .User.Species }}
-        <h2>{{ .Code }} {{ .Name }}</h2>
-        <p>{{ .GovtName }}</p>
+      {{with .User.Species}}
+        <h2>Technology</h2>
         <table>
           <tbody>
           <tr><td align="right">MI:&nbsp;</td><td align="right">{{ index .TechLevel 0 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 0 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 0 }} ({{ . }} xp){{ end }}</td></tr>

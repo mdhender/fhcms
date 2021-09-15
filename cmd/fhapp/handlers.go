@@ -308,7 +308,14 @@ func (s *Server) handleUI() http.HandlerFunc {
 				NextTurn  int
 				OrdersDue string
 			}
-			Site  Site
+			Site struct {
+				Title     string
+				Slug      string
+				Copyright struct {
+					Year   int
+					Author string
+				}
+			}
 			Files []*turnFile
 			User  UserData
 			Stats *StatsData
@@ -322,9 +329,10 @@ func (s *Server) handleUI() http.HandlerFunc {
 		data.Game.Turn = s.data.Cluster.Turn
 		data.Game.NextTurn = s.data.Cluster.Turn + 1
 		data.Game.OrdersDue = "Monday, September 20th by 7PM MDT. MDT is 6 hours behind London."
-		data.Site.Slug = s.data.Site.Slug
-		data.Site.Copyright = s.data.Site.Copyright
 		data.Site.Title = s.data.Site.Title
+		data.Site.Slug = s.data.Site.Slug
+		data.Site.Copyright.Year = s.data.Site.Copyright.Year
+		data.Site.Copyright.Author = s.data.Site.Copyright.Author
 
 		for _, f := range s.data.Files[u.SpeciesId] {
 			tf := &turnFile{Turn: f.Turn, Date: f.Date, Report: f.Report, Orders: f.Orders}
