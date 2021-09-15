@@ -35,6 +35,7 @@ func main() {
 	var addr = flag.String("addr", ":8080", "the address of the application")
 	var data = flag.String("data", "D:\\FarHorizons\\testdata\\t17", "the path to the application data")
 	var pidFile = flag.String("pid-file", "", "create pid file")
+	var players = flag.String("players", "D:\\GoLand\\fhcms\\cmd\\fhapp\\testdata\\players.json", "name of file containing player data")
 	flag.Parse()
 
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC) // force logs to be UTC
@@ -47,12 +48,12 @@ func main() {
 		log.Printf("created pid file %q\n", *pidFile)
 	}
 
-	if err := run(*addr, *data); err != nil {
+	if err := run(*addr, *data, *players); err != nil {
 		log.Fatalf("%+v\n", err)
 	}
 }
 
-func run(addr, data string) error {
+func run(addr, data, players string) error {
 	var err error
 
 	s := &Server{
@@ -158,7 +159,7 @@ func run(addr, data string) error {
 			}
 		}
 	}
-	if err = loader(filepath.Join(data, "players.json"), &s.data.Players); err != nil {
+	if err = loader(players, &s.data.Players); err != nil {
 		return err
 	}
 	for _, p := range s.data.Players {
