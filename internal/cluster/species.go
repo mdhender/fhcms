@@ -21,6 +21,8 @@ package cluster
 // Species represents a single species.
 // TODO: Scan should track the scan results since the planet attributes can change during play.
 type Species struct {
+	Id         string `json:"id"`
+	No         int    `json:"no"`   // number of the species (for reporting?)
 	Name       string `json:"name"` // name of the species
 	Government struct {
 		Name string `json:"name"`

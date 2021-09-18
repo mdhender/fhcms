@@ -30,9 +30,19 @@ type Site struct {
 }
 
 type FileData struct {
-	Species int    `json:"species"`
-	Turn    int    `json:"turn"`
-	Report  string `json:"report"`
-	Orders  string `json:"orders"`
-	Date    string `json:"date"`
+	SpeciesId string `json:"species_id"` // unique identifier for the species
+	SpeciesNo int    `json:"species_no"` // number of the species (for reporting and sorting?)
+	Turn      int    `json:"turn"`
+	Report    string `json:"report"`
+	Orders    string `json:"orders"`
+	Date      string `json:"date"`
+}
+
+func (fd *FileData) LessThan(j *FileData) bool {
+	if fd.SpeciesNo < j.SpeciesNo {
+		return true
+	} else if fd.SpeciesNo == j.SpeciesNo {
+		return fd.Turn < j.Turn
+	}
+	return false
 }

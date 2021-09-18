@@ -33,6 +33,18 @@ type Config struct {
 		Log    string // path to create log files
 		Orders string // path to orders files
 	}
+	Server struct {
+		Host    string
+		Port    int
+		PidFile string // if set, save the PID to this file
+		App     struct {
+			Cluster  string // path to cluster data file
+			Data     string // path to v1 data files
+			Players  string // path to player data file
+			Sessions string // path to session data file
+			Site     string // path to site data file
+		}
+	}
 	Log struct {
 		Flags   int // use as log.SetFlags(cfg.Log.Flags)
 		Verbose bool
@@ -43,11 +55,17 @@ type Config struct {
 // These are the values without loading the environment, configuration file, or command line.
 func DefaultConfig() *Config {
 	var cfg Config
-	cfg.Data.JDB = "D:\\GoLand\\fhcms\\testdata\\t11"
-	cfg.Data.Log = "D:\\GoLand\\fhcms\\testdata\\t11"
-	cfg.Data.Orders = "D:\\GoLand\\fhcms\\testdata\\t11"
+	cfg.Data.JDB = "D:\\FarHorizons\\testdata\\t19"
+	cfg.Data.Log = "D:\\FarHorizons\\testdata\\t19"
+	cfg.Data.Orders = "D:\\FarHorizons\\testdata\\t19"
 	cfg.Log.Flags = log.Ldate | log.Ltime | log.LUTC // force logs to be UTC
 	cfg.Log.Verbose = true
+	cfg.Server.Port = 8080
+	cfg.Server.App.Data = "D:\\FarHorizons\\testdata\\t19"
+	cfg.Server.App.Cluster = filepath.Join(cfg.Server.App.Data, "cluster.json")
+	cfg.Server.App.Players = filepath.Join(cfg.Server.App.Data, "players.json")
+	cfg.Server.App.Sessions = filepath.Join(cfg.Server.App.Data, "sessions.json")
+	cfg.Server.App.Site = filepath.Join(cfg.Server.App.Data, "site.json")
 	return &cfg
 }
 

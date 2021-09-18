@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/mdhender/fhcms/internal/cluster"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -41,7 +42,7 @@ type SessionManager struct {
 	cookieName string
 	sessions   map[string]Session
 	players    []*PlayerData
-	species    []*SpeciesData
+	species    map[string]*cluster.Species
 }
 
 func NewSessionManager(name string) *SessionManager {
@@ -149,10 +150,7 @@ func (s *SessionManager) UnmarshalJSON(data []byte) error {
 		var u UserData
 		for _, p := range s.players {
 			if p.User == sess.Player {
-				for _, sp := range s.species {
-					if sp.Id != p.Species {
-						continue
-					}
+				if sp, ok := s.species[p.SpeciesId]; ok {
 					u.Player = p.User // confusing, I know
 					u.Species = sp
 					u.SpeciesId = sp.Id

@@ -20,7 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 type StatsData struct {
-	Species            int    `json:"species"`
+	SpeciesId          string `json:"species_id"` // unique identifier for the species
+	SpeciesNo          int    `json:"species_no"` // number of the species (for reporting and sorting?)
 	Name               string `json:"name"`
 	MiningLevel        int    `json:"mi"`
 	ManufacturingLevel int    `json:"ma"`

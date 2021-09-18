@@ -1,5 +1,5 @@
 /*******************************************************************************
-fhapp - a player aid for Far Horizons
+Far Horizons Engine
 Copyright (C) 2021  Michael D Henderson
 
 This program is free software: you can redistribute it and/or modify
@@ -14,14 +14,24 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 ******************************************************************************/
 
-package main
+package coords
 
-type PlayerData struct {
-	User      string `json:"user"`
-	Password  string `json:"password"`
-	SpeciesId string `json:"species_id"` // unique identifier for the species
-	Key       string `json:"key"`
+import "fmt"
+
+// Coords represents a location in the cluster.
+type Coords struct {
+	X     int `json:"x"`
+	Y     int `json:"y"`
+	Z     int `json:"z"`
+	Orbit int `json:"orbit,omitempty"`
+}
+
+// Id returns a unique representation of the location.
+func (c *Coords) Id() string {
+	if c.Orbit != 0 {
+		return fmt.Sprintf("%d.%d.%d.%d", c.X, c.Y, c.Z, c.Orbit)
+	}
+	return fmt.Sprintf("%d.%d.%d", c.X, c.Y, c.Z)
 }

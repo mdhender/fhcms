@@ -21,61 +21,73 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/jdb"
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
+	"github.com/mdhender/fhcms/config"
+	"github.com/mdhender/fhcms/internal/cluster"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
 )
 
 func main() {
-	var addr = flag.String("addr", ":8080", "the address of the application")
-	var data = flag.String("data", "D:\\FarHorizons\\testdata\\t17", "the path to the application data")
-	var pidFile = flag.String("pid-file", "", "create pid file")
-	var players = flag.String("players", "D:\\GoLand\\fhcms\\cmd\\fhapp\\testdata\\players.json", "name of file containing player data")
-	flag.Parse()
+	cfg := config.DefaultConfig()
+	err := cfg.Load()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		os.Exit(2)
+	}
 
-	log.SetFlags(log.Ldate | log.Ltime | log.LUTC) // force logs to be UTC
+	log.SetFlags(cfg.Log.Flags)
 
-	if len(*pidFile) != 0 {
-		if err := ioutil.WriteFile(*pidFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0600); err != nil {
-			log.Printf("unable to create pid file: %w", err)
+	if len(cfg.Server.PidFile) != 0 {
+		pid := os.Getpid()
+		if err := ioutil.WriteFile(cfg.Server.PidFile, []byte(fmt.Sprintf("%d", pid)), 0600); err != nil {
+			log.Printf("unable to create pid file: %+v", err)
 			os.Exit(2)
 		}
-		log.Printf("created pid file %q\n", *pidFile)
+		log.Printf("server: pid %8d: file %q\n", pid, cfg.Server.PidFile)
 	}
 
-	if err := run(*addr, *data, *players); err != nil {
-		log.Fatalf("%+v\n", err)
+	if errors := run(cfg); errors != nil {
+		for _, err := range errors {
+			log.Printf("%+v\n", err)
+		}
+		os.Exit(2)
 	}
+
+	os.Exit(0)
 }
 
-func run(addr, data, players string) error {
-	var err error
-
+func run(cfg *config.Config) (errs []error) {
 	s := &Server{
 		router:   way.NewRouter(),
 		sessions: NewSessionManager("fhapp"),
 	}
-	s.Addr = addr
+	s.Addr = net.JoinHostPort(cfg.Server.Host, fmt.Sprintf("%d", cfg.Server.Port))
 	s.ReadTimeout = 5 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxHeaderBytes = 1 << 20 // 1mb?
 
 	// load data
 	if ds, err := jdb.Load("D:\\FarHorizons\\testdata\\t19"); err != nil {
-		return err
+		return append(errs, err)
 	} else {
-		s.data.Cluster = ds.Cluster
+		s.data.Store = ds
 	}
+	xlatNo := make(map[int]*jdb.Species)
+	for _, sp := range s.data.Store.Species {
+		xlatNo[sp.No] = sp
+	}
+
 	s.data.Engine = &Engine{Semver: "7.5.2"}
 	s.data.DS = &JDB{}
-	if err = loader(filepath.Join(data, "galaxy.json"), s.data.DS); err != nil {
-		return err
+	if err := loader(filepath.Join(cfg.Server.App.Data, "galaxy.json"), s.data.DS); err != nil {
+		return append(errs, err)
 	}
 	for _, system := range s.data.DS.Stars {
 		for pn := 0; pn < system.NumPlanets; pn++ {
@@ -165,25 +177,32 @@ func run(addr, data, players string) error {
 			}
 		}
 	}
-	if err = loader(players, &s.data.Players); err != nil {
-		return err
+	if err := loader(cfg.Server.App.Players, &s.data.Players); err != nil {
+		return append(errs, err)
 	}
 	for _, p := range s.data.Players {
-		log.Printf("players: %v\n", *p)
-		if 0 < p.Species && p.Species <= len(s.data.DS.Species) {
-			s.data.DS.Species[p.Species-1].Key = p.Key
+		if _, ok := s.data.Store.Species[p.SpeciesId]; !ok {
+			log.Printf("players: player %q: no such species %q\n", p.User, p.SpeciesId)
+			continue
 		}
+		log.Printf("players: player %q species_id %q password %q key %q\n", p.User, p.SpeciesId, p.Password, p.Key)
 	}
-	s.data.Files = make(map[int][]*FileData)
+	s.data.Files = make(map[string][]*FileData)
 	var files []*struct {
-		SpeciesId int    `json:"species"`
+		SpeciesId string `json:"-"`
+		SpeciesNo int    `json:"species_no"`
 		Turn      int    `json:"turn"`
 		Type      string `json:"type"`
 		File      string `json:"file"`
 		Date      string `json:"date"`
 	}
-	if err = loader(filepath.Join(data, "files.json"), &files); err != nil {
-		return err
+	if err := loader(filepath.Join(cfg.Server.App.Data, "files.json"), &files); err != nil {
+		return append(errs, err)
+	}
+	for _, f := range files {
+		if sp, ok := xlatNo[f.SpeciesNo]; ok {
+			f.SpeciesId = sp.Id
+		}
 	}
 	for _, f := range files {
 		var fd *FileData
@@ -194,7 +213,7 @@ func run(addr, data, players string) error {
 			}
 		}
 		if fd == nil {
-			fd = &FileData{Species: f.SpeciesId, Turn: f.Turn, Date: f.Date}
+			fd = &FileData{SpeciesId: f.SpeciesId, SpeciesNo: f.SpeciesNo, Turn: f.Turn, Date: f.Date}
 			s.data.Files[f.SpeciesId] = append(s.data.Files[f.SpeciesId], fd)
 		}
 		switch f.Type {
@@ -208,7 +227,7 @@ func run(addr, data, players string) error {
 		//log.Printf("files: %2d %v\n", sp, files)
 		for i := 0; i < len(files); i++ { // bubbly and proud of it
 			for j := i + 1; j < len(files); j++ {
-				if files[i].Turn < files[j].Turn {
+				if files[i].LessThan(files[j]) {
 					files[i], files[j] = files[j], files[i]
 				}
 			}
@@ -218,23 +237,26 @@ func run(addr, data, players string) error {
 		//}
 	}
 	s.data.Site = &Site{}
-	if err = loader(filepath.Join(data, "site.json"), s.data.Site); err != nil {
-		return err
+	if err := loader(filepath.Join(cfg.Server.App.Data, "site.json"), s.data.Site); err != nil {
+		return append(errs, err)
 	}
-	s.data.Stats = make(map[int]*StatsData)
+	s.data.Stats = make(map[string]*StatsData)
 	var stats []*StatsData
-	if err = loader(filepath.Join(data, "stats.json"), &stats); err != nil {
-		return err
+	if err := loader(filepath.Join(cfg.Server.App.Data, "stats.json"), &stats); err != nil {
+		return append(errs, err)
 	}
 	for _, stat := range stats {
-		s.data.Stats[stat.Species] = stat
+		if sp, ok := xlatNo[stat.SpeciesNo]; ok {
+			stat.SpeciesId = sp.Id
+			s.data.Stats[stat.SpeciesId] = stat
+		}
 	}
 
 	// link in some stuff required for managing sessions
 	s.sessions.players = s.data.Players
-	s.sessions.species = s.data.DS.Species
-	if err = loader("D:\\GoLand\\fhcms\\cmd\\fhapp\\testdata\\sessions.json", s.sessions); err != nil {
-		return err
+	s.sessions.species = s.data.Store.Species
+	if err := loader("D:\\GoLand\\fhcms\\cmd\\fhapp\\testdata\\sessions.json", s.sessions); err != nil {
+		return append(errs, err)
 	}
 	for id, sess := range s.sessions.sessions {
 		log.Printf("sessions: %q %v\n", id, sess)
@@ -246,10 +268,16 @@ func run(addr, data, players string) error {
 
 	log.Printf("serving %s on address %s\n", "public", s.Addr)
 	//return http.ListenAndServe(addr, s.sessions.SessionUserHandler(s.router))
-	return s.ListenAndServe()
+	if err := s.ListenAndServe(); err != nil {
+		return append(errs, err)
+	}
+
+	log.Printf("oddly: server terminated gracefully\n")
+	return nil
 }
 
 func loader(name string, a interface{}) error {
+	log.Printf("loader: loading %s\n", name)
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
 		return err

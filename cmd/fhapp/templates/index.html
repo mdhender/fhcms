@@ -41,7 +41,7 @@
       <dd><a href="/static/rules.html">Rules</a></dd>
       {{ if .User.IsAuthenticated }}
       <dd><a href="/turn/{{.Game.Turn}}">Turn {{.Game.Turn}} Results</a></dd>
-      <dd><a href="https://farhorizons.dev/sp{{.User.Species.Id}}-{{.User.Species.Key}}/index.html">Archives</a></dd>
+      <dd><a href="https://farhorizons.dev/{{.Player.Data}}/index.html">Archives</a></dd>
       {{ end }}
     </dl>
     <dl class="nav">
@@ -110,11 +110,11 @@
 
     <hr />
 
-    {{ with .User }}
+    {{ with .Player }}
       {{ with .Species }}
         <div class="trio1">
           <h3>Colony Summary</h3>
-          {{ with .Namplas }}
+          {{ with .Colonies }}
             <table border="2">
               <thead><tr><td>&nbsp;Colony&nbsp;</td><td>&nbsp;Coordinates&nbsp;</td><td>&nbsp;Shipyards&nbsp;</td></tr></thead>
               <tbody>

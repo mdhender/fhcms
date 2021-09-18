@@ -22,6 +22,7 @@ package main
 import (
 	"fmt"
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
+	"github.com/mdhender/fhcms/internal/cluster"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -75,6 +76,7 @@ func (s *Server) handleAuthenticate() http.HandlerFunc {
 				input.password = v[0]
 			}
 		}
+		log.Printf("server: %s %q: username %q password %q\n", r.Method, r.URL.Path, input.username, input.password)
 		if input.username == "" || input.password == "" {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -82,19 +84,23 @@ func (s *Server) handleAuthenticate() http.HandlerFunc {
 		log.Printf("server: %s %q: %v\n", r.Method, r.URL.Path, input)
 		var user UserData
 		for _, p := range s.data.Players {
+			log.Printf("server: %s %q: player %v\n", r.Method, r.URL.Path, *p)
 			if p.Password == input.password && p.User == input.username {
-				for _, sp := range s.data.DS.Species {
-					if sp.Id != p.Species {
-						continue
-					}
-					user.Player = p.User // confusing, I know
-					user.Species = sp
-					user.SpeciesId = sp.Id
-					user.IsAuthenticated = true
+				log.Printf("server: %s %q: player user %q: password matched\n", r.Method, r.URL.Path, p.User)
+				sp, ok := s.data.Store.Species[p.SpeciesId]
+				if !ok {
+					log.Printf("server: %s %q: player user %q species %q: no such species\n", r.Method, r.URL.Path, p.User, p.SpeciesId)
+					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+					continue
 				}
+				user.Player = p.User // confusing, I know
+				user.Species = sp
+				user.SpeciesId = p.SpeciesId
+				user.IsAuthenticated = true
 			}
 		}
 		if user.Species == nil {
+			log.Printf("server: %s %q: %v: use.Species is nil\n", r.Method, r.URL.Path, input)
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
@@ -185,7 +191,7 @@ func (s *Server) handleTurnOrders() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("server: %s %q: handleTurnOrders\n", r.Method, r.URL.Path)
 		u := currentUser(r)
-		if u.SpeciesId == 0 || u.Species == nil {
+		if u.SpeciesId == "" || u.Species == nil {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
@@ -239,7 +245,7 @@ func (s *Server) handleTurnReport() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("server: %s %q: handleTurnReport\n", r.Method, r.URL.Path)
 		u := currentUser(r)
-		if u.SpeciesId == 0 || u.Species == nil {
+		if u.SpeciesId == "" || u.Species == nil {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
@@ -302,13 +308,7 @@ func (s *Server) handleUI() http.HandlerFunc {
 		data := struct {
 			Engine *Engine
 			DS     *JDB
-			Game   struct {
-				Title     string
-				Turn      int
-				NextTurn  int
-				OrdersDue string
-			}
-			Site struct {
+			Site   struct {
 				Title     string
 				Slug      string
 				Copyright struct {
@@ -316,7 +316,20 @@ func (s *Server) handleUI() http.HandlerFunc {
 					Author string
 				}
 			}
-			Files []*turnFile
+			Game struct {
+				Title     string
+				Turn      int
+				NextTurn  int
+				OrdersDue string
+			}
+			Files  []*turnFile
+			Player struct {
+				Name            string
+				Data            string // folder on web server containing this player's data
+				IsAdmin         bool
+				IsAuthenticated bool
+				Species         *cluster.Species
+			}
 			User  UserData
 			Stats *StatsData
 		}{
@@ -326,9 +339,14 @@ func (s *Server) handleUI() http.HandlerFunc {
 			Stats:  s.data.Stats[u.SpeciesId],
 		}
 		data.Game.Title = "Raven's Beta"
-		data.Game.Turn = s.data.Cluster.Turn
-		data.Game.NextTurn = s.data.Cluster.Turn + 1
+		data.Game.Turn = s.data.Store.Turn
+		data.Game.NextTurn = s.data.Store.Turn + 1
 		data.Game.OrdersDue = "Monday, September 20th by 7PM MDT. MDT is 6 hours behind London."
+		data.Player.Name = u.Player
+		data.Player.Data = u.SpeciesId + "?key?"
+		data.Player.IsAuthenticated = u.IsAuthenticated
+		data.Player.IsAdmin = u.IsAuthenticated && u.IsAdmin
+		data.Player.Species = u.Species
 		data.Site.Title = s.data.Site.Title
 		data.Site.Slug = s.data.Site.Slug
 		data.Site.Copyright.Year = s.data.Site.Copyright.Year

@@ -21,15 +21,16 @@ package main
 
 import (
 	"context"
+	"github.com/mdhender/fhcms/internal/cluster"
 	"net/http"
 )
 
 type UserData struct {
-	Player          string       `json:"player"`
-	SpeciesId       int          `json:"species_id"`
-	Species         *SpeciesData `json:"-"`
-	IsAdmin         bool         `json:"is_admin"`
-	IsAuthenticated bool         `json:"is_authenticated"`
+	Player          string           `json:"player"`
+	SpeciesId       string           `json:"species_id"` // unique identifier for species
+	Species         *cluster.Species `json:"-"`
+	IsAdmin         bool             `json:"is_admin"`
+	IsAuthenticated bool             `json:"is_authenticated"`
 }
 
 // userDataContextType is an unexported type for keys defined in this package.
