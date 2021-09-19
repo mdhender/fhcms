@@ -174,7 +174,7 @@ func run(cfg *config.Config) (errs []error) {
 	s.sessions.players = s.data.Players
 	s.sessions.species = s.data.Store.Species
 
-	s.routes(cfg.Data.Reports)
+	s.routes(cfg.Data.Reports, cfg.Data.Reports)
 
 	s.Handler = s.sessions.SessionUserHandler(s.router)
 

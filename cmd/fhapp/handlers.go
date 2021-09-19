@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -371,6 +372,85 @@ func (s *Server) handleTurnReport(files string) http.HandlerFunc {
 	}
 }
 
+func (s *Server) handleTurnUpload(uploads string) http.HandlerFunc {
+	log.Printf("uploading turn files to %q\n", uploads)
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("server: %s %q: handleTurnUpload\n", r.Method, r.URL.Path)
+		u := currentUser(r)
+		if u.SpeciesId == "" || u.Species == nil {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		turnNumber, err := strconv.Atoi(way.Param(r.Context(), "turn"))
+		if err != nil || turnNumber < 1 {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		data := struct {
+			Engine *Engine
+			Semver string
+			Site   struct {
+				Title     string
+				Slug      string
+				Copyright struct {
+					Year   int
+					Author string
+				}
+			}
+			Game struct {
+				Title     string
+				Turn      int
+				LastTurn  int
+				OrdersDue string
+			}
+			User   UserData
+			Player struct {
+				Name            string
+				Data            string // folder on web server containing this player's data
+				IsAdmin         bool
+				IsAuthenticated bool
+				Species         *cluster.Species
+			}
+			Stats      *StatsData
+			TurnNumber int
+			OrdersFile string
+			Report     string
+		}{
+			Engine:     s.data.Engine,
+			User:       u,
+			Stats:      s.data.Stats[u.SpeciesId],
+			TurnNumber: turnNumber,
+		}
+		data.Semver = s.data.Store.Semver
+		data.Game.Title = "Raven's Beta"
+		data.Game.Turn = s.data.Store.Turn
+		if data.Game.Turn > 1 {
+			data.Game.LastTurn = s.data.Store.Turn - 1
+		}
+		data.Game.OrdersDue = "Monday, September 20th by 7PM MDT. MDT is 6 hours behind London."
+		data.Player.Name = u.Player
+		data.Player.Data = u.SpeciesId + "?key?"
+		data.Player.IsAuthenticated = u.IsAuthenticated
+		data.Player.IsAdmin = u.IsAuthenticated && u.IsAdmin
+		data.Player.Species = u.Species
+		data.OrdersFile = fmt.Sprintf("sp%02d.t%d.orders.txt", u.Species.No, s.data.Store.Turn)
+		data.Site.Title = s.data.Site.Title
+		data.Site.Slug = s.data.Site.Slug
+		data.Site.Copyright.Year = s.data.Site.Copyright.Year
+		data.Site.Copyright.Author = s.data.Site.Copyright.Author
+		b, err := s.render("turnUpload", data)
+		if err != nil {
+			log.Printf("server: %s %q: handleTurnReport: %+v\n", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Far-Horizons", s.data.Store.Semver)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(b)
+	}
+}
+
 func (s *Server) handleUI() http.HandlerFunc {
 	type turnFile struct {
 		Turn   int
@@ -445,5 +525,83 @@ func (s *Server) handleUI() http.HandlerFunc {
 		w.Header().Set("Far-Horizons", s.data.Store.Semver)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(b)
+	}
+}
+
+func (s *Server) postTurnOrders(uploads string) http.HandlerFunc {
+	log.Printf("posting turn orders to %q\n", uploads)
+	return func(w http.ResponseWriter, r *http.Request) {
+		u := currentUser(r)
+		if !u.IsAuthenticated {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		turnNumber, err := strconv.Atoi(way.Param(r.Context(), "turn"))
+		if err != nil || turnNumber != s.data.Store.Turn {
+			log.Printf("postTurnOrders: turnNumber %d s.data.Store.Turn %d\n", turnNumber, s.data.Store.Turn)
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			log.Printf("server: %s %q: %+v\n", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		log.Printf("server: %s %q: %v\n", r.Method, r.URL.Path, r.PostForm)
+		var input struct {
+			orders string
+		}
+		for k, v := range r.Form {
+			switch k {
+			case "orders":
+				if len(v) != 1 || !utf8.ValidString(v[0]) || len(v[0]) < 1 || len(v[0]) > 64*1024 {
+					http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+					return
+				}
+				input.orders = v[0]
+			}
+		}
+
+		if len(input.orders) < 1 || len(input.orders) > 64*1024 || !utf8.ValidString(input.orders) {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		date := time.Now().UTC().Format(time.RFC3339)
+		input.orders = fmt.Sprintf(";; %s T%d %s\n\n", u.SpeciesId, turnNumber, date) + input.orders
+
+		ordersFile := fmt.Sprintf("sp%02d.t%d.orders.txt", u.Species.No, s.data.Store.Turn)
+		fullOrdersFile := filepath.Join(uploads, ordersFile)
+
+		log.Printf("server: %s %q: species %s turn %d orders %s \n", r.Method, r.URL.Path, u.SpeciesId, turnNumber, ordersFile)
+		if err := ioutil.WriteFile(fullOrdersFile, []byte(input.orders), 0644); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		// add a guard here for the race condition
+		updated := false
+		for _, f := range s.data.Files[u.SpeciesId] {
+			if f.Turn == turnNumber {
+				f.Orders = ordersFile
+				f.Date = date
+				updated = true
+				break
+			}
+		}
+		if !updated {
+			s.data.Files[u.SpeciesId] = append(s.data.Files[u.SpeciesId], &FileData{
+				SpeciesId: u.SpeciesId,
+				SpeciesNo: u.Species.No,
+				Turn:      turnNumber,
+				Report:    "",
+				Orders:    ordersFile,
+				Date:      date,
+			})
+		}
+
+		http.Redirect(w, r, "/", http.StatusFound)
 	}
 }

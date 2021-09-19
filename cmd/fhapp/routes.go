@@ -24,7 +24,7 @@ import (
 	"net/http"
 )
 
-func (s *Server) routes(reports string) {
+func (s *Server) routes(reports, uploads string) {
 	s.router.Handle("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	s.router.HandleFunc("GET", "/favicon.ico", s.handleCachedFile("static/favicon.ico"))
 	s.router.HandleFunc("GET", "/rules", s.handleCachedFile("static/rules.html"))
@@ -34,9 +34,14 @@ func (s *Server) routes(reports string) {
 	//s.router.HandleFunc("GET", "/admin", s.adminOnly(s.handleAdminIndex()))
 	s.router.HandleFunc("GET", "/turn/:turn/orders", s.handleTurnOrders(reports))
 	s.router.HandleFunc("GET", "/turn/:turn/report", s.handleTurnReport(reports))
+	s.router.HandleFunc("GET", "/turn/:turn/upload", s.handleTurnUpload(uploads))
 	s.router.HandleFunc("GET", "/", s.handleUI())
-	s.router.HandleFunc("POST", "/api/authenticate", s.handleAuthenticate())
+
 	s.router.HandleFunc("GET", "/api/logout", s.handleLogout())
+
+	s.router.HandleFunc("POST", "/api/authenticate", s.handleAuthenticate())
+	s.router.HandleFunc("POST", "/api/turn/:turn/orders", s.postTurnOrders(uploads))
+
 	//s.router.HandleFunc("GET", "/api/get-cookie", s.handleGetCookie())
 	//s.router.HandleFunc("GET", "/api/set-cookie", s.handleSetCookie())
 	s.router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -51,9 +51,12 @@
       <dd><a href="https://discord.gg/UpExM6Bdr5" target="_blank">Discord #fhgeneral</a></dd>
     </dl>
     <dl class="nav">
-      <dt>Lorem Ipsum</dt>
-      <dd>Members</dd>
+      <dt>Player</dt>
+      {{if .User.IsAuthenticated}}
+      <dd>Profile</dd>
       <dd>Games</dd>
+      <dd><a href="/turn/{{.Game.Turn}}/upload">Upload Turn {{.Game.Turn}} Orders</a></dd>
+      {{end}}
     </dl>
     <dl class="nav">
       <dt>Extras</dt>
