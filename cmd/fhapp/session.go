@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -43,13 +44,24 @@ type SessionManager struct {
 	sessions   map[string]Session
 	players    []*PlayerData
 	species    map[string]*cluster.Species
+	store      string // path to sessions store
 }
 
-func NewSessionManager(name string) *SessionManager {
-	return &SessionManager{
+func NewSessionManager(store, name string) (*SessionManager, error) {
+	s := &SessionManager{
 		cookieName: "_" + name,
 		sessions:   make(map[string]Session),
+		store:      filepath.Clean(store),
 	}
+	if b, err := ioutil.ReadFile(store); err != nil {
+		return nil, err
+	} else if err = json.Unmarshal(b, s); err != nil {
+		return nil, err
+	}
+	for id, sess := range s.sessions {
+		log.Printf("sessions: %q %v\n", id, sess)
+	}
+	return s, nil
 }
 
 func (s *SessionManager) SessionStart(u UserData) Session {
@@ -61,8 +73,8 @@ func (s *SessionManager) SessionStart(u UserData) Session {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.sessions[sess.Uuid] = sess
-	if b, err := json.MarshalIndent(s, "  ", "  "); err == nil {
-		if err = ioutil.WriteFile("testdata/sessions.json", b, 0600); err != nil {
+	if b, err := json.MarshalIndent(s, "", "  "); err == nil {
+		if err = ioutil.WriteFile(s.store, b, 0600); err != nil {
 			log.Printf("error: %+v\n", err)
 		}
 	}

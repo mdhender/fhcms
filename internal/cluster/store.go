@@ -17,3 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
 package cluster
+
+type Store struct {
+	Semver       string
+	Turn         int // current turn number
+	Radius       int // radius of the cluster
+	Locations    []*Location
+	Planets      map[string]*Planet
+	Species      map[string]*Species
+	Systems      map[string]*System
+	Transactions []Transaction
+}
+
+type Location struct{}
+type Transaction struct{}

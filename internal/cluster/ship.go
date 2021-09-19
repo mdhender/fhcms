@@ -18,97 +18,142 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package cluster
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/mdhender/fhcms/internal/coords"
+)
 
 // Ship represents a single ship.
 type Ship struct {
-	DisplayName string // original name of the ship
-	Class       struct {
-		Code        string `json:"code"`
-		Description string `json:"description"`
-		FTL         bool   `json:"ftl,omitempty"`
-		Tonnage     int    `json:"tonnage"`
-		Cost        int    `json:"cost"`
-	} `json:"class"`
-	Age                int            `json:"age"`
-	Location           *Coords        `json:"location,omitempty"`
-	ArrivedViaWormhole bool           `json:"arrived_via_wormhole,omitempty"`
-	Destination        *Coords        `json:"destination,omitempty"`
-	Inventory          map[string]int `json:"inventory"` // key is item code, value is quantity
-	JustJumped         bool           `json:"just_jumped,omitempty"`
-	LoadingPoint       int            `json:"loading_point,omitempty"`
-	UnloadingPoint     int            `json:"unloading_point,omitempty"`
-	RemainingCost      int            `json:"remaining_cost,omitempty"`
-	Special            int            `json:"special,omitempty"`
-	Status             struct {
-		ForcedJump        bool `json:"forced_jump,omitempty"`
-		InDeepSpace       bool `json:"in_deep_space,omitempty"`
-		InOrbit           bool `json:"in_orbit,omitempty"`
-		JumpedInCombat    bool `json:"jumped_in_combat,omitempty"`
-		OnSurface         bool `json:"on_surface,omitempty"`
-		UnderConstruction bool `json:"under_construction,omitempty"`
-	} `json:"status"`
+	Id                 string // unique identifier for ship
+	Age                int
+	ArrivedViaWormhole bool
+	Class              *ShipClass
+	DisplayName        string // original name of the ship
+	Destination        *coords.Coords
+	Inventory          map[string]*Item // key is item code, value is quantity
+	JustJumped         bool
+	LoadingPoint       int
+	Location           *coords.Coords
+	RemainingCost      int
+	Special            int
+	Status             *ShipStatus
+	UnloadingPoint     int
 }
 
-// shipToClass maps ship class to class
-func shipToClass(i int) (string, string, int, int) {
-	switch i {
-	case 0:
-		return "PB", "Picketboat", 1, 100
-	case 1:
-		return "CT", "Corvette", 2, 200
-	case 2:
-		return "ES", "Escort", 5, 500
-	case 3:
-		return "DD", "Destroyer", 10, 1000
-	case 4:
-		return "FG", "Frigate", 15, 1500
-	case 5:
-		return "CL", "Light Cruiser", 20, 2000
-	case 6:
-		return "CS", "Strike Cruiser", 25, 2500
-	case 7:
-		return "CA", "Heavy Cruiser", 30, 3000
-	case 8:
-		return "CC", "Command Cruiser", 35, 3500
-	case 9:
-		return "BC", "Battlecruiser", 40, 4000
-	case 10:
-		return "BS", "Battleship", 45, 4500
-	case 11:
-		return "DN", "Dreadnought", 50, 5000
-	case 12:
-		return "SD", "Super Dreadnought", 55, 5500
-	case 13:
-		return "BM", "Battlemoon", 60, 6000
-	case 14:
-		return "BW", "Battleworld", 65, 6500
-	case 15:
-		return "BR", "Battlestar", 70, 7000
-	case 16:
-		return "BA", "Starbase", 1, 100
-	case 17:
-		return "TR", "Transport", 1, 100
-	}
+type ShipClass struct {
+	Code        string
+	Cost        int
+	Description string
+	FTL         bool
+	Tonnage     int
+}
 
+type ShipStatus struct {
+	ForcedJump        bool
+	InDeepSpace       bool
+	InOrbit           bool
+	JumpedInCombat    bool
+	OnSurface         bool
+	UnderConstruction bool
+}
+
+// shipClassTranslate maps class to ship class
+func shipClassTranslate(i int) *ShipClass {
+	switch i {
+	case BC:
+		return &ShipClass{Code: "BC", Description: "Battlecruiser", Tonnage: 40, Cost: 4000}
+	case BS:
+		return &ShipClass{Code: "BS", Description: "Battleship", Tonnage: 45, Cost: 4500}
+	case DN:
+		return &ShipClass{Code: "DN", Description: "Dreadnought", Tonnage: 50, Cost: 5000}
+	case BA:
+		return &ShipClass{Code: "BA", Description: "Starbase", Tonnage: 1, Cost: 100}
+	case BM:
+		return &ShipClass{Code: "BM", Description: "Battlemoon", Tonnage: 60, Cost: 6000}
+	case BR:
+		return &ShipClass{Code: "BR", Description: "Battlestar", Tonnage: 70, Cost: 7000}
+	case BW:
+		return &ShipClass{Code: "BW", Description: "Battleworld", Tonnage: 65, Cost: 6500}
+	case CA:
+		return &ShipClass{Code: "CA", Description: "Heavy Cruiser", Tonnage: 30, Cost: 3000}
+	case CC:
+		return &ShipClass{Code: "CC", Description: "Command Cruiser", Tonnage: 35, Cost: 3500}
+	case CL:
+		return &ShipClass{Code: "CL", Description: "Light Cruiser", Tonnage: 20, Cost: 2000}
+	case CS:
+		return &ShipClass{Code: "CS", Description: "Strike Cruiser", Tonnage: 25, Cost: 2500}
+	case CT:
+		return &ShipClass{Code: "CT", Description: "Corvette", Tonnage: 2, Cost: 200}
+	case DD:
+		return &ShipClass{Code: "DD", Description: "Destroyer", Tonnage: 10, Cost: 1000}
+	case ES:
+		return &ShipClass{Code: "ES", Description: "Escort", Tonnage: 5, Cost: 500}
+	case FG:
+		return &ShipClass{Code: "FG", Description: "Frigate", Tonnage: 15, Cost: 1500}
+	case PB:
+		return &ShipClass{Code: "PB", Description: "Picketboat", Tonnage: 1, Cost: 100}
+	case SD:
+		return &ShipClass{Code: "SD", Description: "Super Dreadnought", Tonnage: 55, Cost: 5500}
+	case TR:
+		return &ShipClass{Code: "TR", Description: "Transport", Tonnage: 1, Cost: 100}
+	}
 	panic(fmt.Sprintf("assert(ship.class != %d)", i))
 }
 
-// shipToStatus maps ship status code to text
-func shipToStatus(i int) string {
+/* Ship classes. */
+const PB = 0  /* Picketboat. */
+const CT = 1  /* Corvette. */
+const ES = 2  /* Escort. */
+const DD = 3  /* Destroyer. */
+const FG = 4  /* Frigate. */
+const CL = 5  /* Light Cruiser. */
+const CS = 6  /* Strike Cruiser. */
+const CA = 7  /* Heavy Cruiser. */
+const CC = 8  /* Command Cruiser. */
+const BC = 9  /* Battlecruiser. */
+const BS = 10 /* Battleship. */
+const DN = 11 /* Dreadnought. */
+const SD = 12 /* Super Dreadnought. */
+const BM = 13 /* Battlemoon. */
+const BW = 14 /* Battleworld. */
+const BR = 15 /* Battlestar. */
+const BA = 16 /* Starbase. */
+const TR = 17 /* Transport. */
+
+// shipStatusTranslate maps status to ship status
+func shipStatusTranslate(i int) *ShipStatus {
 	switch i {
 	case 0:
-		return "UNDER_CONSTRUCTION"
+		return &ShipStatus{UnderConstruction: true}
 	case 1:
-		return "ON_SURFACE"
+		return &ShipStatus{OnSurface: true}
 	case 2:
-		return "IN_ORBIT"
+		return &ShipStatus{InOrbit: true}
 	case 3:
-		return "IN_DEEP_SPACE"
+		return &ShipStatus{InDeepSpace: true}
 	case 4:
-		return "JUMPED_IN_COMBAT"
+		return &ShipStatus{JumpedInCombat: true}
 	case 5:
-		return "FORCED_JUMP"
+		return &ShipStatus{ForcedJump: true}
 	}
 	panic(fmt.Sprintf("assert(ship.status != %d)", i))
+}
+
+// String implements the Stringer interface
+func (s *ShipStatus) String() string {
+	if s.ForcedJump {
+		return "FORCED_JUMP"
+	} else if s.JumpedInCombat {
+		return "JUMPED_IN_COMBAT"
+	} else if s.InDeepSpace {
+		return "IN_DEEP_SPACE"
+	} else if s.InOrbit {
+		return "IN_ORBIT"
+	} else if s.OnSurface {
+		return "ON_SURFACE"
+	} else if s.UnderConstruction {
+		return "UNDER_CONSTRUCTION"
+	}
+	return ""
 }

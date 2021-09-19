@@ -40,7 +40,7 @@
       <dt>Main pages</dt>
       <dd><a href="/static/rules.html">Rules</a></dd>
       {{ if .User.IsAuthenticated }}
-      <dd><a href="/turn/{{.Game.Turn}}">Turn {{.Game.Turn}} Results</a></dd>
+      <dd><a href="/turn/{{.Game.Turn}}/report">Turn {{.Game.Turn}} Results</a></dd>
       <dd><a href="https://farhorizons.dev/{{.Player.Data}}/index.html">Archives</a></dd>
       {{ end }}
     </dl>
@@ -84,7 +84,10 @@
 
   <div id="content">
     <h2>Far Horizons Landing Page</h2>
-    <p class="introtext">The Landing Page is a work in progress.</p>
+    <p class="introtext">
+      The Landing Page is a work in progress.
+      Please report bugs on the <a href="https://discord.gg/UpExM6Bdr5" target="_blank">Discord server</a>.
+    </p>
     {{ if .User.IsAuthenticated }}
       {{ if .Files }}
         <table border="2">
@@ -93,9 +96,9 @@
           {{ range .Files }}
           <tr>
             <td align="right">&nbsp;{{.Turn}}&nbsp;</td>
-            <td>&nbsp;{{if .Report }}<a href="/turn/{{.Turn}}/report">report.txt</a>{{ else }}missing{{ end }}&nbsp;</td>
-            <td>&nbsp;{{if .Orders }}<a href="/turn/{{.Turn}}/orders">orders.txt</a>{{ else }}missing{{ end }}&nbsp;</td>
-            <td>&nbsp;not yet implemented&nbsp;</td>
+            <td align="center">&nbsp;{{if .Report}}<a href="/turn/{{.Turn}}/report">report.txt</a>{{else}}n/a{{end}}&nbsp;</td>
+            <td align="center">&nbsp;{{if .Orders}}<a href="/turn/{{.Turn}}/orders">orders.txt</a>{{else}}n/a{{end}}&nbsp;</td>
+            <td align="center">&nbsp;{{if .Combat}}<a href="/turn/{{.Turn}}/combat">orders.txt</a>{{else}}n/a{{end}}&nbsp;</td>
             <td>&nbsp;{{.Date}}&nbsp;</td>
           </tr>
           {{ end }}
@@ -116,13 +119,16 @@
           <h3>Colony Summary</h3>
           {{ with .Colonies }}
             <table border="2">
-              <thead><tr><td>&nbsp;Colony&nbsp;</td><td>&nbsp;Coordinates&nbsp;</td><td>&nbsp;Shipyards&nbsp;</td></tr></thead>
+              <thead><tr><td>&nbsp;Colony&nbsp;</td><td>&nbsp;Coordinates&nbsp;</td><td>&nbsp;Shipyards&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
               <tbody>
-              {{ range . }}
+              {{ range .ById }}
               <tr>
-                <td>&nbsp;{{.Name}}&nbsp;</td>
-                <td>&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Pn}}&nbsp;</td>
-                <td align="right">&nbsp;{{.Shipyards}}&nbsp;</td>
+                <td valign="top">&nbsp;{{.Name.DisplayName}}&nbsp;</td>
+                {{with .Planet.Location}}
+                <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
+                {{end}}
+                <td valign="top" align="right">&nbsp;{{.Shipyards}}&nbsp;</td>
+                <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
               </tr>
               {{ end }}
               </tbody>
@@ -134,15 +140,15 @@
 
         <div class="trio2">
           <h3>Ship Summary</h3>
-          {{ with .Warships }}
+          {{ with .Fleet.Warships }}
             <table border="2">
               <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td></tr></thead>
               <tbody>
               {{ range . }}
                 <tr>
-                  <td>&nbsp;{{.code}}&nbsp;</td>
-                  <td align="right">{{.Age}}&nbsp;</td>
-                  <td align="right">{{.Tonnage}},000&nbsp;</td>
+                  <td valign="top">&nbsp;{{.Class.Code}} {{.DisplayName}}&nbsp;</td>
+                  <td  valign="top"align="right">{{.Age}}&nbsp;</td>
+                  <td  valign="top"align="right">{{.Class.Tonnage}},000&nbsp;</td>
                 </tr>
               {{ end }}
               </tbody>
@@ -154,16 +160,19 @@
 
         <div class="trio3">
           <h3>Transport Summary</h3>
-          {{ with .Transports }}
+          {{ with .Fleet.Transports }}
             <table border="2">
-              <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
+              <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Location&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
               <tbody>
               {{ range . }}
               <tr>
-                <td>&nbsp;{{.Code}}&nbsp;</td>
-                <td align="right">{{.Age}}&nbsp;</td>
-                <td align="right">{{.Tonnage}},000&nbsp;</td>
-                <td>&nbsp&nbsp;</td>
+                <td valign="top">&nbsp;{{.Class.Code}} {{.DisplayName}}&nbsp;</td>
+                {{with .Location}}
+                <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
+                {{end}}
+                <td valign="top" align="right">{{.Age}}&nbsp;</td>
+                <td valign="top" align="right">{{.Class.Tonnage}},000&nbsp;</td>
+                <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
               </tr>
               {{ end }}
               </tbody>
@@ -179,8 +188,8 @@
 
   <div id="sidebar">
     {{with .User.Species}}
-    <h2>{{ .Code }} {{ .Name }}</h2>
-    <p>{{ .GovtName }}</p>
+    <h2>{{ .Id }} {{ .Name }}</h2>
+    <p>{{ .Government.Name }}</p>
     <hr />
     {{end}}
 
@@ -189,12 +198,12 @@
         <h2>Technology</h2>
         <table>
           <tbody>
-          <tr><td align="right">MI:&nbsp;</td><td align="right">{{ index .TechLevel 0 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 0 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 0 }} ({{ . }} xp){{ end }}</td></tr>
-          <tr><td align="right">MA:&nbsp;</td><td align="right">{{ index .TechLevel 1 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 1 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 1 }} ({{ . }} xp){{ end }}</td></tr>
-          <tr><td align="right">ML:&nbsp;</td><td align="right">{{ index .TechLevel 2 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 2 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 2 }} ({{ . }} xp){{ end }}</td></tr>
-          <tr><td align="right">GV:&nbsp;</td><td align="right">{{ index .TechLevel 3 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 3 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 3 }} ({{ . }} xp){{ end }}</td></tr>
-          <tr><td align="right">LS:&nbsp;</td><td align="right">{{ index .TechLevel 4 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 4 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 4 }} ({{ . }} xp){{ end }}</td></tr>
-          <tr><td align="right">BI:&nbsp;</td><td align="right">{{ index .TechLevel 5 }}</td><td>&nbsp;/&nbsp;</td><td align="right">{{ with index .TechKnowledge 5 }}{{ . }}{{ end }}</td><td align="right">{{ with index .TechEps 5 }} ({{ . }} xp){{ end }}</td></tr>
+          <tr><td align="right">{{.MI.Code}}:&nbsp;</td><td align="right">{{.MI.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.MI.KnowledgeLevel}}</td><td align="right">{{with .MI.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+          <tr><td align="right">{{.MA.Code}}:&nbsp;</td><td align="right">{{.MA.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.MA.KnowledgeLevel}}</td><td align="right">{{with .MA.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+          <tr><td align="right">{{.ML.Code}}:&nbsp;</td><td align="right">{{.ML.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.ML.KnowledgeLevel}}</td><td align="right">{{with .ML.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+          <tr><td align="right">{{.GV.Code}}:&nbsp;</td><td align="right">{{.GV.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.GV.KnowledgeLevel}}</td><td align="right">{{with .GV.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+          <tr><td align="right">{{.LS.Code}}:&nbsp;</td><td align="right">{{.LS.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.LS.KnowledgeLevel}}</td><td align="right">{{with .LS.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+          <tr><td align="right">{{.BI.Code}}:&nbsp;</td><td align="right">{{.BI.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.BI.KnowledgeLevel}}</td><td align="right">{{with .BI.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
           </tbody>
         </table>
       {{ end }}
@@ -239,7 +248,7 @@
 
 <div id="footer">
   <div class="left">
-    <p><a href="https://github.com/mdhender/fhapp">fhapp v{{ .Engine.Semver }}</a> &copy; {{ .Site.Copyright.Year }} {{ .Site.Copyright.Author }} | All times are MDT?</p>
+    <p><a href="https://github.com/mdhender/fhapp">fhapp v{{ .Semver }}</a> &copy; {{ .Site.Copyright.Year }} {{ .Site.Copyright.Author }} | All times are MDT?</p>
   </div>
   <div class="right textright">
     {{ if .User.IsAuthenticated }}

@@ -24,7 +24,7 @@ import (
 	"net/http"
 )
 
-func (s *Server) routes() {
+func (s *Server) routes(reports string) {
 	s.router.Handle("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	s.router.HandleFunc("GET", "/favicon.ico", s.handleCachedFile("static/favicon.ico"))
 	s.router.HandleFunc("GET", "/rules", s.handleCachedFile("static/rules.html"))
@@ -32,8 +32,8 @@ func (s *Server) routes() {
 	//s.router.HandleFunc("GET", "/login", s.notImplemented())
 	//s.router.HandleFunc("GET", "/logout", s.notImplemented())
 	//s.router.HandleFunc("GET", "/admin", s.adminOnly(s.handleAdminIndex()))
-	s.router.HandleFunc("GET", "/turn/:turn/orders", s.handleTurnOrders())
-	s.router.HandleFunc("GET", "/turn/:turn/report", s.handleTurnReport())
+	s.router.HandleFunc("GET", "/turn/:turn/orders", s.handleTurnOrders(reports))
+	s.router.HandleFunc("GET", "/turn/:turn/report", s.handleTurnReport(reports))
 	s.router.HandleFunc("GET", "/", s.handleUI())
 	s.router.HandleFunc("POST", "/api/authenticate", s.handleAuthenticate())
 	s.router.HandleFunc("GET", "/api/logout", s.handleLogout())

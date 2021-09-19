@@ -22,8 +22,8 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/base64"
-	"github.com/mdhender/fhcms/cmd/fhapp/internal/jdb"
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
+	"github.com/mdhender/fhcms/internal/cluster"
 	"log"
 	"net/http"
 )
@@ -32,9 +32,8 @@ type Server struct {
 	http.Server
 	router *way.Router
 	data   struct {
-		Store *jdb.Store
+		Store   *cluster.Store
 		Engine  *Engine
-		DS      *JDB
 		Site    *Site
 		Players []*PlayerData
 		Files   map[string][]*FileData // key is species id

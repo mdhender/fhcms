@@ -22,7 +22,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mdhender/fhcms/cmd/fhapp/internal/jdb"
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
 	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/internal/cluster"
@@ -64,9 +63,14 @@ func main() {
 }
 
 func run(cfg *config.Config) (errs []error) {
+	sessions, err := NewSessionManager(cfg.Data.Sessions, "fhapp")
+	if err != nil {
+		return append(errs, err)
+	}
+
 	s := &Server{
 		router:   way.NewRouter(),
-		sessions: NewSessionManager("fhapp"),
+		sessions: sessions,
 	}
 	s.Addr = net.JoinHostPort(cfg.Server.Host, fmt.Sprintf("%d", cfg.Server.Port))
 	s.ReadTimeout = 5 * time.Second
@@ -74,110 +78,24 @@ func run(cfg *config.Config) (errs []error) {
 	s.MaxHeaderBytes = 1 << 20 // 1mb?
 
 	// load data
-	if ds, err := jdb.Load("D:\\FarHorizons\\testdata\\t19"); err != nil {
+	galaxyDataFile := filepath.Join(cfg.Data.Path, "galaxy.dat")
+	starDataFile := filepath.Join(cfg.Data.Path, "stars.dat")
+	planetDataFile := filepath.Join(cfg.Data.Path, "planets.dat")
+	speciesDataPath := cfg.Data.Path
+	locationDataFile := filepath.Join(cfg.Data.Path, "locations.dat")
+	transactionDataFile := filepath.Join(cfg.Data.Path, "transactions.dat")
+
+	if ds, err := cluster.FromDat32(galaxyDataFile, starDataFile, planetDataFile, speciesDataPath, locationDataFile, transactionDataFile, cfg.Data.BigEndian); err != nil {
 		return append(errs, err)
 	} else {
 		s.data.Store = ds
 	}
-	xlatNo := make(map[int]*jdb.Species)
+	xlatNo := make(map[int]*cluster.Species)
 	for _, sp := range s.data.Store.Species {
 		xlatNo[sp.No] = sp
 	}
 
-	s.data.Engine = &Engine{Semver: "7.5.2"}
-	s.data.DS = &JDB{}
-	if err := loader(filepath.Join(cfg.Server.App.Data, "galaxy.json"), s.data.DS); err != nil {
-		return append(errs, err)
-	}
-	for _, system := range s.data.DS.Stars {
-		for pn := 0; pn < system.NumPlanets; pn++ {
-			planet := s.data.DS.Planets[pn+system.PlanetIndex]
-			system.Planets = append(system.Planets, planet)
-			planet.System = system
-		}
-	}
-	for _, species := range s.data.DS.Species {
-		species.Code = fmt.Sprintf("SP%02d", species.Id)
-		for pn, nampla := range species.Namplas {
-			planet := s.data.DS.Planets[nampla.PlanetIndex]
-			if pn == 0 { // by convention, PN 0 is the home colony
-				species.HomeSystem = planet.System
-				species.HomePlanet = nampla
-			}
-			nampla.System = planet.System
-			nampla.Planet = planet
-		}
-		for _, ship := range species.Ships {
-			if ship.Pn == 99 || ship.Name == "Unused" {
-				continue
-			}
-			if ship.DestX != 0 && ship.DestY != 0 && ship.DestZ != 0 {
-				log.Printf("init: ship dest %d %d %d\n", ship.X, ship.Y, ship.Z)
-			}
-			switch ship.Class {
-			case BA: /* Starbase. */
-				ship.Code = "BA " + ship.Name
-				species.Starbases = append(species.Starbases, ship)
-			case BC: /* Battlecruiser. */
-				ship.Code = "BC " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case BM: /* Battlemoon. */
-				ship.Code = "BM " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case BR: /* Battlestar. */
-				ship.Code = "BR " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case BS: /* Battleship. */
-				ship.Code = "BS " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case BW: /* Battleworld. */
-				ship.Code = "BW " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case CA: /* Heavy Cruiser. */
-				ship.Code = "CA " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case CL: /* Light Cruiser. */
-				ship.Code = "CL " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case CC: /* Command Cruiser. */
-				ship.Code = "CC " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case CS: /* Strike Cruiser. */
-				ship.Code = "CS " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case CT: /* Corvette. */
-				ship.Code = "CT " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case DD: /* Destroyer. */
-				ship.Code = "DD " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case DN: /* Dreadnought. */
-				ship.Code = "DN " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case ES: /* Escort. */
-				ship.Code = "ES " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case FG: /* Frigate. */
-				ship.Code = "FG " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case PB: /* Picketboat. */
-				ship.Code = "PB " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case SD: /* Super Dreadnought. */
-				ship.Code = "SD " + ship.Name
-				species.Warships = append(species.Warships, ship)
-			case TR: /* Transport. */
-				ship.Code = "TR " + ship.Name
-				species.Transports = append(species.Transports, ship)
-			default:
-				// should panic?
-				log.Printf("init: unknown ship class %d\n", ship.Class)
-				ship.Code = "?? " + ship.Name
-				species.Transports = append(species.Transports, ship)
-			}
-		}
-	}
-	if err := loader(cfg.Server.App.Players, &s.data.Players); err != nil {
+	if err = loader(cfg.Data.Players, &s.data.Players); err != nil {
 		return append(errs, err)
 	}
 	for _, p := range s.data.Players {
@@ -196,7 +114,7 @@ func run(cfg *config.Config) (errs []error) {
 		File      string `json:"file"`
 		Date      string `json:"date"`
 	}
-	if err := loader(filepath.Join(cfg.Server.App.Data, "files.json"), &files); err != nil {
+	if err = loader(cfg.Data.Files, &files); err != nil {
 		return append(errs, err)
 	}
 	for _, f := range files {
@@ -237,12 +155,12 @@ func run(cfg *config.Config) (errs []error) {
 		//}
 	}
 	s.data.Site = &Site{}
-	if err := loader(filepath.Join(cfg.Server.App.Data, "site.json"), s.data.Site); err != nil {
+	if err := loader(cfg.Data.Site, s.data.Site); err != nil {
 		return append(errs, err)
 	}
 	s.data.Stats = make(map[string]*StatsData)
 	var stats []*StatsData
-	if err := loader(filepath.Join(cfg.Server.App.Data, "stats.json"), &stats); err != nil {
+	if err := loader(cfg.Data.Stats, &stats); err != nil {
 		return append(errs, err)
 	}
 	for _, stat := range stats {
@@ -255,14 +173,8 @@ func run(cfg *config.Config) (errs []error) {
 	// link in some stuff required for managing sessions
 	s.sessions.players = s.data.Players
 	s.sessions.species = s.data.Store.Species
-	if err := loader("D:\\GoLand\\fhcms\\cmd\\fhapp\\testdata\\sessions.json", s.sessions); err != nil {
-		return append(errs, err)
-	}
-	for id, sess := range s.sessions.sessions {
-		log.Printf("sessions: %q %v\n", id, sess)
-	}
 
-	s.routes()
+	s.routes(cfg.Data.Reports)
 
 	s.Handler = s.sessions.SessionUserHandler(s.router)
 

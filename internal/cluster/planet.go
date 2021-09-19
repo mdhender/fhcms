@@ -18,19 +18,37 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package cluster
 
+import "github.com/mdhender/fhcms/internal/coords"
+
 // Planet represents a single planet.
 type Planet struct {
-	Coords                   *Coords            `json:"coords"` // location of the planet within the cluster
-	System                   string             `json:"system"` // identifier for system containing the planet
-	Atmosphere               []GasType          `json:"atmosphere"`
-	Colonies                 map[string]*Colony `json:"colonies"` // key is species
-	Diameter                 int                `json:"diameter"`
-	EconEfficiency           int                `json:"econ_efficiency"`
-	Gravity                  int                `json:"gravity"`
-	Message                  int                `json:"message"`
-	MiningDifficulty         int                `json:"mining_difficulty"`
-	MiningDifficultyIncrease int                `json:"mining_difficulty_increase"`
-	PressureClass            int                `json:"pressure_class"`
-	TemperatureClass         int                `json:"temperature_class"`
-	Special                  string             `json:"special,omitempty"`
+	Id                       string // unique identifier for the planet
+	Atmosphere               []*AtmosphericGas
+	Colonies                 map[string]*Colony // key is species id
+	Diameter                 int
+	EconEfficiency           int
+	Gravity                  int
+	Location                 *coords.Coords // location of the planet in the cluster
+	Message                  int
+	MiningDifficulty         int
+	MiningDifficultyIncrease int
+	Orbit                    int
+	PressureClass            int
+	TemperatureClass         int
+	Special                  string
+	System                   *System             // system containing the planet
+	VisitedBy                map[string]*Species // all species that have visited the planet
+}
+
+// AtmosphericGas represents information about a specific gas in the planet's atmospher
+type AtmosphericGas struct {
+	Gas        *Code
+	Percentage int
+}
+
+func atmosphereTranslate(i, pct int) *AtmosphericGas {
+	return &AtmosphericGas{
+		Gas:        gasTranslate(i),
+		Percentage: pct,
+	}
 }

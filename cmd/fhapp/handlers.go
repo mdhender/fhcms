@@ -36,7 +36,7 @@ func (s *Server) handleAdminIndex() http.HandlerFunc {
 	format := "Hello, %s!"
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Far-Horizons", s.data.DS.Semver)
+		w.Header().Set("Far-Horizons", s.data.Store.Semver)
 		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprintf(w, format, "World")
 	}
@@ -138,7 +138,7 @@ func (s *Server) handleCachedFile(name string) http.HandlerFunc {
 			}
 		}
 		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Far-Horizons", s.data.DS.Semver)
+		w.Header().Set("Far-Horizons", s.data.Store.Semver)
 		w.Header().Set("Etag", etag)
 		w.Header().Set("Cache-Control", maxAge)
 		w.WriteHeader(http.StatusOK)
@@ -154,7 +154,7 @@ func (s *Server) handleGetCookie() http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Far-Horizons", s.data.DS.Semver)
+		w.Header().Set("Far-Horizons", s.data.Store.Semver)
 		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprintf(w, "GET cookie(%q): %q", s.sessions.cookieName, c.Value)
 	}
@@ -171,7 +171,7 @@ func (s *Server) handleLogout() http.HandlerFunc {
 			MaxAge:   -1,
 			HttpOnly: true,
 		})
-		w.Header().Set("Far-Horizons", s.data.DS.Semver)
+		w.Header().Set("Far-Horizons", s.data.Store.Semver)
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 }
@@ -187,7 +187,8 @@ func (s *Server) handleSetCookie() http.HandlerFunc {
 	}
 }
 
-func (s *Server) handleTurnOrders() http.HandlerFunc {
+func (s *Server) handleTurnOrders(files string) http.HandlerFunc {
+	log.Printf("serving turn orders from %q\n", files)
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("server: %s %q: handleTurnOrders\n", r.Method, r.URL.Path)
 		u := currentUser(r)
@@ -201,25 +202,60 @@ func (s *Server) handleTurnOrders() http.HandlerFunc {
 			return
 		}
 		data := struct {
-			Engine     *Engine
-			DS         *JDB
-			Site       *Site
+			Engine *Engine
+			Semver string
+			Site   struct {
+				Title     string
+				Slug      string
+				Copyright struct {
+					Year   int
+					Author string
+				}
+			}
+			Game struct {
+				Title     string
+				Turn      int
+				NextTurn  int
+				OrdersDue string
+			}
+			User   UserData
+			Player struct {
+				Name            string
+				Data            string // folder on web server containing this player's data
+				IsAdmin         bool
+				IsAuthenticated bool
+				Species         *cluster.Species
+			}
+			Stats      *StatsData
 			TurnNumber int
 			Date       string
 			Orders     string
-			User       UserData
 		}{
 			Engine:     s.data.Engine,
-			DS:         s.data.DS,
-			Site:       s.data.Site,
 			User:       u,
+			Stats:      s.data.Stats[u.SpeciesId],
 			TurnNumber: turnNumber,
 		}
+		data.Semver = s.data.Store.Semver
+		data.Game.Title = "Raven's Beta"
+		data.Game.Turn = s.data.Store.Turn
+		data.Game.NextTurn = s.data.Store.Turn + 1
+		data.Game.OrdersDue = "Monday, September 20th by 7PM MDT. MDT is 6 hours behind London."
+		data.Player.Name = u.Player
+		data.Player.Data = u.SpeciesId + "?key?"
+		data.Player.IsAuthenticated = u.IsAuthenticated
+		data.Player.IsAdmin = u.IsAuthenticated && u.IsAdmin
+		data.Player.Species = u.Species
+		data.Site.Title = s.data.Site.Title
+		data.Site.Slug = s.data.Site.Slug
+		data.Site.Copyright.Year = s.data.Site.Copyright.Year
+		data.Site.Copyright.Author = s.data.Site.Copyright.Author
+
 		for _, f := range s.data.Files[u.SpeciesId] {
 			if f.Turn == turnNumber {
 				data.Date = f.Date
 				if f.Orders != "" {
-					if b, err := ioutil.ReadFile(filepath.Join("testdata", "files", f.Orders)); err != nil {
+					if b, err := ioutil.ReadFile(filepath.Join(files, f.Orders)); err != nil {
 						log.Printf("server: %s %q: handleTurnOrders: %+v\n", r.Method, r.URL.Path, err)
 					} else {
 						data.Orders = string(b)
@@ -235,13 +271,14 @@ func (s *Server) handleTurnOrders() http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Far-Horizons", s.data.DS.Semver)
+		w.Header().Set("Far-Horizons", s.data.Store.Semver)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(b)
 	}
 }
 
-func (s *Server) handleTurnReport() http.HandlerFunc {
+func (s *Server) handleTurnReport(files string) http.HandlerFunc {
+	log.Printf("serving turn reports from %q\n", files)
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("server: %s %q: handleTurnReport\n", r.Method, r.URL.Path)
 		u := currentUser(r)
@@ -255,26 +292,61 @@ func (s *Server) handleTurnReport() http.HandlerFunc {
 			return
 		}
 		data := struct {
-			Engine     *Engine
-			DS         *JDB
-			Site       *Site
+			Engine *Engine
+			Semver string
+			Site   struct {
+				Title     string
+				Slug      string
+				Copyright struct {
+					Year   int
+					Author string
+				}
+			}
+			Game struct {
+				Title     string
+				Turn      int
+				NextTurn  int
+				OrdersDue string
+			}
+			User   UserData
+			Player struct {
+				Name            string
+				Data            string // folder on web server containing this player's data
+				IsAdmin         bool
+				IsAuthenticated bool
+				Species         *cluster.Species
+			}
+			Stats      *StatsData
 			TurnNumber int
 			Date       string
 			Report     string
-			User       UserData
 		}{
 			Engine:     s.data.Engine,
-			DS:         s.data.DS,
-			Site:       s.data.Site,
 			User:       u,
+			Stats:      s.data.Stats[u.SpeciesId],
 			TurnNumber: turnNumber,
 		}
+		data.Semver = s.data.Store.Semver
+		data.Game.Title = "Raven's Beta"
+		data.Game.Turn = s.data.Store.Turn
+		data.Game.NextTurn = s.data.Store.Turn + 1
+		data.Game.OrdersDue = "Monday, September 20th by 7PM MDT. MDT is 6 hours behind London."
+		data.Player.Name = u.Player
+		data.Player.Data = u.SpeciesId + "?key?"
+		data.Player.IsAuthenticated = u.IsAuthenticated
+		data.Player.IsAdmin = u.IsAuthenticated && u.IsAdmin
+		data.Player.Species = u.Species
+		data.Site.Title = s.data.Site.Title
+		data.Site.Slug = s.data.Site.Slug
+		data.Site.Copyright.Year = s.data.Site.Copyright.Year
+		data.Site.Copyright.Author = s.data.Site.Copyright.Author
+
 		for _, f := range s.data.Files[u.SpeciesId] {
 			if f.Turn == turnNumber {
 				data.Date = f.Date
 				if f.Report != "" {
-					if b, err := ioutil.ReadFile(filepath.Join("testdata", "files", f.Report)); err != nil {
-						log.Printf("server: %s %q: handleTurnOrders: %+v\n", r.Method, r.URL.Path, err)
+					if b, err := ioutil.ReadFile(filepath.Join(files, f.Report)); err != nil {
+						log.Printf("server: %s %q: handleTurnReport: %+v\n", r.Method, r.URL.Path, err)
 					} else {
 						data.Report = string(b)
 					}
@@ -289,7 +361,7 @@ func (s *Server) handleTurnReport() http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Far-Horizons", s.data.DS.Semver)
+		w.Header().Set("Far-Horizons", s.data.Store.Semver)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(b)
 	}
@@ -300,6 +372,7 @@ func (s *Server) handleUI() http.HandlerFunc {
 		Turn   int
 		Report string
 		Orders string
+		Combat string
 		Date   string
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -307,7 +380,7 @@ func (s *Server) handleUI() http.HandlerFunc {
 		u := currentUser(r)
 		data := struct {
 			Engine *Engine
-			DS     *JDB
+			Semver string
 			Site   struct {
 				Title     string
 				Slug      string
@@ -334,10 +407,10 @@ func (s *Server) handleUI() http.HandlerFunc {
 			Stats *StatsData
 		}{
 			Engine: s.data.Engine,
-			DS:     s.data.DS,
 			User:   u,
 			Stats:  s.data.Stats[u.SpeciesId],
 		}
+		data.Semver = s.data.Store.Semver
 		data.Game.Title = "Raven's Beta"
 		data.Game.Turn = s.data.Store.Turn
 		data.Game.NextTurn = s.data.Store.Turn + 1
@@ -363,7 +436,7 @@ func (s *Server) handleUI() http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Far-Horizons", s.data.DS.Semver)
+		w.Header().Set("Far-Horizons", s.data.Store.Semver)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(b)
 	}

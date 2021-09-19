@@ -23,5 +23,6 @@ type PlayerData struct {
 	User      string `json:"user"`
 	Password  string `json:"password"`
 	SpeciesId string `json:"species_id"` // unique identifier for the species
+	SpeciesNo int    `json:"species_no"`
 	Key       string `json:"key"`
 }

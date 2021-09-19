@@ -29,21 +29,21 @@ import (
 type Config struct {
 	Debug bool
 	Data  struct {
-		JDB    string // path to json data file
-		Log    string // path to create log files
-		Orders string // path to orders files
+		BigEndian bool   // byte order of v1 binary data files
+		Files     string // name of files data file
+		Logs      string // path to create log files
+		Orders    string // path to orders files
+		Path      string // path to v1 binary data files
+		Players   string // name of player data file
+		Reports   string // path to turn reports
+		Sessions  string // name of session data file
+		Site      string // name of site data file
+		Stats     string // name of stats data file
 	}
 	Server struct {
 		Host    string
 		Port    int
 		PidFile string // if set, save the PID to this file
-		App     struct {
-			Cluster  string // path to cluster data file
-			Data     string // path to v1 data files
-			Players  string // path to player data file
-			Sessions string // path to session data file
-			Site     string // path to site data file
-		}
 	}
 	Log struct {
 		Flags   int // use as log.SetFlags(cfg.Log.Flags)
@@ -55,17 +55,21 @@ type Config struct {
 // These are the values without loading the environment, configuration file, or command line.
 func DefaultConfig() *Config {
 	var cfg Config
-	cfg.Data.JDB = "D:\\FarHorizons\\testdata\\t19"
-	cfg.Data.Log = "D:\\FarHorizons\\testdata\\t19"
-	cfg.Data.Orders = "D:\\FarHorizons\\testdata\\t19"
+	root := "D:\\FarHorizons\\testdata\\t19"
+	// byte order is the order in the data file, not the computer we're running on!
+	cfg.Data.BigEndian = false // leave this to document the choice
+	cfg.Data.Files = filepath.Join(root, "files.json")
+	cfg.Data.Logs = root
+	cfg.Data.Orders = root
+	cfg.Data.Path = root
+	cfg.Data.Players = filepath.Join(root, "players.json")
+	cfg.Data.Reports = filepath.Join(root, "reports")
+	cfg.Data.Sessions = filepath.Join(root, "sessions.json")
+	cfg.Data.Site = filepath.Join(root, "site.json")
+	cfg.Data.Stats = filepath.Join(root, "stats.json")
 	cfg.Log.Flags = log.Ldate | log.Ltime | log.LUTC // force logs to be UTC
 	cfg.Log.Verbose = true
 	cfg.Server.Port = 8080
-	cfg.Server.App.Data = "D:\\FarHorizons\\testdata\\t19"
-	cfg.Server.App.Cluster = filepath.Join(cfg.Server.App.Data, "cluster.json")
-	cfg.Server.App.Players = filepath.Join(cfg.Server.App.Data, "players.json")
-	cfg.Server.App.Sessions = filepath.Join(cfg.Server.App.Data, "sessions.json")
-	cfg.Server.App.Site = filepath.Join(cfg.Server.App.Data, "site.json")
 	return &cfg
 }
 
@@ -78,9 +82,15 @@ func DefaultConfig() *Config {
 func (cfg *Config) Load() error {
 	fs := flag.NewFlagSet("Server", flag.ExitOnError)
 	debug := fs.Bool("debug", cfg.Debug, "log debug information (optional)")
-	dataJDB := fs.String("jdb-path", cfg.Data.JDB, "path to read json data")
-	dataLog := fs.String("data", cfg.Data.Log, "path to create log files")
-	dataOrders := fs.String("orders", cfg.Data.Orders, "path to read orders files")
+	dataFiles := fs.String("files", cfg.Data.Files, "name of files data json file")
+	dataLogs := fs.String("logs", cfg.Data.Logs, "path to log files")
+	dataOrders := fs.String("orders", cfg.Data.Orders, "path to orders files")
+	dataPath := fs.String("data", cfg.Data.Path, "path to v1 binary data files")
+	dataPlayers := fs.String("players", cfg.Data.Players, "name of players data json file")
+	dataReports := fs.String("reports", cfg.Data.Reports, "path to turn report files")
+	dataSessions := fs.String("sessions", cfg.Data.Sessions, "name of sessions data json file")
+	dataSite := fs.String("site", cfg.Data.Site, "name of sites data json file")
+	dataStats := fs.String("stats", cfg.Data.Stats, "name of stats data json file")
 	logVerbose := fs.Bool("verbose", cfg.Log.Verbose, "log extra information to the console")
 
 	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("FH"), ff.WithConfigFileFlag("config"), ff.WithConfigFileParser(ff.JSONParser)); err != nil {
@@ -88,10 +98,27 @@ func (cfg *Config) Load() error {
 	}
 
 	cfg.Debug = *debug
-	cfg.Data.JDB = filepath.Clean(*dataJDB)
-	cfg.Data.Log = filepath.Clean(*dataLog)
+	cfg.Data.Files = filepath.Clean(*dataFiles)
+	cfg.Data.Logs = filepath.Clean(*dataLogs)
 	cfg.Data.Orders = filepath.Clean(*dataOrders)
+	cfg.Data.Path = filepath.Clean(*dataPath)
+	cfg.Data.Players = filepath.Clean(*dataPlayers)
+	cfg.Data.Reports = filepath.Clean(*dataReports)
+	cfg.Data.Sessions = filepath.Clean(*dataSessions)
+	cfg.Data.Site = filepath.Clean(*dataSite)
+	cfg.Data.Stats = filepath.Clean(*dataStats)
 	cfg.Log.Verbose = *logVerbose
+
+	log.Printf("config: %-30s == %q\n", "files", cfg.Data.Files)
+	log.Printf("config: %-30s == %q\n", "logs", cfg.Data.Logs)
+	log.Printf("config: %-30s == %q\n", "orders", cfg.Data.Orders)
+	log.Printf("config: %-30s == %q\n", "path", cfg.Data.Path)
+	log.Printf("config: %-30s == %q\n", "players", cfg.Data.Players)
+	log.Printf("config: %-30s == %q\n", "reports", cfg.Data.Reports)
+	log.Printf("config: %-30s == %q\n", "sessions", cfg.Data.Sessions)
+	log.Printf("config: %-30s == %q\n", "site", cfg.Data.Site)
+	log.Printf("config: %-30s == %q\n", "stats", cfg.Data.Stats)
+	log.Printf("config: %-30s == %v\n", "verbose", cfg.Log.Verbose)
 
 	return nil
 }

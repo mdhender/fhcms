@@ -18,47 +18,56 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package cluster
 
-// Species represents a single species.
-// TODO: Scan should track the scan results since the planet attributes can change during play.
 type Species struct {
-	Id         string `json:"id"`
-	No         int    `json:"no"`   // number of the species (for reporting?)
-	Name       string `json:"name"` // name of the species
-	Government struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
-	} `json:"government"`
-	HomeWorld  string   `json:"home_world"` // coordinates of the home world
-	Ally       []string `json:"ally"`
-	AutoOrders bool     `json:"auto_orders,omitempty"`
-	Colonies   []string `json:"colonies"` // coordinates of the planet containing the colony
-	Contact    []string `json:"contact"`
-	EconUnits  int      `json:"econ_units"`
-	Enemy      []string `json:"enemy"`
-	Fleet      struct {
-		Cost           int `json:"cost"`
-		MaintenancePct int `json:"maintenance_pct"` // percentage of production applied to fleet maintenance
-	} `json:"fleet"`
+	Id         string // unique identifier for species
+	MI         *Technology
+	MA         *Technology
+	ML         *Technology
+	GV         *Technology
+	LS         *Technology
+	BI         *Technology
+	Ally       map[string]*Species
+	AutoOrders bool
+	Colonies   struct {
+		ById       map[string]*Colony // key is name of planet, converted to upper case
+		ByLocation map[string]*Colony // key is location of planet, including orbit
+	}
+	Contact   map[string]*Species
+	EconUnits int
+	Enemy     map[string]*Species
+	Fleet     struct {
+		Cost              int
+		DefensiveStrength int
+		MaintenancePct    int // percentage of production applied to fleet maintenance
+		OffensiveStrength int
+		Ships             map[string]*Ship // key is name of ship, converted to upper case
+		Starbases         []*Ship
+		Transports        []*Ship
+		Warships          []*Ship
+	}
 	Gases struct {
-		Required struct {
-			Code   string `json:"code"`
-			MinPct int    `json:"min_pct"`
-			MaxPct int    `json:"max_pct"`
-		} `json:"required"`
-		Neutral []string `json:"neutral"`
-		Poison  []string `json:"poison"`
-	} `json:"gases"`
-	HPOriginalBase int                     `json:"hp_original_base"`
-	NamedPlanets   map[string]*NamedPlanet `json:"named_planets"` // key is name of planet, converted to upper case
-	Scanned        []string                `json:"scanned"`       // coordinates of all systems that have been scanned
-	Ships          map[string]*Ship        `json:"ships"`         // key is name of ship, converted to upper case
-	Tech           struct {
-		MI Technology `json:"mi"`
-		MA Technology `json:"ma"`
-		ML Technology `json:"ml"`
-		GV Technology `json:"gv"`
-		LS Technology `json:"ls"`
-		BI Technology `json:"bi"`
-	} `json:"tech"`
-	Visited []string `json:"visited"` // coordinates of all systems that have been visited
+		Neutral        []*Code
+		Poison         []*Code
+		Required       *Code
+		RequiredMaxPct int
+		RequiredMinPct int
+	}
+	Government struct {
+		Name string
+		Type string
+	}
+	HomeWorld struct {
+		Name         *NamedPlanet
+		OriginalBase int // something something home world
+		Planet       *Planet
+		System       *System
+	}
+	Name         string // name of the species
+	NamedPlanets struct {
+		ById       map[string]*NamedPlanet // key is name of planet, converted to upper case
+		ByLocation map[string]*NamedPlanet // key is location, including orbit
+	}
+	No      int       // number of the species (for reporting?)
+	Scanned []*System // all systems that have been scanned
+	Visited []*System // all systems that have been visited
 }

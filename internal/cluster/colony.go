@@ -20,41 +20,35 @@ package cluster
 
 // Colony represents a single colony.
 type Colony struct {
-	Status struct {
-		Colony          bool `json:"colony"`
-		DisbandedColony bool `json:"disbanded_colony,omitempty"`
-		Hiding          bool `json:"hiding,omitempty"`
-		Hidden          bool `json:"hidden,omitempty"`
-		HomePlanet      bool `json:"home_planet,omitempty"`
-		MiningColony    bool `json:"mining_colony,omitempty"`
-		Populated       bool `json:"populated,omitempty"`
-		ResortColony    bool `json:"resort_colony,omitempty"`
-	} `json:"status"`
-	Inventory   map[string]int `json:"inventory"` // key is item code, value is quantity
-	MaBase      int            `json:"ma_base"`
-	Message     int            `json:"message"`
-	MiBase      int            `json:"mi_base"`
-	PlanetIndex int            `json:"planet_index"`
-	PopUnits    int            `json:"pop_units"`
-	SiegeEff    int            `json:"siege_eff"`
-	Shipyards   int            `json:"shipyards"`
-	Special     int            `json:"special,omitempty"`
-	Units       struct {
-		Colonists struct {
-			Auto               bool `json:"auto,omitempty"`
-			AvailableToInstall int  `json:"available_to_install,omitempty"`
-			Needed             int  `json:"needed,omitempty"`
-		} `json:"colonists"`
-		Manufacturing struct {
-			Auto               bool `json:"auto,omitempty"`
-			AvailableToInstall int  `json:"available_to_install,omitempty"`
-			Needed             int  `json:"needed,omitempty"`
-		} `json:"manufacturing"`
-		Mining struct {
-			Auto               bool `json:"auto,omitempty"`
-			AvailableToInstall int  `json:"available_to_install,omitempty"`
-			Needed             int  `json:"needed,omitempty"`
-		} `json:"mining"`
-	} `json:"units"`
-	UseOnAmbush int `json:"use_on_ambush"`
+	Name   *NamedPlanet
+	System *System
+	Planet *Planet // planet the colony is on
+	Is     struct {
+		Colony          bool
+		DisbandedColony bool
+		Hiding          bool
+		Hidden          bool
+		HomePlanet      bool
+		MiningColony    bool
+		Populated       bool
+		ResortColony    bool
+	}
+	Population int // population units - not the same as colonists
+	Colonists  struct {
+		Auto               bool
+		AvailableToInstall int
+		Needed             int
+	}
+	Manufacturing, Mining struct {
+		Auto               bool
+		AvailableToInstall int
+		Base               int
+		Needed             int
+	}
+	Inventory   map[string]*Item // key is item code
+	SiegeEff    int
+	Shipyards   int
+	Special     int
+	UseOnAmbush int
+	Message     int
 }

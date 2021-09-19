@@ -28,6 +28,10 @@ type Coords struct {
 	Orbit int `json:"orbit,omitempty"`
 }
 
+func New(x, y, z, orbit int) *Coords {
+	return &Coords{X: x, Y: y, Z: z, Orbit: orbit}
+}
+
 // Id returns a unique representation of the location.
 func (c *Coords) Id() string {
 	if c.Orbit != 0 {

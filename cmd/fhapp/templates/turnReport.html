@@ -40,8 +40,8 @@
       <dt>Main pages</dt>
       <dd><a href="/static/rules.html">Rules</a></dd>
       {{ if .User.IsAuthenticated }}
-      <dd><a href="/turn/{{.Site.Turn}}">Last Turn Results</a></dd>
-      <dd><a href="https://farhorizons.dev/sp{{.User.Species.Id}}-{{.User.Species.Key}}/index.html">Archives</a></dd>
+      <dd><a href="/turn/{{.Game.Turn}}/report">Turn {{.Game.Turn}} Results</a></dd>
+      <dd><a href="https://farhorizons.dev/{{.Player.Data}}/index.html">Archives</a></dd>
       {{ end }}
     </dl>
     <dl class="nav">
@@ -63,10 +63,9 @@
     </dl>
     <dl class="introduction">
       {{ if .User.IsAuthenticated }}
-      <dt>Raven's Beta</dt>
-      <dd>You are logged in as Species {{.User.Species.Id}} on Raven's 32-bit beta.</dd>
-      <dd>The Galaxy Turn Number is {{ .DS.Galaxy.TurnNumber}}.</dd>
-      <dd>The last posted turn results are for turn {{ .Site.Turn }}.</dd>
+      <dt>{{.Game.Title}} :: Turn {{.Game.Turn}}</dt>
+      <dd>You are logged in as Species {{.User.Species.Id}}.</dd>
+      <dd>Orders for Turn {{.Game.NextTurn}} are due {{.Game.OrdersDue}}.</dd>
       {{ else }}
       <dt>Login</dt>
       <dd>
@@ -85,42 +84,51 @@
 
   <div id="content">
     <h2>Turn {{ .TurnNumber }} Report -- {{ .Date }} </h2>
-    {{ if .Report }}
-    <code><pre>
-{{ .Report }}
-</pre>
-    </code>
-    {{ else }}
-    <p>There is no report for this turn.</p>
-    {{ end }}
-
+    {{with .Report}}<code><pre>{{.}}</pre></code>{{ else }}<p>There is no report for this turn.</p>{{ end }}
     <hr />
-
     <hr class="clear" />
   </div>
 
   <div id="sidebar">
-    <h2>Turn 18</h2>
-    <p>Orders for Turn 18 Orders are due Monday, September 13th by 7PM MDT.
-      MDT is 6 hours behind London.</p>
+    {{with .User.Species}}
+    <h2>{{ .Id }} {{ .Name }}</h2>
+    <p>{{ .Government.Name }}</p>
+    <hr />
+    {{end}}
 
     <div class="left">
-      <h2>Left menu</h2>
-      <ul class="sidemenu">
-        <li>First page</li>
-        <li>Second page</li>
-        <li>Third page with subs
-          <ul>
-            <li>First subpage</li>
-            <li>Second subpage</li>
-          </ul>
-        </li>
-        <li>Fourth page</li>
-      </ul>
+      {{with .User.Species}}
+      <h2>Technology</h2>
+      <table>
+        <tbody>
+        <tr><td align="right">{{.MI.Code}}:&nbsp;</td><td align="right">{{.MI.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.MI.KnowledgeLevel}}</td><td align="right">{{with .MI.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+        <tr><td align="right">{{.MA.Code}}:&nbsp;</td><td align="right">{{.MA.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.MA.KnowledgeLevel}}</td><td align="right">{{with .MA.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+        <tr><td align="right">{{.ML.Code}}:&nbsp;</td><td align="right">{{.ML.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.ML.KnowledgeLevel}}</td><td align="right">{{with .ML.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+        <tr><td align="right">{{.GV.Code}}:&nbsp;</td><td align="right">{{.GV.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.GV.KnowledgeLevel}}</td><td align="right">{{with .GV.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+        <tr><td align="right">{{.LS.Code}}:&nbsp;</td><td align="right">{{.LS.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.LS.KnowledgeLevel}}</td><td align="right">{{with .LS.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+        <tr><td align="right">{{.BI.Code}}:&nbsp;</td><td align="right">{{.BI.Level}}&nbsp;</td><td>/</td><td align="right">&nbsp;{{.BI.KnowledgeLevel}}</td><td align="right">{{with .BI.ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td></tr>
+        </tbody>
+      </table>
+      {{ end }}
+
+      {{ with .Stats }}
+      <h2>Statistics</h2>
+      <table>
+        <tbody>
+        <tr><td align="right">Production:&nbsp;</td><td align="right">{{ .Production }}</td><td>&nbsp;EU</td></tr>
+        <tr><td align="right">Banked:&nbsp;</td><td align="right">{{ .BankedEu }}</td><td>&nbsp;EU</td></tr>
+        <tr><td align="right">Colonies:&nbsp;</td><td align="right">{{ .Colonies }}</td></tr>
+        <tr><td align="right">Ships:&nbsp;</td><td align="right">{{ .Ships }}</td></tr>
+        <tr><td align="right">Shipyards:&nbsp;</td><td align="right">{{ .Shipyards }}</td></tr>
+        <tr><td align="right">Offensive Power:&nbsp;</td><td align="right">{{ .OffensivePower }}</td></tr>
+        <tr><td align="right">Defensive Power:&nbsp;</td><td align="right">{{ .DefensivePower }}</td></tr>
+        </tbody>
+      </table>
+      {{ end }}
     </div>
 
     <div class="right">
-      <h2>Right menu</h2>
+      <h2>Colonies</h2>
       <ul class="sidemenu">
         <li>Sixth page</li>
         <li>Seventh page</li>
@@ -128,7 +136,7 @@
         <li>The last one</li>
       </ul>
 
-      <h2>Sample links</h2>
+      <h2>Ships</h2>
       <ul>
         <li>Sample link 1</li>
         <li>Sample link 2</li>
@@ -143,11 +151,11 @@
 
 <div id="footer">
   <div class="left">
-    <p><a href="https://github.com/mdhender/fhapp">fhapp v{{ .Engine.Semver }}</a> &copy; {{ .Site.Copyright.Year }} {{ .Site.Copyright.Author }} | All times are MDT?</p>
+    <p><a href="https://github.com/mdhender/fhapp">fhapp v{{ .Semver }}</a> &copy; {{ .Site.Copyright.Year }} {{ .Site.Copyright.Author }} | All times are MDT?</p>
   </div>
   <div class="right textright">
     {{ if .User.IsAuthenticated }}
-    <p>Raven's Beta | Species {{ .User.Species.Id }} | <a href="/api/logout">Logout</a></p>
+    <p>{{.Game.Title}} | Species {{ .User.Species.Id }} | <a href="/api/logout">Logout</a></p>
     {{ end }}
     <p class="hide"><a href="#top">Return to top</a></p>
   </div>

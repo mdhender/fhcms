@@ -18,8 +18,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package cluster
 
-// NamedPlanet represent the name applied to a planet by a species.
+import "strings"
+
+// NamedPlanet represents the name applied to a planet by a species.
+// The ID is usually the name of the planet converted to uppercase.
 type NamedPlanet struct {
-	Planet      string `json:"planet"`       // coordinates of the planet being named
-	DisplayName string `json:"display_name"` // original name of the planet
+	Id          string  // unique identifier for named planet
+	Colony      *Colony // optional
+	DisplayName string  // original name of the planet
+	Planet      *Planet
+}
+
+func newNamedPlanet(name string, planet *Planet) *NamedPlanet {
+	return &NamedPlanet{
+		Id:          strings.ToUpper(strings.TrimSpace(name)),
+		DisplayName: strings.TrimSpace(name),
+		Planet:      planet,
+	}
 }
