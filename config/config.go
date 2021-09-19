@@ -43,8 +43,8 @@ type Config struct {
 	Server struct {
 		Host    string
 		Port    int
-		PidFile string // if set, save the PID to this file
 	}
+	PIDFile   bool // create pid file if set
 	Log struct {
 		Flags   int // use as log.SetFlags(cfg.Log.Flags)
 		Verbose bool
@@ -86,6 +86,7 @@ func (cfg *Config) Load() error {
 	dataLogs := fs.String("logs", cfg.Data.Logs, "path to log files")
 	dataOrders := fs.String("orders", cfg.Data.Orders, "path to orders files")
 	dataPath := fs.String("data", cfg.Data.Path, "path to v1 binary data files")
+	dataPIDFile := fs.Bool("pid-file", false, "create pid file")
 	dataPlayers := fs.String("players", cfg.Data.Players, "name of players data json file")
 	dataReports := fs.String("reports", cfg.Data.Reports, "path to turn report files")
 	dataSessions := fs.String("sessions", cfg.Data.Sessions, "name of sessions data json file")
@@ -108,11 +109,13 @@ func (cfg *Config) Load() error {
 	cfg.Data.Site = filepath.Clean(*dataSite)
 	cfg.Data.Stats = filepath.Clean(*dataStats)
 	cfg.Log.Verbose = *logVerbose
+	cfg.PIDFile = *dataPIDFile
 
 	log.Printf("config: %-30s == %q\n", "files", cfg.Data.Files)
 	log.Printf("config: %-30s == %q\n", "logs", cfg.Data.Logs)
 	log.Printf("config: %-30s == %q\n", "orders", cfg.Data.Orders)
 	log.Printf("config: %-30s == %q\n", "path", cfg.Data.Path)
+	log.Printf("config: %-30s == %v\n", "pid-file", cfg.PIDFile)
 	log.Printf("config: %-30s == %q\n", "players", cfg.Data.Players)
 	log.Printf("config: %-30s == %q\n", "reports", cfg.Data.Reports)
 	log.Printf("config: %-30s == %q\n", "sessions", cfg.Data.Sessions)

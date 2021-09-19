@@ -43,13 +43,13 @@ func main() {
 
 	log.SetFlags(cfg.Log.Flags)
 
-	if len(cfg.Server.PidFile) != 0 {
+	if cfg.PIDFile {
 		pid := os.Getpid()
-		if err := ioutil.WriteFile(cfg.Server.PidFile, []byte(fmt.Sprintf("%d", pid)), 0600); err != nil {
+		if err := ioutil.WriteFile("/tmp/.fhapp.pid", []byte(fmt.Sprintf("%d", pid)), 0600); err != nil {
 			log.Printf("unable to create pid file: %+v", err)
 			os.Exit(2)
 		}
-		log.Printf("server: pid %8d: file %q\n", pid, cfg.Server.PidFile)
+		log.Printf("server: pid %8d: file %q\n", pid, "/tmp/.fhapp.pid")
 	}
 
 	if errors := run(cfg); errors != nil {
