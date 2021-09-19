@@ -40,7 +40,7 @@
       <dt>Main pages</dt>
       <dd><a href="/static/rules.html">Rules</a></dd>
       {{ if .User.IsAuthenticated }}
-      <dd><a href="/turn/{{.Game.Turn}}/report">Turn {{.Game.Turn}} Results</a></dd>
+      <dd><a href="/turn/{{.Game.LastTurn}}/report">Turn {{.Game.LastTurn}} Results</a></dd>
       <dd><a href="https://farhorizons.dev/{{.Player.Data}}/index.html">Archives</a></dd>
       {{ end }}
     </dl>
@@ -65,7 +65,7 @@
       {{ if .User.IsAuthenticated }}
       <dt>{{.Game.Title}} :: Turn {{.Game.Turn}}</dt>
       <dd>You are logged in as Species {{.User.Species.Id}}.</dd>
-      <dd>Orders for Turn {{.Game.NextTurn}} are due {{.Game.OrdersDue}}.</dd>
+      <dd>Orders for Turn {{.Game.Turn}} are due {{.Game.OrdersDue}}.</dd>
       {{ else }}
       <dt>Login</dt>
       <dd>

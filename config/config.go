@@ -41,11 +41,11 @@ type Config struct {
 		Stats     string // name of stats data file
 	}
 	Server struct {
-		Host    string
-		Port    int
+		Host string
+		Port int
 	}
-	PIDFile   bool // create pid file if set
-	Log struct {
+	PIDFile bool // create pid file if set
+	Log     struct {
 		Flags   int // use as log.SetFlags(cfg.Log.Flags)
 		Verbose bool
 	}

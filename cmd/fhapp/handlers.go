@@ -215,7 +215,7 @@ func (s *Server) handleTurnOrders(files string) http.HandlerFunc {
 			Game struct {
 				Title     string
 				Turn      int
-				NextTurn  int
+				LastTurn  int
 				OrdersDue string
 			}
 			User   UserData
@@ -239,7 +239,9 @@ func (s *Server) handleTurnOrders(files string) http.HandlerFunc {
 		data.Semver = s.data.Store.Semver
 		data.Game.Title = "Raven's Beta"
 		data.Game.Turn = s.data.Store.Turn
-		data.Game.NextTurn = s.data.Store.Turn + 1
+		if data.Game.Turn > 1 {
+			data.Game.LastTurn = s.data.Store.Turn - 1
+		}
 		data.Game.OrdersDue = "Monday, September 20th by 7PM MDT. MDT is 6 hours behind London."
 		data.Player.Name = u.Player
 		data.Player.Data = u.SpeciesId + "?key?"
@@ -305,7 +307,7 @@ func (s *Server) handleTurnReport(files string) http.HandlerFunc {
 			Game struct {
 				Title     string
 				Turn      int
-				NextTurn  int
+				LastTurn  int
 				OrdersDue string
 			}
 			User   UserData
@@ -329,7 +331,9 @@ func (s *Server) handleTurnReport(files string) http.HandlerFunc {
 		data.Semver = s.data.Store.Semver
 		data.Game.Title = "Raven's Beta"
 		data.Game.Turn = s.data.Store.Turn
-		data.Game.NextTurn = s.data.Store.Turn + 1
+		if data.Game.Turn > 1 {
+			data.Game.LastTurn = s.data.Store.Turn - 1
+		}
 		data.Game.OrdersDue = "Monday, September 20th by 7PM MDT. MDT is 6 hours behind London."
 		data.Player.Name = u.Player
 		data.Player.Data = u.SpeciesId + "?key?"
@@ -392,7 +396,7 @@ func (s *Server) handleUI() http.HandlerFunc {
 			Game struct {
 				Title     string
 				Turn      int
-				NextTurn  int
+				LastTurn  int
 				OrdersDue string
 			}
 			Files  []*turnFile
@@ -413,7 +417,9 @@ func (s *Server) handleUI() http.HandlerFunc {
 		data.Semver = s.data.Store.Semver
 		data.Game.Title = "Raven's Beta"
 		data.Game.Turn = s.data.Store.Turn
-		data.Game.NextTurn = s.data.Store.Turn + 1
+		if data.Game.Turn > 1 {
+			data.Game.LastTurn = s.data.Store.Turn - 1
+		}
 		data.Game.OrdersDue = "Monday, September 20th by 7PM MDT. MDT is 6 hours behind London."
 		data.Player.Name = u.Player
 		data.Player.Data = u.SpeciesId + "?key?"
