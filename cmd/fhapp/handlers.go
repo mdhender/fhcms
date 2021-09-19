@@ -549,7 +549,7 @@ func (s *Server) postTurnOrders(uploads string) http.HandlerFunc {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		log.Printf("server: %s %q: %v\n", r.Method, r.URL.Path, r.PostForm)
+		//log.Printf("server: %s %q: %v\n", r.Method, r.URL.Path, r.PostForm)
 		var input struct {
 			orders string
 		}
@@ -575,7 +575,7 @@ func (s *Server) postTurnOrders(uploads string) http.HandlerFunc {
 		ordersFile := fmt.Sprintf("sp%02d.t%d.orders.txt", u.Species.No, s.data.Store.Turn)
 		fullOrdersFile := filepath.Join(uploads, ordersFile)
 
-		log.Printf("server: %s %q: species %s turn %d orders %s \n", r.Method, r.URL.Path, u.SpeciesId, turnNumber, ordersFile)
+		log.Printf("server: %s %q: species %s turn %d orders %s\n", r.Method, r.URL.Path, u.SpeciesId, turnNumber, ordersFile)
 		if err := ioutil.WriteFile(fullOrdersFile, []byte(input.orders), 0644); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
