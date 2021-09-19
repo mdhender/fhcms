@@ -22,7 +22,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/mdhender/fhcms/internal/cluster"
 	"github.com/mdhender/fhcms/internal/dat32"
 	"io/ioutil"
 	"log"
@@ -91,13 +90,6 @@ func run(root, gFile, sFile, pFile string, bigendian bool) error {
 		if err := write(filepath.Join(root, fmt.Sprintf("sp%02d.json", sp.Id)), sp); err != nil {
 			return err
 		}
-	}
-
-	c, err := cluster.ConvertDat32ToCluster(galaxy, stars, planets, species)
-	if err != nil {
-		return err
-	} else if err = write(filepath.Join(root, "cluster.json"), c); err != nil {
-		return err
 	}
 
 	return err
