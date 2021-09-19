@@ -20,9 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
 	"github.com/mdhender/fhcms/internal/cluster"
+	"github.com/mdhender/fhcms/parser"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -581,10 +583,38 @@ func (s *Server) postTurnOrders(uploads string) http.HandlerFunc {
 			return
 		}
 
+		log.Printf("orders: loading orders file %q\n", ordersFile)
+
+		// parser returns a raw parse tree. we will evaluate it later, maybe.
+		var report bytes.Buffer
+		var errs []error
+		tree, err := parser.Parse(fullOrdersFile, false)
+		if err != nil {
+			errs = append(errs, err)
+		} else if tree == nil {
+			errs = append(errs, fmt.Errorf("parser failed to return orders"))
+		}
+		for _, err := range errs {
+			report.WriteString(fmt.Sprintf("parser: %+v\n", err))
+		}
+		if tree != nil {
+			report.WriteString(fmt.Sprintf("%v\n", *tree))
+		}
+
+		reportFile := fmt.Sprintf("sp%02d.t%d.report.txt", u.Species.No, s.data.Store.Turn)
+		fullreportFile := filepath.Join(uploads, reportFile)
+
+		log.Printf("server: %s %q: species %s turn %d report %s\n", r.Method, r.URL.Path, u.SpeciesId, turnNumber, reportFile)
+		if err := ioutil.WriteFile(fullreportFile, report.Bytes(), 0644); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
 		// add a guard here for the race condition
 		updated := false
 		for _, f := range s.data.Files[u.SpeciesId] {
 			if f.Turn == turnNumber {
+				f.Report = reportFile
 				f.Orders = ordersFile
 				f.Date = date
 				updated = true
@@ -596,7 +626,7 @@ func (s *Server) postTurnOrders(uploads string) http.HandlerFunc {
 				SpeciesId: u.SpeciesId,
 				SpeciesNo: u.Species.No,
 				Turn:      turnNumber,
-				Report:    "",
+				Report:    reportFile,
 				Orders:    ordersFile,
 				Date:      date,
 			})
