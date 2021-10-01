@@ -176,7 +176,7 @@ func run(cfg *config.Config) (errs []error) {
 
 	s.routes(cfg.Data.Reports, cfg.Data.Reports)
 
-	s.Handler = s.sessions.SessionUserHandler(s.router)
+	s.Handler = s.staticFiles("static", s.sessions.SessionUserHandler(s.router))
 
 	log.Printf("serving %s on address %s\n", "public", s.Addr)
 	//return http.ListenAndServe(addr, s.sessions.SessionUserHandler(s.router))

@@ -48,6 +48,7 @@ type SessionManager struct {
 }
 
 func NewSessionManager(store, name string) (*SessionManager, error) {
+	log.Printf("sessions: cookie.name %q sessions.file %q\n", name, store)
 	s := &SessionManager{
 		cookieName: "_" + name,
 		sessions:   make(map[string]Session),
@@ -58,8 +59,9 @@ func NewSessionManager(store, name string) (*SessionManager, error) {
 	} else if err = json.Unmarshal(b, s); err != nil {
 		return nil, err
 	}
+	log.Printf("sessions: dumping %d sessions\n", len(s.sessions))
 	for id, sess := range s.sessions {
-		log.Printf("sessions: %q %v\n", id, sess)
+		log.Printf("sessions: %q user %q expires %v\n", id, sess.User.Player, sess.ExpiresAt)
 	}
 	return s, nil
 }
@@ -112,10 +114,14 @@ type sessionContextKey string
 func (s *SessionManager) SessionUserHandler(h http.Handler) http.HandlerFunc {
 	log.Printf("sessions: adding session user handler as middleware\n")
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("adapter: %s %q\n", r.Method, r.URL.Path)
+		log.Printf("sessionUserHandler: %s %q: cookie.name %q\n", r.Method, r.URL.Path, s.cookieName)
 		var user UserData
 		if cookie, err := r.Cookie(s.cookieName); err == nil {
+			log.Printf("sessionUserHandler: %s %q: cookie.name %q: value %q\n", r.Method, r.URL.Path, s.cookieName, cookie.Value)
 			user = s.SessionGet(cookie.Value).User
+			log.Printf("sessionUserHandler: %s %q: cookie.name %q: user %q\n", r.Method, r.URL.Path, s.cookieName, user.Player)
+		} else {
+			log.Printf("sessionUserHandler: %s %q: cookie.name %q: %+v\n", r.Method, r.URL.Path, s.cookieName, err)
 		}
 		h.ServeHTTP(w, r.WithContext(user.NewContext(r.Context())))
 	}
@@ -146,22 +152,24 @@ func (s *SessionManager) UnmarshalJSON(data []byte) error {
 	var sessions []struct {
 		Uuid      string `json:"uuid"`
 		ExpiresAt string `json:"expires_at"`
-		Player    string `json:"player"`
+		User      string `json:"user"`
 	}
 	if err := json.Unmarshal(data, &sessions); err != nil {
 		return err
 	}
+	log.Printf("[json] unmarshal sessions %v\n", sessions)
 	if s.sessions == nil {
 		s.sessions = make(map[string]Session)
 	}
 	for i, sess := range sessions {
+		log.Printf("[json] unmarshal session  %v\n", sess)
 		expiresAt, err := time.Parse(time.RFC3339, sess.ExpiresAt)
 		if err != nil {
 			return fmt.Errorf("error importing session %d: %+v", i+1, err)
 		}
 		var u UserData
 		for _, p := range s.players {
-			if p.User == sess.Player {
+			if p.User == sess.User {
 				if sp, ok := s.species[p.SpeciesId]; ok {
 					u.Player = p.User // confusing, I know
 					u.Species = sp

@@ -32,6 +32,7 @@ func (s *Server) routes(reports, uploads string) {
 	//s.router.HandleFunc("GET", "/login", s.notImplemented())
 	//s.router.HandleFunc("GET", "/logout", s.notImplemented())
 	//s.router.HandleFunc("GET", "/admin", s.adminOnly(s.handleAdminIndex()))
+	s.router.HandleFunc("GET", "/home", s.handleHomePage(reports))
 	s.router.HandleFunc("GET", "/turn/:turn/orders", s.handleTurnOrders(reports))
 	s.router.HandleFunc("GET", "/turn/:turn/report", s.handleTurnReport(reports))
 	s.router.HandleFunc("GET", "/turn/:turn/upload", s.handleTurnUpload(uploads))

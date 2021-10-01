@@ -25,6 +25,7 @@ import (
 	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
 	"github.com/mdhender/fhcms/internal/cluster"
 	"github.com/mdhender/fhcms/parser"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -633,5 +634,38 @@ func (s *Server) postTurnOrders(uploads string) http.HandlerFunc {
 		}
 
 		http.Redirect(w, r, "/", http.StatusFound)
+	}
+}
+
+func (s *Server) handleHomePage(uploads string) http.HandlerFunc {
+	log.Printf("handling home page with %q\n", uploads)
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/home" {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Initialize a slice containing the paths to the two files. Note that the
+		// home.page.tmpl file must be the *first* file in the slice.
+		files := []string{
+			filepath.Join("templates", "home.page.html"),
+			filepath.Join("templates", "base.layout.html"),
+		}
+
+		// Use the template.ParseFiles() function to read the files and store the
+		// templates in a template set. Notice that we can pass the slice of file paths
+		// as a variadic parameter?
+		ts, err := template.ParseFiles(files...)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+
+		err = ts.Execute(w, nil)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, "Internal Server Error", 500)
+		}
 	}
 }

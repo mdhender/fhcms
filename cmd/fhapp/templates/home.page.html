@@ -1,0 +1,104 @@
+{{template "base" .}}
+
+{{define "content"}}
+  <h2>Far Horizons Landing Page</h2>
+  <p class="introtext">
+    The Landing Page is a work in progress.
+    Please report bugs on the <a href="https://discord.gg/UpExM6Bdr5" target="_blank">Discord server</a>.
+  </p>
+  {{ if .User.IsAuthenticated }}
+    {{ if .Files }}
+      <table border="2">
+        <thead><tr><td>&nbsp;Turn&nbsp;</td><td>&nbsp;Report</td><td>&nbsp;Orders&nbsp;</td><td>&nbsp;Combat&nbsp;</td><td>&nbsp;Date&nbsp;</td></tr></thead>
+        <tbody>
+        {{ range .Files }}
+          <tr>
+            <td align="right">&nbsp;{{.Turn}}&nbsp;</td>
+            <td align="center">&nbsp;{{if .Report}}<a href="/turn/{{.Turn}}/report">report.txt</a>{{else}}n/a{{end}}&nbsp;</td>
+            <td align="center">&nbsp;{{if .Orders}}<a href="/turn/{{.Turn}}/orders">orders.txt</a>{{else}}n/a{{end}}&nbsp;</td>
+            <td align="center">&nbsp;{{if .Combat}}<a href="/turn/{{.Turn}}/combat">orders.txt</a>{{else}}n/a{{end}}&nbsp;</td>
+            <td>&nbsp;{{.Date}}&nbsp;</td>
+          </tr>
+        {{ end }}
+        </tbody>
+      </table>
+    {{ else }}
+      <p>There are no reports or orders for this species.</p>
+    {{ end }}
+  {{ else }}
+    <p>Please log in to access the system.</p>
+  {{ end }}
+
+  <hr />
+
+  {{ with .Player }}
+    {{ with .Species }}
+      <div class="trio1">
+        <h3>Colony Summary</h3>
+        {{ with .Colonies }}
+          <table border="2">
+            <thead><tr><td>&nbsp;Colony&nbsp;</td><td>&nbsp;Coordinates&nbsp;</td><td>&nbsp;Shipyards&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
+            <tbody>
+            {{ range .ById }}
+              <tr>
+                <td valign="top">&nbsp;{{.Name.DisplayName}}&nbsp;</td>
+                {{with .Planet.Location}}
+                <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
+                {{end}}
+                <td valign="top" align="right">&nbsp;{{.Shipyards}}&nbsp;</td>
+                <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
+              </tr>
+            {{ end }}
+            </tbody>
+          </table>
+        {{ else }}
+          <p>The species has no colonies.</p>
+        {{ end }}
+      </div>
+
+      <div class="trio2">
+        <h3>Ship Summary</h3>
+        {{ with .Fleet.Warships }}
+          <table border="2">
+            <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td></tr></thead>
+            <tbody>
+            {{ range . }}
+              <tr>
+                <td valign="top">&nbsp;{{.Class.Code}} {{.DisplayName}}&nbsp;</td>
+                <td  valign="top"align="right">{{.Age}}&nbsp;</td>
+                <td  valign="top"align="right">{{.Class.Tonnage}},000&nbsp;</td>
+              </tr>
+            {{ end }}
+            </tbody>
+          </table>
+        {{ else }}
+          <p>The species has no warships.</p>
+        {{ end }}
+      </div>
+
+      <div class="trio3">
+        <h3>Transport Summary</h3>
+        {{ with .Fleet.Transports }}
+          <table border="2">
+            <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Location&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
+            <tbody>
+            {{ range . }}
+              <tr>
+                <td valign="top">&nbsp;{{.Class.Code}} {{.DisplayName}}&nbsp;</td>
+                {{with .Location}}
+                <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
+                {{end}}
+                <td valign="top" align="right">{{.Age}}&nbsp;</td>
+                <td valign="top" align="right">{{.Class.Tonnage}},000&nbsp;</td>
+                <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
+              </tr>
+            {{ end }}
+            </tbody>
+          </table>
+        {{ else }}
+          <p>The species has no transports.</p>
+        {{ end }}
+      </div>
+    {{ end }}
+  {{ end }}
+{{end}}

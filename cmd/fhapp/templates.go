@@ -27,6 +27,8 @@ import (
 	"sync"
 )
 
+// https://curtisvermeeren.github.io/2017/09/14/Golang-Templates-Cheatsheet
+
 // templateHandler implements an HTTP handler that renders a single template
 type templateHandler struct {
 	once     sync.Once
