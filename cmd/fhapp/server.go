@@ -22,8 +22,8 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/base64"
-	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
 	"github.com/mdhender/fhcms/internal/cluster"
+	"github.com/mdhender/fhcms/internal/way"
 	"log"
 	"net/http"
 )

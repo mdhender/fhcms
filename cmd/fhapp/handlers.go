@@ -22,8 +22,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
 	"github.com/mdhender/fhcms/internal/cluster"
+	"github.com/mdhender/fhcms/internal/way"
 	"github.com/mdhender/fhcms/parser"
 	"html/template"
 	"io/ioutil"

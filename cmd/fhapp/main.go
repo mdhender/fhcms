@@ -22,9 +22,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mdhender/fhcms/cmd/fhapp/internal/way"
 	"github.com/mdhender/fhcms/config"
 	"github.com/mdhender/fhcms/internal/cluster"
+	"github.com/mdhender/fhcms/internal/way"
 	"io/ioutil"
 	"log"
 	"net"

@@ -52,12 +52,12 @@ func (s *Server) authenticatedOnly(h http.HandlerFunc) http.HandlerFunc {
 
 func (s *Server) staticFiles(root string, h http.HandlerFunc) http.HandlerFunc {
 	type cache struct {
-		b []byte
-		etag string
+		b           []byte
+		etag        string
 		contentType string
 	}
 	files := make(map[string]*cache)
-	for _, file := range []string {
+	for _, file := range []string{
 		filepath.Clean(filepath.Join(root, "browserconfig.xml")),
 		filepath.Clean(filepath.Join(root, "favicon.ico")),
 		filepath.Clean(filepath.Join(root, "humans.txt")),
@@ -72,7 +72,7 @@ func (s *Server) staticFiles(root string, h http.HandlerFunc) http.HandlerFunc {
 		filepath.Clean(filepath.Join(root, "css", "normalize.css")),
 		filepath.Clean(filepath.Join(root, "css", "img", "bodybg.gif")),
 		filepath.Clean(filepath.Join(root, "js", "vendor", "modernizr-3.11.2.min.js")),
-	}{
+	} {
 		log.Printf("[static] cacheing %q\n", file)
 		if b, err := ioutil.ReadFile(file); err != nil {
 			panic(err)
@@ -100,7 +100,7 @@ func (s *Server) staticFiles(root string, h http.HandlerFunc) http.HandlerFunc {
 			}
 			h := sha1.New()
 			h.Write(b)
-			files[filepath.Base(file)]= &cache{contentType: contentType, b: b, etag: "fhapp:" + base64.URLEncoding.EncodeToString(h.Sum(nil))}
+			files[filepath.Base(file)] = &cache{contentType: contentType, b: b, etag: "fhapp:" + base64.URLEncoding.EncodeToString(h.Sum(nil))}
 		}
 	}
 	maxAge := fmt.Sprintf("max-age=%d", 4*7*24*60*60) // 4 weeks
