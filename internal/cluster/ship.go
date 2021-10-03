@@ -29,16 +29,19 @@ type Ship struct {
 	Age                int
 	ArrivedViaWormhole bool
 	Class              *ShipClass
-	DisplayName        string // original name of the ship
 	Destination        *coords.Coords
-	Inventory          map[string]*Item // key is item code, value is quantity
-	JustJumped         bool
-	LoadingPoint       int
-	Location           *coords.Coords
-	RemainingCost      int
-	Special            int
-	Status             *ShipStatus
-	UnloadingPoint     int
+	Display            struct {
+		Name    string // original name of the ship
+		Tonnage string
+	}
+	Inventory      map[string]*Item // key is item code, value is quantity
+	JustJumped     bool
+	LoadingPoint   int
+	Location       *coords.Coords
+	RemainingCost  int
+	Special        int
+	Status         *ShipStatus
+	UnloadingPoint int
 }
 
 type ShipClass struct {

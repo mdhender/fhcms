@@ -55,7 +55,7 @@ type Config struct {
 // These are the values without loading the environment, configuration file, or command line.
 func DefaultConfig() *Config {
 	var cfg Config
-	root := "D:\\FarHorizons\\testdata\\t19"
+	root := "D:\\FarHorizons\\testdata"
 	// byte order is the order in the data file, not the computer we're running on!
 	cfg.Data.BigEndian = false // leave this to document the choice
 	cfg.Data.Files = filepath.Join(root, "files.json")

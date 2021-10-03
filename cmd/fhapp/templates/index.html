@@ -126,7 +126,7 @@
               <tbody>
               {{ range .ById }}
               <tr>
-                <td valign="top">&nbsp;{{.Name.DisplayName}}&nbsp;</td>
+                <td valign="top">&nbsp;{{.Name.Display.Name}}&nbsp;</td>
                 {{with .Planet.Location}}
                 <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
                 {{end}}
@@ -142,16 +142,41 @@
         </div>
 
         <div class="trio2">
-          <h3>Ship Summary</h3>
+          {{ with .Fleet.Starbases }}
+            <h3>Starbase Summary</h3>
+              <table border="2">
+                <thead><tr><td>&nbsp;Starbase&nbsp;</td><td>&nbsp;Location&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
+                <tbody>
+                {{ range . }}
+                  <tr>
+                    <td valign="top">&nbsp;{{.Class.Code}} {{.Display.Name}}&nbsp;</td>
+                    {{with .Location}}
+                    <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
+                    {{end}}
+                    <td  valign="top"align="right">{{.Age}}&nbsp;</td>
+                    <td  valign="top"align="right">{{.Display.Tonnage}}&nbsp;</td>
+                    <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
+                  </tr>
+                {{ end }}
+                </tbody>
+              </table>
+            <br/>
+          {{ end }}
+
+          <h3>Warship Summary</h3>
           {{ with .Fleet.Warships }}
             <table border="2">
-              <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td></tr></thead>
+              <thead><tr><td>&nbsp;Warship&nbsp;</td><td>&nbsp;Location&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
               <tbody>
               {{ range . }}
                 <tr>
-                  <td valign="top">&nbsp;{{.Class.Code}} {{.DisplayName}}&nbsp;</td>
+                  <td valign="top">&nbsp;{{.Class.Code}} {{.Display.Name}}&nbsp;</td>
+                  {{with .Location}}
+                  <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
+                  {{end}}
                   <td  valign="top"align="right">{{.Age}}&nbsp;</td>
-                  <td  valign="top"align="right">{{.Class.Tonnage}},000&nbsp;</td>
+                  <td  valign="top"align="right">{{.Display.Tonnage}}&nbsp;</td>
+                  <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
                 </tr>
               {{ end }}
               </tbody>
@@ -165,16 +190,16 @@
           <h3>Transport Summary</h3>
           {{ with .Fleet.Transports }}
             <table border="2">
-              <thead><tr><td>&nbsp;Ship&nbsp;</td><td>&nbsp;Location&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
+              <thead><tr><td>&nbsp;Transport&nbsp;</td><td>&nbsp;Location&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
               <tbody>
               {{ range . }}
               <tr>
-                <td valign="top">&nbsp;{{.Class.Code}} {{.DisplayName}}&nbsp;</td>
+                <td valign="top">&nbsp;{{.Class.Code}} {{.Display.Name}}&nbsp;</td>
                 {{with .Location}}
                 <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
                 {{end}}
                 <td valign="top" align="right">{{.Age}}&nbsp;</td>
-                <td valign="top" align="right">{{.Class.Tonnage}},000&nbsp;</td>
+                <td valign="top" align="right">{{.Display.Tonnage}}&nbsp;</td>
                 <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
               </tr>
               {{ end }}
