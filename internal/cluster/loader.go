@@ -248,7 +248,6 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 				Age:                ship.Age,
 				ArrivedViaWormhole: ship.ArrivedViaWormhole,
 				Class:              shipClassTranslate(ship.Class),
-				DisplayName:        strings.TrimSpace(ship.Name),
 				Inventory:          make(map[string]*Item),
 				JustJumped:         ship.JustJumped,
 				LoadingPoint:       ship.LoadingPoint,
@@ -262,23 +261,13 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 			if ship.DestX != 0 && ship.DestY != 0 && ship.DestZ != 0 {
 				sh.Destination = coords.New(ship.DestX, ship.DestY, ship.DestZ, 0)
 			}
+			sh.Display.Name = strings.TrimSpace(ship.Name)
+			sh.Display.Tonnage = fmt.Sprintf("%dk", ship.Tonnage)
 			for code, qty := range ship.ItemQuantity {
 				if qty > 0 {
 					item := itemTranslate(code, qty)
 					sh.Inventory[item.Code] = item
 				}
-			}
-			if len(sh.Inventory) == 0 && sh.DisplayName == "Mungo" {
-				item := itemTranslate(3, 23)
-				sh.Inventory[item.Code] = item
-				item = itemTranslate(13, 3)
-				sh.Inventory[item.Code] = item
-			}
-			if len(sh.Inventory) == 0 && sh.DisplayName == "Mongo" {
-				item := itemTranslate(2, 51)
-				sh.Inventory[item.Code] = item
-				item = itemTranslate(13, 3)
-				sh.Inventory[item.Code] = item
 			}
 			sp.Fleet.Ships[sh.Id] = sh
 			if sh.Class.Code == "BA" {

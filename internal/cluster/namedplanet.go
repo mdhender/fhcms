@@ -23,16 +23,19 @@ import "strings"
 // NamedPlanet represents the name applied to a planet by a species.
 // The ID is usually the name of the planet converted to uppercase.
 type NamedPlanet struct {
-	Id          string  // unique identifier for named planet
-	Colony      *Colony // optional
-	DisplayName string  // original name of the planet
-	Planet      *Planet
+	Id      string  // unique identifier for named planet
+	Colony  *Colony // optional
+	Display struct {
+		Name string
+	} // original name of the planet
+	Planet *Planet
 }
 
 func newNamedPlanet(name string, planet *Planet) *NamedPlanet {
-	return &NamedPlanet{
-		Id:          strings.ToUpper(strings.TrimSpace(name)),
-		DisplayName: strings.TrimSpace(name),
-		Planet:      planet,
+	np := &NamedPlanet{
+		Id:     strings.ToUpper(strings.TrimSpace(name)),
+		Planet: planet,
 	}
+	np.Display.Name = strings.TrimSpace(name)
+	return np
 }

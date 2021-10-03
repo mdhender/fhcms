@@ -160,6 +160,7 @@ func run(cfg *config.Config) (errs []error) {
 	}
 	s.data.Stats = make(map[string]*StatsData)
 	var stats []*StatsData
+	fmt.Println(cfg.Data.Stats)
 	if err := loader(cfg.Data.Stats, &stats); err != nil {
 		return append(errs, err)
 	}
@@ -167,6 +168,8 @@ func run(cfg *config.Config) (errs []error) {
 		if sp, ok := xlatNo[stat.SpeciesNo]; ok {
 			stat.SpeciesId = sp.Id
 			s.data.Stats[stat.SpeciesId] = stat
+		} else {
+			fmt.Println("no species found", stat.SpeciesNo)
 		}
 	}
 
