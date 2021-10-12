@@ -246,7 +246,7 @@ func (s *Server) handleTurnOrders(files string) http.HandlerFunc {
 		if data.Game.Turn > 1 {
 			data.Game.LastTurn = s.data.Store.Turn - 1
 		}
-		data.Game.OrdersDue = "Monday, October 4th by 7PM MDT. MDT is 6 hours behind London."
+		data.Game.OrdersDue = fmt.Sprintf("%s by %s. %s", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 		data.Player.Name = u.Player
 		data.Player.Data = u.SpeciesId + "?key?"
 		data.Player.IsAuthenticated = u.IsAuthenticated
@@ -338,7 +338,7 @@ func (s *Server) handleTurnReport(files string) http.HandlerFunc {
 		if data.Game.Turn > 1 {
 			data.Game.LastTurn = s.data.Store.Turn - 1
 		}
-		data.Game.OrdersDue = "Monday, October 4th by 7PM MDT. MDT is 6 hours behind London."
+		data.Game.OrdersDue = fmt.Sprintf("%s by %s. %s", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 		data.Player.Name = u.Player
 		data.Player.Data = u.SpeciesId + "?key?"
 		data.Player.IsAuthenticated = u.IsAuthenticated
@@ -430,7 +430,7 @@ func (s *Server) handleTurnUpload(uploads string) http.HandlerFunc {
 		if data.Game.Turn > 1 {
 			data.Game.LastTurn = s.data.Store.Turn - 1
 		}
-		data.Game.OrdersDue = "Monday, October 4th by 7PM MDT. MDT is 6 hours behind London."
+		data.Game.OrdersDue = fmt.Sprintf("%s by %s. %s", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 		data.Player.Name = u.Player
 		data.Player.Data = u.SpeciesId + "?key?"
 		data.Player.IsAuthenticated = u.IsAuthenticated
@@ -503,7 +503,7 @@ func (s *Server) handleUI() http.HandlerFunc {
 		if data.Game.Turn > 1 {
 			data.Game.LastTurn = s.data.Store.Turn - 1
 		}
-		data.Game.OrdersDue = "Monday, October 4th by 7PM MDT. MDT is 6 hours behind London."
+		data.Game.OrdersDue = fmt.Sprintf("%s by %s. %s", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 		data.Player.Name = u.Player
 		data.Player.Data = u.SpeciesId + "?key?"
 		data.Player.IsAuthenticated = u.IsAuthenticated

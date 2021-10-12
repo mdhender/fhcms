@@ -95,6 +95,19 @@ func run(cfg *config.Config) (errs []error) {
 		xlatNo[sp.No] = sp
 	}
 
+	if err = loader(cfg.Data.Turn, &s.data.Turn); err != nil {
+		return append(errs, err)
+	}
+	switch s.data.Turn.TimeZone {
+	case "MDT":
+		s.data.Turn.By += " " + s.data.Turn.TimeZone
+		s.data.Turn.TimeZone += " is 6 hours behind London."
+	case "MST":
+		s.data.Turn.By += " " + s.data.Turn.TimeZone
+		s.data.Turn.TimeZone += " is 7 hours behind London."
+	}
+	log.Printf("turn: %s by %s. %s\n", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
+
 	if err = loader(cfg.Data.Players, &s.data.Players); err != nil {
 		return append(errs, err)
 	}

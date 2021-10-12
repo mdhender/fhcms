@@ -38,6 +38,11 @@ type Server struct {
 		Players []*PlayerData
 		Files   map[string][]*FileData // key is species id
 		Stats   map[string]*StatsData  // key is species id
+		Turn    struct {
+			Due      string `json:"due"`
+			By       string `json:"by"`
+			TimeZone string `json:"tmz"`
+		}
 	}
 	sessions *SessionManager
 }
