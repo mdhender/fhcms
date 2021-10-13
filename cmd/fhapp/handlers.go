@@ -462,6 +462,10 @@ func (s *Server) handleUI() http.HandlerFunc {
 		Combat string
 		Date   string
 	}
+	type otherSpecies struct {
+		Name   string
+		Status string
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("server: %s %q: handleUI\n", r.Method, r.URL.Path)
 		u := currentUser(r)
@@ -490,8 +494,9 @@ func (s *Server) handleUI() http.HandlerFunc {
 				IsAuthenticated bool
 				Species         *cluster.Species
 			}
-			User  UserData
-			Stats *StatsData
+			User    UserData
+			Stats   *StatsData
+			Species []*otherSpecies
 		}{
 			Engine: s.data.Engine,
 			User:   u,
@@ -513,6 +518,22 @@ func (s *Server) handleUI() http.HandlerFunc {
 		data.Site.Slug = s.data.Site.Slug
 		data.Site.Copyright.Year = s.data.Site.Copyright.Year
 		data.Site.Copyright.Author = s.data.Site.Copyright.Author
+
+		if u.Species != nil {
+			os := make(map[string]string)
+			for _, o := range u.Species.Contact {
+				os[o.Name] = "Neutral"
+			}
+			for _, o := range u.Species.Ally {
+				os[o.Name] = "Ally"
+			}
+			for _, o := range u.Species.Enemy {
+				os[o.Name] = "Enemy"
+			}
+			for name, status := range os {
+				data.Species = append(data.Species, &otherSpecies{Name: name, Status: status})
+			}
+		}
 
 		for _, f := range s.data.Files[u.SpeciesId] {
 			tf := &turnFile{Turn: f.Turn, Date: f.Date, Report: f.Report, Orders: f.Orders}

@@ -151,6 +151,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 		sp.GV = &Technology{Code: "GV", Level: species.TechLevel[3], KnowledgeLevel: species.TechKnowledge[3], ExperiencePoints: species.TechEps[3]}
 		sp.LS = &Technology{Code: "LS", Level: species.TechLevel[4], KnowledgeLevel: species.TechKnowledge[4], ExperiencePoints: species.TechEps[4]}
 		sp.BI = &Technology{Code: "BI", Level: species.TechLevel[5], KnowledgeLevel: species.TechKnowledge[5], ExperiencePoints: species.TechEps[5]}
+
 		sp.Fleet.Cost = species.FleetCost
 		sp.Fleet.MaintenancePct = species.FleetPercentCost
 		sp.Fleet.Ships = make(map[string]*Ship)
@@ -276,6 +277,36 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 				sp.Fleet.Transports = append(sp.Fleet.Transports, sh)
 			} else {
 				sp.Fleet.Warships = append(sp.Fleet.Warships, sh)
+			}
+		}
+	}
+
+	// populate the maps of contacts, allies, and enemies.
+	for _, species := range speciesData {
+		speciesId := fmt.Sprintf("SP%02d", species.Id)
+		sp := ds.Species[speciesId]
+
+		// add the contact only if it's in the list of species.
+		// (it should be a bug if it isn't.)
+		for _, spNo := range species.Contact {
+			if o, ok := ds.Species[fmt.Sprintf("SP%02d", spNo)]; ok {
+				sp.Contact[fmt.Sprintf("SP%02d", spNo)] = o
+			}
+		}
+		// add the ally only if it's in the list of contacts.
+		// checking against the contacts guards against the player
+		// declaring species to be allies before they've met.
+		for _, spNo := range species.Ally {
+			if o, ok := sp.Contact[fmt.Sprintf("SP%02d", spNo)]; ok {
+				sp.Ally[fmt.Sprintf("SP%02d", spNo)] = o
+			}
+		}
+		// add the enemy only if it's in the list of contacts.
+		// checking against the contacts guards against the player
+		// declaring species to be enemies before they've met.
+		for _, spNo := range species.Enemy {
+			if o, ok := sp.Contact[fmt.Sprintf("SP%02d", spNo)]; ok {
+				sp.Enemy[fmt.Sprintf("SP%02d", spNo)] = o
 			}
 		}
 	}

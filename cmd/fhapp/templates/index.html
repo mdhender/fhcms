@@ -250,6 +250,18 @@
         </tbody>
       </table>
       {{ end }}
+
+      {{ with .Species }}
+      <h2>Species</h2>
+      <table>
+        <tbody>
+        {{range .}}
+        <tr><td align="right">{{.Name}}&nbsp;</td><td align="left">&nbsp;{{.Status}}</td></tr>
+        {{end}}
+        </tbody>
+      </table>
+      {{ end }}
+
     </div>
 
     <div class="right">
