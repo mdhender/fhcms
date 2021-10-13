@@ -533,6 +533,13 @@ func (s *Server) handleUI() http.HandlerFunc {
 			for name, status := range os {
 				data.Species = append(data.Species, &otherSpecies{Name: name, Status: status})
 			}
+			for i := 0; i < len(data.Species); i++ { // bubbly and proud of it
+				for j := i + 1; j < len(data.Species); j++ {
+					if data.Species[i].Name < data.Species[j].Name {
+						data.Species[i], data.Species[j] = data.Species[j], data.Species[i]
+					}
+				}
+			}
 		}
 
 		for _, f := range s.data.Files[u.SpeciesId] {
