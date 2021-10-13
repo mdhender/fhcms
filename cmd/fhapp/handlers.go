@@ -535,7 +535,7 @@ func (s *Server) handleUI() http.HandlerFunc {
 			}
 			for i := 0; i < len(data.Species); i++ { // bubbly and proud of it
 				for j := i + 1; j < len(data.Species); j++ {
-					if data.Species[i].Name < data.Species[j].Name {
+					if data.Species[i].Name > data.Species[j].Name {
 						data.Species[i], data.Species[j] = data.Species[j], data.Species[i]
 					}
 				}
