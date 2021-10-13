@@ -262,7 +262,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 				sh.Destination = coords.New(ship.DestX, ship.DestY, ship.DestZ, 0)
 			}
 			sh.Display.Name = strings.TrimSpace(ship.Name)
-			sh.Display.Tonnage = fmt.Sprintf("%dk", ship.Tonnage)
+			sh.Display.Tonnage = fmt.Sprintf("%dk", 10*ship.Tonnage)
 			for code, qty := range ship.ItemQuantity {
 				if qty > 0 {
 					item := itemTranslate(code, qty)
