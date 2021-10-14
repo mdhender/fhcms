@@ -542,9 +542,9 @@ func (s *Server) handleUI() http.HandlerFunc {
 					}
 				}
 			}
-			if turnFiles, _ = flist.Fetch(s.data.TurnFiles, u.Species.No*0+2); turnFiles != nil {
+			if turnFiles, _ = flist.Fetch(s.data.TurnFiles, u.Species.No); turnFiles != nil {
 				for _, f := range turnFiles {
-					log.Printf("[turn] 18: %2d %s %q %q\n", f.Turn, f.Date, f.Orders, f.Report)
+					log.Printf("[turn] %2d %2d %s %q %q\n", u.Species.No, f.Turn, f.Date, f.Orders, f.Report)
 				}
 			}
 		}
