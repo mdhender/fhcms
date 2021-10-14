@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/mdhender/fhcms/internal/cluster"
+	"github.com/mdhender/fhcms/internal/flist"
 	"github.com/mdhender/fhcms/internal/way"
 	"github.com/mdhender/fhcms/parser"
 	"html/template"
@@ -519,6 +520,7 @@ func (s *Server) handleUI() http.HandlerFunc {
 		data.Site.Copyright.Year = s.data.Site.Copyright.Year
 		data.Site.Copyright.Author = s.data.Site.Copyright.Author
 
+		var turnFiles []*flist.TurnData
 		if u.Species != nil {
 			os := make(map[string]string)
 			for _, o := range u.Species.Contact {
@@ -540,12 +542,21 @@ func (s *Server) handleUI() http.HandlerFunc {
 					}
 				}
 			}
+			if turnFiles, _ = flist.Fetch(s.data.TurnFiles, u.Species.No*0+2); turnFiles != nil {
+				for _, f := range turnFiles {
+					log.Printf("[turn] 18: %2d %s %q %q\n", f.Turn, f.Date, f.Orders, f.Report)
+				}
+			}
 		}
 
 		for _, f := range s.data.Files[u.SpeciesId] {
 			tf := &turnFile{Turn: f.Turn, Date: f.Date, Report: f.Report, Orders: f.Orders}
 			data.Files = append(data.Files, tf)
 		}
+		//for _, f := range turnFiles {
+		//	tf := &turnFile{Turn: f.Turn, Date: f.Date, Report: f.Report, Orders: f.Orders}
+		//	data.Files = append(data.Files, tf)
+		//}
 		b, err := s.render("index", data)
 		if err != nil {
 			log.Printf("server: %s %q: handleUI: %+v\n", r.Method, r.URL.Path, err)

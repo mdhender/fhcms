@@ -43,6 +43,7 @@ type Server struct {
 			By       string `json:"by"`
 			TimeZone string `json:"tmz"`
 		}
+		TurnFiles string // path to files named sp??.t??.[orders|report].txt
 	}
 	sessions *SessionManager
 }

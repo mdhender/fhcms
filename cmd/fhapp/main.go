@@ -118,6 +118,8 @@ func run(cfg *config.Config) (errs []error) {
 		}
 		log.Printf("players: player %q species_id %q password %q key %q\n", p.User, p.SpeciesId, p.Password, p.Key)
 	}
+
+	s.data.TurnFiles = cfg.Data.TurnFiles
 	s.data.Files = make(map[string][]*FileData)
 	var files []*struct {
 		SpeciesId string `json:"-"`

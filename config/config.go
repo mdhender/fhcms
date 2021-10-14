@@ -40,6 +40,7 @@ type Config struct {
 		Site      string // name of site data file
 		Stats     string // name of stats data file
 		Turn      string // name of turn data file
+		TurnFiles string // path to turn files (orders and reports)
 	}
 	Server struct {
 		Host string
@@ -69,6 +70,7 @@ func DefaultConfig() *Config {
 	cfg.Data.Site = filepath.Join(root, "site.json")
 	cfg.Data.Stats = filepath.Join(root, "stats.json")
 	cfg.Data.Turn = filepath.Join(root, "turn.json")
+	cfg.Data.TurnFiles = filepath.Join(root, "reports")
 	cfg.Log.Flags = log.Ldate | log.Ltime | log.LUTC // force logs to be UTC
 	cfg.Log.Verbose = true
 	cfg.Server.Port = 8080
@@ -95,6 +97,7 @@ func (cfg *Config) Load() error {
 	dataSite := fs.String("site", cfg.Data.Site, "name of sites data json file")
 	dataStats := fs.String("stats", cfg.Data.Stats, "name of stats data json file")
 	dataTurn := fs.String("turn", cfg.Data.Turn, "name of turn data json file")
+	dataTurnFiles := fs.String("turn-files", cfg.Data.TurnFiles, "path to turn orders and report files")
 	logVerbose := fs.Bool("verbose", cfg.Log.Verbose, "log extra information to the console")
 
 	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("FH"), ff.WithConfigFileFlag("config"), ff.WithConfigFileParser(ff.JSONParser)); err != nil {
@@ -112,6 +115,7 @@ func (cfg *Config) Load() error {
 	cfg.Data.Site = filepath.Clean(*dataSite)
 	cfg.Data.Stats = filepath.Clean(*dataStats)
 	cfg.Data.Turn = filepath.Clean(*dataTurn)
+	cfg.Data.TurnFiles = filepath.Clean(*dataTurnFiles)
 	cfg.Log.Verbose = *logVerbose
 	cfg.PIDFile = *dataPIDFile
 
@@ -126,6 +130,7 @@ func (cfg *Config) Load() error {
 	log.Printf("config: %-30s == %q\n", "site", cfg.Data.Site)
 	log.Printf("config: %-30s == %q\n", "stats", cfg.Data.Stats)
 	log.Printf("config: %-30s == %q\n", "turn", cfg.Data.Turn)
+	log.Printf("config: %-30s == %q\n", "turn-files", cfg.Data.TurnFiles)
 	log.Printf("config: %-30s == %v\n", "verbose", cfg.Log.Verbose)
 
 	return nil
