@@ -549,14 +549,14 @@ func (s *Server) handleUI() http.HandlerFunc {
 			}
 		}
 
-		for _, f := range s.data.Files[u.SpeciesId] {
-			tf := &turnFile{Turn: f.Turn, Date: f.Date, Report: f.Report, Orders: f.Orders}
-			data.Files = append(data.Files, tf)
-		}
-		//for _, f := range turnFiles {
+		//for _, f := range s.data.Files[u.SpeciesId] {
 		//	tf := &turnFile{Turn: f.Turn, Date: f.Date, Report: f.Report, Orders: f.Orders}
 		//	data.Files = append(data.Files, tf)
 		//}
+		for _, f := range turnFiles {
+			tf := &turnFile{Turn: f.Turn, Date: f.Date, Report: f.Report, Orders: f.Orders}
+			data.Files = append(data.Files, tf)
+		}
 		b, err := s.render("index", data)
 		if err != nil {
 			log.Printf("server: %s %q: handleUI: %+v\n", r.Method, r.URL.Path, err)

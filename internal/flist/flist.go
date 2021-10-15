@@ -67,10 +67,10 @@ func Fetch(path string, speciesNo int) ([]*TurnData, error) {
 		})
 	}
 
-	// sort by turn then file type (with orders before report)
+	// sort by turn (descending) then file type (with orders before report)
 	for i := 0; i < len(files); i++ { // bubbly and proud of it
 		for j := i + 1; j < len(files); j++ {
-			if files[i].Turn > files[j].Turn {
+			if files[i].Turn < files[j].Turn {
 				files[i], files[j] = files[j], files[i]
 			} else if files[i].Turn == files[j].Turn {
 				if files[i].Type > files[j].Type {
