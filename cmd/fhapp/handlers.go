@@ -249,7 +249,11 @@ func (s *Server) handleTurnOrders(files string) http.HandlerFunc {
 		}
 		data.Game.OrdersDue = fmt.Sprintf("%s by %s. %s", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 		data.Player.Name = u.Player
-		data.Player.Data = u.SpeciesId + "?key?"
+		for _, p := range s.data.Players {
+			if p.SpeciesId == u.SpeciesId {
+				data.Player.Data = strings.ToLower(u.SpeciesId) + "-" + p.Key
+			}
+		}
 		data.Player.IsAuthenticated = u.IsAuthenticated
 		data.Player.IsAdmin = u.IsAuthenticated && u.IsAdmin
 		data.Player.Species = u.Species
@@ -341,7 +345,11 @@ func (s *Server) handleTurnReport(files string) http.HandlerFunc {
 		}
 		data.Game.OrdersDue = fmt.Sprintf("%s by %s. %s", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 		data.Player.Name = u.Player
-		data.Player.Data = u.SpeciesId + "?key?"
+		for _, p := range s.data.Players {
+			if p.SpeciesId == u.SpeciesId {
+				data.Player.Data = strings.ToLower(u.SpeciesId) + "-" + p.Key
+			}
+		}
 		data.Player.IsAuthenticated = u.IsAuthenticated
 		data.Player.IsAdmin = u.IsAuthenticated && u.IsAdmin
 		data.Player.Species = u.Species
@@ -433,7 +441,11 @@ func (s *Server) handleTurnUpload(uploads string) http.HandlerFunc {
 		}
 		data.Game.OrdersDue = fmt.Sprintf("%s by %s. %s", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 		data.Player.Name = u.Player
-		data.Player.Data = u.SpeciesId + "?key?"
+		for _, p := range s.data.Players {
+			if p.SpeciesId == u.SpeciesId {
+				data.Player.Data = strings.ToLower(u.SpeciesId) + "-" + p.Key
+			}
+		}
 		data.Player.IsAuthenticated = u.IsAuthenticated
 		data.Player.IsAdmin = u.IsAuthenticated && u.IsAdmin
 		data.Player.Species = u.Species
@@ -511,7 +523,11 @@ func (s *Server) handleUI() http.HandlerFunc {
 		}
 		data.Game.OrdersDue = fmt.Sprintf("%s by %s. %s", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 		data.Player.Name = u.Player
-		data.Player.Data = u.SpeciesId + "?key?"
+		for _, p := range s.data.Players {
+			if p.SpeciesId == u.SpeciesId {
+				data.Player.Data = strings.ToLower(u.SpeciesId) + "-" + p.Key
+			}
+		}
 		data.Player.IsAuthenticated = u.IsAuthenticated
 		data.Player.IsAdmin = u.IsAuthenticated && u.IsAdmin
 		data.Player.Species = u.Species

@@ -42,7 +42,7 @@
       <dd><a href="/static/rules.html">Rules</a></dd>
       {{ if .User.IsAuthenticated }}
       <dd><a href="/turn/{{.Game.LastTurn}}/report">Turn {{.Game.LastTurn}} Results</a></dd>
-      <dd><a href="https://farhorizons.dev/{{.Player.Data}}/index.html">Archives</a></dd>
+      {{with .Player.Data}}<dd><a href="https://farhorizons.dev/{{.}}/index.html">Archives</a></dd>{{end}}
       {{ end }}
     </dl>
     <dl class="nav">
