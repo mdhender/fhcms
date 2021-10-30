@@ -20,7 +20,6 @@ package cluster
 
 import (
 	"fmt"
-	"github.com/mdhender/fhcms/internal/coords"
 )
 
 // Ship represents a single ship.
@@ -29,7 +28,7 @@ type Ship struct {
 	Age                int
 	ArrivedViaWormhole bool
 	Class              *ShipClass
-	Destination        *coords.Coords
+	Destination        *Coords
 	Display            struct {
 		Name    string // original name of the ship
 		Tonnage string
@@ -37,7 +36,7 @@ type Ship struct {
 	Inventory      map[string]*Item // key is item code, value is quantity
 	JustJumped     bool
 	LoadingPoint   int
-	Location       *coords.Coords
+	Location       *Coords
 	RemainingCost  int
 	Special        int
 	Status         *ShipStatus

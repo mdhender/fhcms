@@ -18,8 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package cluster
 
-import "github.com/mdhender/fhcms/internal/coords"
-
 // Planet represents a single planet.
 type Planet struct {
 	Id                       string // unique identifier for the planet
@@ -28,7 +26,7 @@ type Planet struct {
 	Diameter                 int
 	EconEfficiency           int
 	Gravity                  int
-	Location                 *coords.Coords // location of the planet in the cluster
+	Location                 *Coords // location of the planet in the cluster
 	Message                  int
 	MiningDifficulty         int
 	MiningDifficultyIncrease int

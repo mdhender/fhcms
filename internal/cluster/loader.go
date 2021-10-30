@@ -22,16 +22,25 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/mdhender/fhcms/internal/coords"
 	"github.com/mdhender/fhcms/internal/dat32"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"strings"
 )
 
-func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataPath, locationDataFile, transactionDataFile string, bigendian bool) (*Store, error) {
+func FromDat32(path string, bigEndian bool) (*Store, error) {
+	galaxyDataFile := filepath.Join(path, "galaxy.dat")
+	starDataFile := filepath.Join(path, "stars.dat")
+	planetDataFile := filepath.Join(path, "planets.dat")
+	speciesDataPath := path
+	locationDataFile := filepath.Join(path, "locations.dat")
+	log.Printf("todo: use locationDataFile %q\n", locationDataFile)
+	transactionDataFile := filepath.Join(path, "transactions.dat")
+	log.Printf("todo: use transactionDataFile %q\n", transactionDataFile)
+
 	var bo binary.ByteOrder
-	if bigendian {
+	if bigEndian {
 		bo = binary.BigEndian
 	} else {
 		bo = binary.LittleEndian
@@ -73,7 +82,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 	// convert all stars to systems
 	for i := 0; i < starData.NumStars; i++ {
 		star := &starData.Stars[i]
-		location := coords.New(star.X, star.Y, star.Z, 0)
+		location := &Coords{X: star.X, Y: star.Y, Z: star.Z}
 		s := &System{
 			Id:        location.Id(),
 			Color:     starColorTranslate(star.Color),
@@ -87,7 +96,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 
 		// link wormhole
 		if star.WormHere != 0 {
-			location = coords.New(star.WormX, star.WormY, star.WormZ, 0)
+			location = &Coords{X: star.WormX, Y: star.WormY, Z: star.WormZ}
 			if end, ok := ds.Systems[location.Id()]; ok {
 				s.Wormhole, end.Wormhole = end, s
 			}
@@ -95,7 +104,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 
 		// add all planets
 		for n := 0; n < star.NumPlanets; n++ {
-			location = coords.New(star.X, star.Y, star.Z, n+1)
+			location = &Coords{X: star.X, Y: star.Y, Z: star.Z, Orbit: n + 1}
 			planet := planetData.Planets[star.PlanetIndex+n]
 			p := &Planet{
 				Id:                       location.Id(),
@@ -169,7 +178,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 		}
 		sp.Government.Name = species.GovtName
 		sp.Government.Type = species.GovtType
-		location, ok := coords.New(species.X, species.Y, species.Z, species.PN), false
+		location, ok := &Coords{X: species.X, Y: species.Y, Z: species.Z, Orbit: species.PN}, false
 		sp.HomeWorld.OriginalBase = species.HPOriginalBase
 		if sp.HomeWorld.Planet, ok = ds.Planets[location.Id()]; !ok {
 			panic(fmt.Sprintf("species %q has home world %q which is not in system map", speciesId, location.Id()))
@@ -179,7 +188,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 		// add all named planets for this species
 		for i := 0; i < species.NumNamplas; i++ {
 			nampla := &species.NamplaBase[i]
-			location := coords.New(nampla.X, nampla.Y, nampla.Z, nampla.PN)
+			location := &Coords{X: nampla.X, Y: nampla.Y, Z: nampla.Z, Orbit: nampla.PN}
 			p, ok := ds.Planets[location.Id()]
 			if !ok {
 				panic(fmt.Sprintf("species %q has named planet %q which is not in system map", speciesId, nampla.Name))
@@ -252,7 +261,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 				Inventory:          make(map[string]*Item),
 				JustJumped:         ship.JustJumped,
 				LoadingPoint:       ship.LoadingPoint,
-				Location:           coords.New(ship.X, ship.Y, ship.Z, ship.PN),
+				Location:           &Coords{X: ship.X, Y: ship.Y, Z: ship.Z, Orbit: ship.PN},
 				RemainingCost:      ship.RemainingCost,
 				Special:            ship.Special,
 				Status:             shipStatusTranslate(ship.Status),
@@ -260,7 +269,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 			}
 			sh.Class.FTL = ship.Type == 0
 			if ship.DestX != 0 && ship.DestY != 0 && ship.DestZ != 0 {
-				sh.Destination = coords.New(ship.DestX, ship.DestY, ship.DestZ, 0)
+				sh.Destination = &Coords{X: ship.DestX, Y: ship.DestY, Z: ship.DestZ}
 			}
 			sh.Display.Name = strings.TrimSpace(ship.Name)
 			sh.Display.Tonnage = fmt.Sprintf("%dk", 10*ship.Tonnage)
@@ -314,7 +323,7 @@ func FromDat32(galaxyDataFile, starDataFile, planetDataFile string, speciesDataP
 	// map systems visited
 	for i := 0; i < starData.NumStars; i++ {
 		star := &starData.Stars[i]
-		location := coords.Coords{X: star.X, Y: star.Y, Z: star.Z}
+		location := &Coords{X: star.X, Y: star.Y, Z: star.Z}
 		s := ds.Systems[location.Id()]
 		for _, speciesNo := range star.VisitedBy {
 			for _, sp := range ds.Species {

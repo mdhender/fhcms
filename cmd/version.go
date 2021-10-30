@@ -16,26 +16,24 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package cluster
+package cmd
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/spf13/cobra"
+)
 
-// Coords represents a location in the cluster.
-type Coords struct {
-	X     int `json:"x"`
-	Y     int `json:"y"`
-	Z     int `json:"z"`
-	Orbit int `json:"orbit,omitempty"`
+var version = "7.5.2"
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
 }
 
-// Id returns a unique representation of the location.
-func (c *Coords) Id() string {
-	if c.Orbit != 0 {
-		return fmt.Sprintf("%d.%d.%d.%d", c.X, c.Y, c.Z, c.Orbit)
-	}
-	return fmt.Sprintf("%d.%d.%d", c.X, c.Y, c.Z)
-}
-
-func New(x, y, z, orbit int) *Coords {
-	return &Coords{X: x, Y: y, Z: z, Orbit: orbit}
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of Far Horizon",
+	Long:  `Print the version number of the application.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(version)
+	},
 }

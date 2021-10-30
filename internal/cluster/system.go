@@ -18,15 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package cluster
 
-import (
-	"github.com/mdhender/fhcms/internal/coords"
-)
-
 // System represents a single star system in the cluster.
 type System struct {
 	Id        string // unique identifier for the system
 	Color     *Code
-	Location  *coords.Coords // location of the star within the cluster
+	Location  *Coords // location of the star within the cluster
 	Message   int
 	Planets   []*Planet // planets in system, ordered by orbit
 	Type      *Code

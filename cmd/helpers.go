@@ -16,26 +16,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package cluster
+package cmd
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/mdhender/fhcms/internal/cluster"
+	"log"
+	"os"
+	"path/filepath"
+)
 
-// Coords represents a location in the cluster.
-type Coords struct {
-	X     int `json:"x"`
-	Y     int `json:"y"`
-	Z     int `json:"z"`
-	Orbit int `json:"orbit,omitempty"`
-}
-
-// Id returns a unique representation of the location.
-func (c *Coords) Id() string {
-	if c.Orbit != 0 {
-		return fmt.Sprintf("%d.%d.%d.%d", c.X, c.Y, c.Z, c.Orbit)
+func loader(path string, bigEndian bool) (*cluster.Store, error) {
+	if path = filepath.Clean(path); path == "." {
+		if cwd, err := os.Getwd(); err != nil {
+			return nil, err
+		} else if path = filepath.Clean(cwd); path == "." {
+			return nil, fmt.Errorf("unable to determine path to data files")
+		}
 	}
-	return fmt.Sprintf("%d.%d.%d", c.X, c.Y, c.Z)
-}
-
-func New(x, y, z, orbit int) *Coords {
-	return &Coords{X: x, Y: y, Z: z, Orbit: orbit}
+	log.Printf("loader: path      %q\n", path)
+	log.Printf("loader: bigEndian %v\n", bigEndian)
+	return cluster.FromDat32(path, bigEndian)
 }
