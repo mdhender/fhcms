@@ -209,6 +209,7 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 				Planet:    p,
 				System:    p.System,
 			}
+			np.Colony = cc
 
 			cc.Is.Colony = (nampla.Status & 2) != 0
 			cc.Is.DisbandedColony = (nampla.Status & 64) != 0
@@ -267,7 +268,19 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 				Status:             shipStatusTranslate(ship.Status),
 				UnloadingPoint:     ship.UnloadingPoint,
 			}
-			sh.Class.FTL = ship.Type == 0
+			sh.Class.Tonnage = ship.Tonnage
+			// Ship types
+			switch ship.Type {
+			case 0: //   #define FTL             0
+				sh.Class.Is.SubLight = false
+			case 1: //   #define SUB_LIGHT       1
+				sh.Class.Is.SubLight = true
+			case 2: //   #define STARBASE        2
+				sh.Class.Is.SubLight = true
+				sh.Class.Is.Starbase = true
+			default:
+				panic(fmt.Sprintf("assert(ship.type != %d)", ship.Type))
+			}
 			if ship.DestX != 0 && ship.DestY != 0 && ship.DestZ != 0 {
 				sh.Destination = &Coords{X: ship.DestX, Y: ship.DestY, Z: ship.DestZ}
 			}
@@ -280,11 +293,11 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 				}
 			}
 			sp.Fleet.Ships[sh.Id] = sh
-			if sh.Class.Code == "BA" {
+			if sh.Class.Is.Starbase {
 				sp.Fleet.Starbases = append(sp.Fleet.Starbases, sh)
-			} else if sh.Class.Code == "TR" {
+			} else if sh.Class.Is.Transport {
 				sp.Fleet.Transports = append(sp.Fleet.Transports, sh)
-			} else {
+			} else if sh.Class.Is.Warship {
 				sp.Fleet.Warships = append(sp.Fleet.Warships, sh)
 			}
 		}
