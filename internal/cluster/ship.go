@@ -20,7 +20,6 @@ package cluster
 
 import (
 	"fmt"
-	"github.com/mdhender/fhcms/internal/coords"
 )
 
 // Ship represents a single ship.
@@ -29,7 +28,7 @@ type Ship struct {
 	Age                int
 	ArrivedViaWormhole bool
 	Class              *ShipClass
-	Destination        *coords.Coords
+	Destination        *Coords
 	Display            struct {
 		Name    string // original name of the ship
 		Tonnage string
@@ -37,7 +36,7 @@ type Ship struct {
 	Inventory      map[string]*Item // key is item code, value is quantity
 	JustJumped     bool
 	LoadingPoint   int
-	Location       *coords.Coords
+	Location       *Coords
 	RemainingCost  int
 	Special        int
 	Status         *ShipStatus
@@ -48,8 +47,13 @@ type ShipClass struct {
 	Code        string
 	Cost        int
 	Description string
-	FTL         bool
 	Tonnage     int
+	Is          struct {
+		Starbase  bool
+		SubLight  bool
+		Transport bool
+		Warship   bool
+	}
 }
 
 type ShipStatus struct {
@@ -64,42 +68,132 @@ type ShipStatus struct {
 // shipClassTranslate maps class to ship class
 func shipClassTranslate(i int) *ShipClass {
 	switch i {
-	case BC:
-		return &ShipClass{Code: "BC", Description: "Battlecruiser", Tonnage: 40, Cost: 4000}
-	case BS:
-		return &ShipClass{Code: "BS", Description: "Battleship", Tonnage: 45, Cost: 4500}
-	case DN:
-		return &ShipClass{Code: "DN", Description: "Dreadnought", Tonnage: 50, Cost: 5000}
 	case BA:
-		return &ShipClass{Code: "BA", Description: "Starbase", Tonnage: 1, Cost: 100}
+		return &ShipClass{Code: "BA", Description: "Starbase", Tonnage: 1, Cost: 100, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: true, SubLight: true, Transport: false, Warship: false}}
+	case BC:
+		return &ShipClass{Code: "BC", Description: "Battlecruiser", Tonnage: 40, Cost: 4000, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case BM:
-		return &ShipClass{Code: "BM", Description: "Battlemoon", Tonnage: 60, Cost: 6000}
+		return &ShipClass{Code: "BM", Description: "Battlemoon", Tonnage: 60, Cost: 6000, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case BR:
-		return &ShipClass{Code: "BR", Description: "Battlestar", Tonnage: 70, Cost: 7000}
+		return &ShipClass{Code: "BR", Description: "Battlestar", Tonnage: 70, Cost: 7000, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
+	case BS:
+		return &ShipClass{Code: "BS", Description: "Battleship", Tonnage: 45, Cost: 4500, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case BW:
-		return &ShipClass{Code: "BW", Description: "Battleworld", Tonnage: 65, Cost: 6500}
+		return &ShipClass{Code: "BW", Description: "Battleworld", Tonnage: 65, Cost: 6500, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case CA:
-		return &ShipClass{Code: "CA", Description: "Heavy Cruiser", Tonnage: 30, Cost: 3000}
+		return &ShipClass{Code: "CA", Description: "Heavy Cruiser", Tonnage: 30, Cost: 3000, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case CC:
-		return &ShipClass{Code: "CC", Description: "Command Cruiser", Tonnage: 35, Cost: 3500}
+		return &ShipClass{Code: "CC", Description: "Command Cruiser", Tonnage: 35, Cost: 3500, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case CL:
-		return &ShipClass{Code: "CL", Description: "Light Cruiser", Tonnage: 20, Cost: 2000}
+		return &ShipClass{Code: "CL", Description: "Light Cruiser", Tonnage: 20, Cost: 2000, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case CS:
-		return &ShipClass{Code: "CS", Description: "Strike Cruiser", Tonnage: 25, Cost: 2500}
+		return &ShipClass{Code: "CS", Description: "Strike Cruiser", Tonnage: 25, Cost: 2500, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case CT:
-		return &ShipClass{Code: "CT", Description: "Corvette", Tonnage: 2, Cost: 200}
+		return &ShipClass{Code: "CT", Description: "Corvette", Tonnage: 2, Cost: 200, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case DD:
-		return &ShipClass{Code: "DD", Description: "Destroyer", Tonnage: 10, Cost: 1000}
+		return &ShipClass{Code: "DD", Description: "Destroyer", Tonnage: 10, Cost: 1000, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
+	case DN:
+		return &ShipClass{Code: "DN", Description: "Dreadnought", Tonnage: 50, Cost: 5000, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case ES:
-		return &ShipClass{Code: "ES", Description: "Escort", Tonnage: 5, Cost: 500}
+		return &ShipClass{Code: "ES", Description: "Escort", Tonnage: 5, Cost: 500, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case FG:
-		return &ShipClass{Code: "FG", Description: "Frigate", Tonnage: 15, Cost: 1500}
+		return &ShipClass{Code: "FG", Description: "Frigate", Tonnage: 15, Cost: 1500, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case PB:
-		return &ShipClass{Code: "PB", Description: "Picketboat", Tonnage: 1, Cost: 100}
+		return &ShipClass{Code: "PB", Description: "Picketboat", Tonnage: 1, Cost: 100, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case SD:
-		return &ShipClass{Code: "SD", Description: "Super Dreadnought", Tonnage: 55, Cost: 5500}
+		return &ShipClass{Code: "SD", Description: "Super Dreadnought", Tonnage: 55, Cost: 5500, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case TR:
-		return &ShipClass{Code: "TR", Description: "Transport", Tonnage: 1, Cost: 100}
+		return &ShipClass{Code: "TR", Description: "Transport", Tonnage: 1, Cost: 100, Is: struct {
+			Starbase  bool
+			SubLight  bool
+			Transport bool
+			Warship   bool
+		}{Starbase: false, SubLight: true, Transport: true, Warship: false}}
 	}
 	panic(fmt.Sprintf("assert(ship.class != %d)", i))
 }

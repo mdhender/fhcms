@@ -16,26 +16,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package cluster
+package cmd
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
 
-// Coords represents a location in the cluster.
-type Coords struct {
-	X     int `json:"x"`
-	Y     int `json:"y"`
-	Z     int `json:"z"`
-	Orbit int `json:"orbit,omitempty"`
+func init() {
+	rootCmd.AddCommand(turnCmd)
 }
 
-// Id returns a unique representation of the location.
-func (c *Coords) Id() string {
-	if c.Orbit != 0 {
-		return fmt.Sprintf("%d.%d.%d.%d", c.X, c.Y, c.Z, c.Orbit)
-	}
-	return fmt.Sprintf("%d.%d.%d", c.X, c.Y, c.Z)
-}
-
-func New(x, y, z, orbit int) *Coords {
-	return &Coords{X: x, Y: y, Z: z, Orbit: orbit}
+var turnCmd = &cobra.Command{
+	Use:   "turn",
+	Short: "Print the turn number for the current game",
+	Long:  `Load game data and print the current turn number.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		ds, err := loader(viper.GetString("files.path"), viper.GetBool("big_endian"))
+		cobra.CheckErr(err)
+		fmt.Printf("%d\n", ds.Turn)
+	},
 }
