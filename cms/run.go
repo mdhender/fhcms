@@ -21,9 +21,9 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/mdhender/fhcms/config"
-	"github.com/mdhender/fhcms/prng"
-	"github.com/mdhender/fhcms/store/jsondb"
+	"github.com/mdhender/fhcms/cms/config"
+	"github.com/mdhender/fhcms/cms/prng"
+	"github.com/mdhender/fhcms/cms/store/jsondb"
 	"log"
 	"os"
 	"path/filepath"
