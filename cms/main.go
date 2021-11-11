@@ -20,7 +20,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/mdhender/fhcms/config"
+	"github.com/mdhender/fhcms/cms/config"
 	"log"
 	"os"
 )

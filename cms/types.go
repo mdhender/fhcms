@@ -20,7 +20,7 @@ package main
 
 import (
 	"bytes"
-	"github.com/mdhender/fhcms/parser"
+	"github.com/mdhender/fhcms/cms/parser"
 )
 
 type action_data struct {

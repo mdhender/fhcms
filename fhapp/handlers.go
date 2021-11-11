@@ -22,10 +22,10 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/mdhender/fhcms/cms/parser"
 	"github.com/mdhender/fhcms/internal/cluster"
 	"github.com/mdhender/fhcms/internal/flist"
 	"github.com/mdhender/fhcms/internal/way"
-	"github.com/mdhender/fhcms/parser"
 	"html/template"
 	"io/ioutil"
 	"log"
