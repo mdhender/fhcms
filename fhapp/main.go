@@ -22,7 +22,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mdhender/fhcms/config"
+	"github.com/mdhender/fhcms/cms/config"
 	"github.com/mdhender/fhcms/internal/cluster"
 	"github.com/mdhender/fhcms/internal/way"
 	"io/ioutil"
@@ -78,14 +78,7 @@ func run(cfg *config.Config) (errs []error) {
 	s.MaxHeaderBytes = 1 << 20 // 1mb?
 
 	// load data
-	galaxyDataFile := filepath.Join(cfg.Data.Path, "galaxy.dat")
-	starDataFile := filepath.Join(cfg.Data.Path, "stars.dat")
-	planetDataFile := filepath.Join(cfg.Data.Path, "planets.dat")
-	speciesDataPath := cfg.Data.Path
-	locationDataFile := filepath.Join(cfg.Data.Path, "locations.dat")
-	transactionDataFile := filepath.Join(cfg.Data.Path, "transactions.dat")
-
-	if ds, err := cluster.FromDat32(galaxyDataFile, starDataFile, planetDataFile, speciesDataPath, locationDataFile, transactionDataFile, cfg.Data.BigEndian); err != nil {
+	if ds, err := datLoader(cfg.Data.Path, cfg.Data.BigEndian); err != nil {
 		return append(errs, err)
 	} else {
 		s.data.Store = ds
@@ -95,7 +88,7 @@ func run(cfg *config.Config) (errs []error) {
 		xlatNo[sp.No] = sp
 	}
 
-	if err = loader(cfg.Data.Turn, &s.data.Turn); err != nil {
+	if err = jsonLoader(cfg.Data.Turn, &s.data.Turn); err != nil {
 		return append(errs, err)
 	}
 	switch s.data.Turn.TimeZone {
@@ -108,7 +101,7 @@ func run(cfg *config.Config) (errs []error) {
 	}
 	log.Printf("turn: %s by %s. %s\n", s.data.Turn.Due, s.data.Turn.By, s.data.Turn.TimeZone)
 
-	if err = loader(cfg.Data.Players, &s.data.Players); err != nil {
+	if err = jsonLoader(cfg.Data.Players, &s.data.Players); err != nil {
 		return append(errs, err)
 	}
 	for _, p := range s.data.Players {
@@ -129,7 +122,7 @@ func run(cfg *config.Config) (errs []error) {
 		File      string `json:"file"`
 		Date      string `json:"date"`
 	}
-	if err = loader(cfg.Data.Files, &files); err != nil {
+	if err = jsonLoader(cfg.Data.Files, &files); err != nil {
 		return append(errs, err)
 	}
 	for _, f := range files {
@@ -170,13 +163,13 @@ func run(cfg *config.Config) (errs []error) {
 		//}
 	}
 	s.data.Site = &Site{}
-	if err := loader(cfg.Data.Site, s.data.Site); err != nil {
+	if err := jsonLoader(cfg.Data.Site, s.data.Site); err != nil {
 		return append(errs, err)
 	}
 	s.data.Stats = make(map[string]*StatsData)
 	var stats []*StatsData
 	fmt.Println(cfg.Data.Stats)
-	if err := loader(cfg.Data.Stats, &stats); err != nil {
+	if err := jsonLoader(cfg.Data.Stats, &stats); err != nil {
 		return append(errs, err)
 	}
 	for _, stat := range stats {
@@ -206,7 +199,20 @@ func run(cfg *config.Config) (errs []error) {
 	return nil
 }
 
-func loader(name string, a interface{}) error {
+func datLoader(path string, bigEndian bool) (*cluster.Store, error) {
+	if path = filepath.Clean(path); path == "." {
+		if cwd, err := os.Getwd(); err != nil {
+			return nil, err
+		} else if path = filepath.Clean(cwd); path == "." {
+			return nil, fmt.Errorf("unable to determine path to data files")
+		}
+	}
+	log.Printf("loader: path      %q\n", path)
+	log.Printf("loader: bigEndian %v\n", bigEndian)
+	return cluster.FromDat32(path, bigEndian)
+}
+
+func jsonLoader(name string, a interface{}) error {
 	log.Printf("loader: loading %s\n", name)
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
