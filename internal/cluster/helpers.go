@@ -35,7 +35,6 @@ func commas(value int) string {
 	return strings.TrimLeft(s[0:3]+","+s[3:6]+","+s[6:9]+","+s[9:12]+","+s[12:15]+","+s[15:18]+","+s[18:21]+","+s[21:], "0,")
 }
 
-
 func itemToCode(i int) (string, string) {
 	switch i {
 	case 0:

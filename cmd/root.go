@@ -18,10 +18,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
+	"fmt"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"log"
+	"strings"
 )
 
 var cfgFile string
@@ -33,6 +36,10 @@ var rootCmd = &cobra.Command{
 	Short: "Far Horizons engine",
 	Long: `FH is the game engine for Far Horizons. This application creates
 new games, executes orders, and generates reports for each player.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// bind viper and cobra here since this hook runs early and always
+		return bindConfig(cmd)
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Printf("env: %-30s == %q\n", "HOME", homeFolder)
 		log.Printf("env: %-30s == %q\n", "FH_CONFIG", viper.ConfigFileUsed())
@@ -46,40 +53,63 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here, will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.fh.yaml)")
 
 	// Cobra also supports local flags, which will only run when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
+// bindConfig reads in config file and ENV variables if set.
+// logic for binding viper and cobra taken from
+// https://carolynvanslyck.com/blog/2020/08/sting-of-the-viper/
+func bindConfig(cmd *cobra.Command) error {
 	var err error
+
 	// Find home directory.
 	homeFolder, err = homedir.Dir()
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Search config in home directory with name ".fh" (without extension).
+	if cfgFile == "" { // use default location of ~/.fh
 		viper.AddConfigPath(homeFolder)
 		viper.SetConfigType("json")
 		viper.SetConfigName(".fh")
+	} else { // Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err = viper.ReadInConfig(); err == nil {
+	// Try to read the config file. Ignore file-not-found errors.
+	if err = viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
+	} else {
 		log.Printf("viper: using config file: %q\n", viper.ConfigFileUsed())
+		if err = viper.WriteConfigAs("D:\\GoLand\\fhcms\\testdata\\viper.json"); err != nil {
+			return err
+		}
 	}
 
-	err = viper.WriteConfigAs("D:\\GoLand\\fhcms\\testdata\\viper.json")
-	cobra.CheckErr(err)
+	// read in environment variables that match
+	viper.SetEnvPrefix("FH")
+	viper.AutomaticEnv()
+
+	// bind the current command's flags to viper
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		// Environment variables can't have dashes in them, so bind them to their equivalent
+		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
+		if strings.Contains(f.Name, "-") {
+			envVarSuffix := strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
+			_ = viper.BindEnv(f.Name, fmt.Sprintf("%s_%s", "FH", envVarSuffix))
+		}
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed && viper.IsSet(f.Name) {
+			val := viper.Get(f.Name)
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
+
+	return nil
 }

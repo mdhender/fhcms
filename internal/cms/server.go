@@ -16,25 +16,32 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package cmd
+package cms
 
 import (
-	"fmt"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"crypto/sha1"
+	"encoding/base64"
+	"github.com/mdhender/fhcms/internal/way"
+	"log"
+	"net/http"
 )
 
-func init() {
-	rootCmd.AddCommand(turnCmd)
+type Server struct {
+	http.Server
+	router *way.Router
 }
 
-var turnCmd = &cobra.Command{
-	Use:   "turn",
-	Short: "Print the turn number for the current game",
-	Long:  `Load game data and print the current turn number.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		ds, err := loader(viper.GetString("files.path"), viper.GetBool("files.big_endian"))
-		cobra.CheckErr(err)
-		fmt.Printf("%d\n", ds.Turn)
-	},
+// serverContextKey is the context key type for storing parameters in context.Context.
+type serverContextKey string
+
+func (s *Server) notImplemented() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("cms: %s %q: not implemented\n", r.Method, r.URL.Path)
+	}
+}
+
+func mketag(b []byte) string {
+	h := sha1.New()
+	h.Write(b)
+	return "cms:" + base64.URLEncoding.EncodeToString(h.Sum(nil))
 }

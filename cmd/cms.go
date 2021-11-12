@@ -19,22 +19,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package cmd
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func init() {
-	rootCmd.AddCommand(turnCmd)
+	rootCmd.AddCommand(cmsCmd)
 }
 
-var turnCmd = &cobra.Command{
-	Use:   "turn",
-	Short: "Print the turn number for the current game",
-	Long:  `Load game data and print the current turn number.`,
+var cmsCmd = &cobra.Command{
+	Use:   "cms",
+	Short: "Serve player app",
+	Long:  `Allow players to view game data.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ds, err := loader(viper.GetString("files.path"), viper.GetBool("files.big_endian"))
-		cobra.CheckErr(err)
-		fmt.Printf("%d\n", ds.Turn)
 	},
 }
