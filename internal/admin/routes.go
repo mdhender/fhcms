@@ -52,5 +52,5 @@ func adminIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func adminListAccounts(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprint(w, "adminListaccounts\n")
+	_, _ = fmt.Fprint(w, "adminListAccounts\n")
 }

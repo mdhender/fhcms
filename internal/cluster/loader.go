@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/mdhender/fhcms/internal/dat32"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"strings"
 )
@@ -34,10 +33,10 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 	starDataFile := filepath.Join(path, "stars.dat")
 	planetDataFile := filepath.Join(path, "planets.dat")
 	speciesDataPath := path
-	locationDataFile := filepath.Join(path, "locations.dat")
-	log.Printf("todo: use locationDataFile %q\n", locationDataFile)
-	transactionDataFile := filepath.Join(path, "transactions.dat")
-	log.Printf("todo: use transactionDataFile %q\n", transactionDataFile)
+	//locationDataFile := filepath.Join(path, "locations.dat")
+	//log.Printf("todo: use locationDataFile %q\n", locationDataFile)
+	//transactionDataFile := filepath.Join(path, "transactions.dat")
+	//log.Printf("todo: use transactionDataFile %q\n", transactionDataFile)
 
 	var bo binary.ByteOrder
 	if bigEndian {
