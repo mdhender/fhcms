@@ -33,7 +33,7 @@ var turnCmd = &cobra.Command{
 	Short: "Print the turn number for the current game",
 	Long:  `Load game data and print the current turn number.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ds, err := loader(viper.GetString("files.path"), viper.GetBool("big_endian"))
+		ds, err := loader(viper.GetString("files.path"), viper.GetBool("files.big_endian"))
 		cobra.CheckErr(err)
 		fmt.Printf("%d\n", ds.Turn)
 	},

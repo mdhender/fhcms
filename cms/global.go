@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
-	"github.com/mdhender/fhcms/prng"
+	"github.com/mdhender/fhcms/cms/prng"
 	"io"
 	"os"
 )

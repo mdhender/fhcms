@@ -45,4 +45,3 @@ func mketag(b []byte) string {
 	h.Write(b)
 	return "cms:" + base64.URLEncoding.EncodeToString(h.Sum(nil))
 }
-

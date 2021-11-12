@@ -33,7 +33,7 @@ var statsCmd = &cobra.Command{
 	Short: "Print statistics for the current game",
 	Long:  `Load game data and print statistics for species.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ds, err := loader(viper.GetString("files.path"), viper.GetBool("big_endian"))
+		ds, err := loader(viper.GetString("files.path"), viper.GetBool("files.big_endian"))
 		cobra.CheckErr(err)
 		//StatsMain(ds)
 

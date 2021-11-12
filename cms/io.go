@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
-	"github.com/mdhender/fhcms/store/jsondb"
+	"github.com/mdhender/fhcms/cms/store/jsondb"
 )
 
 var __jdb *jsondb.Store

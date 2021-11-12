@@ -20,7 +20,7 @@ package main
 
 import (
 	"bytes"
-	"github.com/mdhender/fhcms/prng"
+	"github.com/mdhender/fhcms/cms/prng"
 	"io"
 )
 
