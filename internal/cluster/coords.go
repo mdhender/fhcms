@@ -36,6 +36,6 @@ func (c *Coords) Id() string {
 	return fmt.Sprintf("%d.%d.%d", c.X, c.Y, c.Z)
 }
 
-func New(x, y, z, orbit int) *Coords {
+func NewCoords(x, y, z, orbit int) *Coords {
 	return &Coords{X: x, Y: y, Z: z, Orbit: orbit}
 }

@@ -16,17 +16,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package main
+package cluster
 
-import (
-	"github.com/mdhender/fhcms/cmd"
-	"log"
-)
-
-func main() {
-	// default log format to UTC
-	log.SetFlags(log.Ldate | log.Ltime | log.LUTC)
-
-	// run the command as given
-	cmd.Execute()
+// UpdateEconEfficiency will recalculate the economic efficiencies of all planets.
+func (ds *Store) UpdateEconEfficiency() {
+	// calculate the total economic base for each planet from named planet data
+	totalEconBase := make(map[string]int)
+	for _, sp := range ds.Species {
+		for _, np := range sp.NamedPlanets.ById {
+			if np.Colony != nil {
+				totalEconBase[np.Planet.Id] = totalEconBase[np.Planet.Id] + np.Colony.Mining.Base + np.Colony.Manufacturing.Base
+			}
+		}
+	}
+	// recalculate economic efficiencies of all planets
+	for id, base := range totalEconBase {
+		econEfficiency := 100
+		if base > 2000 {
+			econEfficiency = (100 * ((base-2000)/20 + 2000)) / base
+		}
+		ds.Planets[id].EconEfficiency = econEfficiency
+	}
 }
