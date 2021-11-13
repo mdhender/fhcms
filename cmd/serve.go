@@ -41,13 +41,12 @@ var serveCmd = &cobra.Command{
 	Short: "Serve data for the game",
 	Long:  `Provide a REST-ish API for game data.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// For debugging/example purposes, we generate and print
-		// a sample jwt token with claims `user_id:123` here:
+		// For debugging/example purposes, we generate and printsample jwt tokens here
 		tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
-		_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": 123})
-		fmt.Printf("DEBUG: a sample jwt is %s\n\n", tokenString)
-		_, adminTokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": 123, "admin": true})
-		fmt.Printf("DEBUG: a sample admin jwt is %s\n\n", adminTokenString)
+		_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"species": 18})
+		fmt.Printf("jwt: player 18 %s\n\n", tokenString)
+		_, adminTokenString, _ := tokenAuth.Encode(map[string]interface{}{"species": 18, "admin": true})
+		fmt.Printf("jst: admin %s\n\n", adminTokenString)
 
 		r, routerName := chi.NewRouter(), "chi"
 		r.Use(middleware.Logger)
