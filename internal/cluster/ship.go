@@ -20,25 +20,29 @@ package cluster
 
 import (
 	"fmt"
+	"log"
 )
 
 // Ship represents a single ship.
 type Ship struct {
 	Id                 string // unique identifier for ship
+	Name               string // original name of the ship
 	Age                int
 	ArrivedViaWormhole bool
 	Class              *ShipClass
 	Destination        *Coords
 	Display            struct {
-		Name    string // original name of the ship
+		Name    string
 		Tonnage string
 	}
+	Index          int              // original index in data file
 	Inventory      map[string]*Item // key is item code, value is quantity
 	JustJumped     bool
 	LoadingPoint   int
 	Location       *Coords
 	RemainingCost  int
 	Special        int
+	Species        *Species
 	Status         *ShipStatus
 	UnloadingPoint int
 }
@@ -253,4 +257,100 @@ func (s *ShipStatus) String() string {
 		return "UNDER_CONSTRUCTION"
 	}
 	return ""
+}
+
+/* This routine will return a pointer to a string containing a complete
+ * ship name, including its orbital/landed status and age. If global
+ * variable "truncate_name" is TRUE, then orbital/landed status and age
+ * will not be included. */
+
+func (ship *Ship) Named(truncate_name, ignore_field_distorters bool) string {
+	item, ok := ship.Inventory["FD"]
+	ship_is_distorted := ok && item.Quantity == ship.Class.Tonnage
+
+	if ship.Status.OnSurface {
+		ship_is_distorted = false
+	}
+
+	if ignore_field_distorters {
+		ship_is_distorted = false
+	}
+
+	var full_ship_id string
+
+	if ship_is_distorted {
+		if ship.Class.Is.Transport {
+			full_ship_id = fmt.Sprintf("%s%d ???", ship.Class.Code, ship.Class.Tonnage)
+		} else if ship.Class.Is.Starbase {
+			full_ship_id = fmt.Sprintf("BAS ???")
+		} else {
+			full_ship_id = fmt.Sprintf("%s ???", ship.Class.Code)
+		}
+	} else if ship.Class.Is.Transport {
+		if ship.Class.Is.SubLight {
+			full_ship_id = fmt.Sprintf("%s%dS %s", ship.Class.Code, ship.Class.Tonnage, ship.Name)
+		} else {
+			full_ship_id = fmt.Sprintf("%s%d %s", ship.Class.Code, ship.Class.Tonnage, ship.Name)
+		}
+	} else {
+		if ship.Class.Is.SubLight {
+			full_ship_id = fmt.Sprintf("%sS %s", ship.Class.Code, ship.Name)
+		} else {
+			full_ship_id = fmt.Sprintf("%s %s", ship.Class.Code, ship.Name)
+		}
+	}
+
+	if truncate_name {
+		return full_ship_id
+	}
+
+	full_ship_id += fmt.Sprintf(" (")
+
+	effective_age := ship.Age
+	if effective_age < 0 {
+		effective_age = 0
+	}
+	if !(ship_is_distorted || ship.Status.UnderConstruction) { // show age
+		full_ship_id += fmt.Sprintf("A%d,", effective_age)
+	}
+
+	if ship.Status.UnderConstruction {
+		full_ship_id += "C"
+	} else if ship.Status.InOrbit {
+		full_ship_id += fmt.Sprintf("O%d", ship.Location.Orbit)
+	} else if ship.Status.OnSurface {
+		full_ship_id += fmt.Sprintf("L%d", ship.Location.Orbit)
+	} else if ship.Status.InDeepSpace {
+		full_ship_id += fmt.Sprintf("D")
+	} else if ship.Status.ForcedJump {
+		full_ship_id += fmt.Sprintf("FJ")
+	} else if ship.Status.JumpedInCombat {
+		full_ship_id += fmt.Sprintf("WD")
+	} else {
+		full_ship_id += fmt.Sprintf("***???***")
+		log.Printf("\n\tWARNING!!!  Internal error in subroutine 'ship_name'\n\n")
+	}
+
+	if ship.Class.Is.Starbase {
+		full_ship_id += fmt.Sprintf(",%d tons", 10000*ship.Class.Tonnage)
+	}
+
+	return full_ship_id + ")"
+}
+
+func (ship *Ship) SortedInventory() []*Item {
+	var sortedInventory []*Item
+	for _, item := range ship.Inventory {
+		if item.Quantity > 0 {
+			sortedInventory = append(sortedInventory, item)
+		}
+	}
+	for i := 0; i < len(sortedInventory); i++ {
+		for j := i + 1; j < len(sortedInventory); j++ {
+			if sortedInventory[j].Code < sortedInventory[i].Code {
+				sortedInventory[i], sortedInventory[j] = sortedInventory[j], sortedInventory[i]
+			}
+		}
+	}
+	return sortedInventory
 }

@@ -298,3 +298,8 @@ type ship_data struct {
 	// padding to make Go struct same size as C
 	MorePadding [2]uint8
 }
+
+type sp_loc_data struct {
+	S       uint8 // species number
+	X, Y, Z uint8 // coordinates
+}

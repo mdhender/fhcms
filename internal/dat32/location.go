@@ -16,34 +16,37 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package cluster
+package dat32
 
-import "strings"
+import (
+	"bytes"
+	"encoding/binary"
+	"io"
+	"io/ioutil"
+)
 
-// NamedPlanet represents the name applied to a planet by a species.
-// The ID is usually the name of the planet converted to uppercase.
-type NamedPlanet struct {
-	Id      string  // unique identifier for named planet
-	Colony  *Colony // optional
-	Display struct {
-		Name string // original name of the planet
-	}
-	Index   int // nampla_index
-	Planet  *Planet
-	Special struct { // this is the hellish field that is used for multiple purposes
-		// captures the value
-		Value int
-		// and these capture what I hope is the intent
-		ExcessRawMaterialUnitsThatMayBeRecylcedInAutoMode int
-	}
+type SpLocData struct {
+	S       int // Species number
+	X, Y, Z int // Location
 }
 
-func newNamedPlanet(name string, planet *Planet, index int) *NamedPlanet {
-	np := &NamedPlanet{
-		Id:     strings.ToUpper(strings.TrimSpace(name)),
-		Planet: planet,
-		Index:  index,
+// ReadLocations returns either a slice of SpLocData or an error.
+func ReadLocations(name string, bo binary.ByteOrder) ([]SpLocData, error) {
+	b, err := ioutil.ReadFile(name)
+	if err != nil {
+		return nil, err
 	}
-	np.Display.Name = strings.TrimSpace(name)
-	return np
+	r := bytes.NewReader(b)
+	var ld []SpLocData
+	var data sp_loc_data
+	for {
+		if err = binary.Read(r, bo, &data); err != nil {
+			break
+		}
+		ld = append(ld, SpLocData{S: int(data.S), X: int(data.X), Y: int(data.Y), Z: int(data.Z)})
+	}
+	if err != io.EOF {
+		return nil, err
+	}
+	return ld, nil
 }

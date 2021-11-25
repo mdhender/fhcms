@@ -22,12 +22,10 @@ type Store struct {
 	Semver       string
 	Turn         int // current turn number
 	Radius       int // radius of the cluster
-	Locations    []*Location
+	Locations    []SpeciesLocationData
 	Planets      map[string]*Planet
 	Species      map[string]*Species
+	SpeciesBase  []*Species // zero index is not used
 	Systems      map[string]*System
 	Transactions []Transaction
 }
-
-type Location struct{}
-type Transaction struct{}

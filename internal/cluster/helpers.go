@@ -154,6 +154,33 @@ func lifeSupportNeeded(species *Species, planet *Planet) int {
 	return lsn
 }
 
+// MishapChance calculates
+func MishapChance(sp *Species, ship *Ship, to *Coords) (int, string) {
+	if to == nil {
+		return 0, "0%"
+	} else if ship.Location.X == to.X && ship.Location.Y == to.Y && ship.Location.Z == to.Z {
+		return 0, "0%"
+	} else if sp.GV.Level == 0 {
+		return 100_00, "100%"
+	} else if to.X == 9999 {
+		return 100_00, "???"
+	}
+
+	mishap_chance := (100 *
+		(((ship.Location.X - to.X) * (ship.Location.X - to.X)) +
+			((ship.Location.Y - to.Y) * (ship.Location.Y - to.Y)) +
+			((ship.Location.Z - to.Z) * (ship.Location.Z - to.Z)))) / sp.GV.Level
+	if ship.Age > 0 && mishap_chance < 100_00 {
+		success_chance := 100_00 - mishap_chance
+		success_chance -= (2 * ship.Age * success_chance) / 100
+		mishap_chance = 10000 - success_chance
+	}
+	if mishap_chance >= 100_00 {
+		return 100_00, "100%"
+	}
+	return mishap_chance, fmt.Sprintf("%d.%02d%%", mishap_chance/100, mishap_chance%100)
+}
+
 /* Look-up table for ship defensive/offensive power uses ship->tonnage
  * as an index. Each value is equal to 100 * (ship->tonnage)^1.2. The
  * 'power' subroutine uses recursion to calculate values for tonnages

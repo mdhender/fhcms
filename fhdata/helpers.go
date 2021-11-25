@@ -38,7 +38,7 @@ func gasToType(i int) (string, string) {
 	case 2:
 		return "CH4", "Methane"
 	case 3:
-		return "HE", "Helium"
+		return "He", "Helium"
 	case 4:
 		return "NH3", "Ammonia"
 	case 5:
@@ -48,9 +48,9 @@ func gasToType(i int) (string, string) {
 	case 7:
 		return "O2", "Oxygen"
 	case 8:
-		return "HCL", "Hydrogen Chloride"
+		return "HCl", "Hydrogen Chloride"
 	case 9:
-		return "CL2", "Chlorine"
+		return "Cl2", "Chlorine"
 	case 10:
 		return "F2", "Fluorine"
 	case 11:
@@ -70,7 +70,7 @@ func gasToGasType(g int) (gt GasType) {
 	case 2:
 		gt.Code = "CH4" // Methane
 	case 3:
-		gt.Code = "HE" // Helium
+		gt.Code = "He" // Helium
 	case 4:
 		gt.Code = "NH3" // Ammonia
 	case 5:
@@ -80,9 +80,9 @@ func gasToGasType(g int) (gt GasType) {
 	case 7:
 		gt.Code = "O2" // Oxygen
 	case 8:
-		gt.Code = "HCL" // Hydrogen Chloride
+		gt.Code = "HCl" // Hydrogen Chloride
 	case 9:
-		gt.Code = "CL2" // Chlorine
+		gt.Code = "Cl2" // Chlorine
 	case 10:
 		gt.Code = "F2" // Fluorine
 	case 11:

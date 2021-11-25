@@ -32,10 +32,12 @@ type Species struct {
 		ById       map[string]*Colony // key is name of planet, converted to upper case
 		ByLocation map[string]*Colony // key is location of planet, including orbit
 	}
-	Contact   map[string]*Species
-	EconUnits int
-	Enemy     map[string]*Species
-	Fleet     struct {
+	Contact         map[string]*Species
+	DistortedNumber int // number if field distortion units are working
+	EconUnits       int
+	Enemy           map[string]*Species
+	Fleet           struct {
+		Base              []*Ship // indexed from original data file
 		Cost              int
 		DefensiveStrength int
 		MaintenancePct    int // percentage of production applied to fleet maintenance
@@ -64,6 +66,7 @@ type Species struct {
 	}
 	Name         string // name of the species
 	NamedPlanets struct {
+		Base       []*NamedPlanet          // indexed from original data file
 		ById       map[string]*NamedPlanet // key is name of planet, converted to upper case
 		ByLocation map[string]*NamedPlanet // key is location, including orbit
 	}

@@ -33,7 +33,7 @@ func gasTranslate(i int) *Code {
 	case 2:
 		return &Code{Code: "CH4", Descr: "Methane"}
 	case 3:
-		return &Code{Code: "HE", Descr: "Helium"}
+		return &Code{Code: "He", Descr: "Helium"}
 	case 4:
 		return &Code{Code: "NH3", Descr: "Ammonia"}
 	case 5:
@@ -43,9 +43,9 @@ func gasTranslate(i int) *Code {
 	case 7:
 		return &Code{Code: "O2", Descr: "Oxygen"}
 	case 8:
-		return &Code{Code: "HCL", Descr: "Hydrogen Chloride"}
+		return &Code{Code: "HCl", Descr: "Hydrogen Chloride"}
 	case 9:
-		return &Code{Code: "CL2", Descr: "Chlorine"}
+		return &Code{Code: "Cl2", Descr: "Chlorine"}
 	case 10:
 		return &Code{Code: "F2", Descr: "Fluorine"}
 	case 11:
