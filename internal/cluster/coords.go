@@ -28,6 +28,10 @@ type Coords struct {
 	Orbit int `json:"orbit,omitempty"`
 }
 
+func (c *Coords) Delta(to *Coords) int {
+	return (c.X-to.X)*(c.X-to.X) + (c.Y-to.Y)*(c.Y-to.Y) + (c.Z-to.Z)*(c.Z-to.Z)
+}
+
 // Id returns a unique representation of the location.
 func (c *Coords) Id() string {
 	if c.Orbit != 0 {

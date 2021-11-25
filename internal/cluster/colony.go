@@ -39,8 +39,14 @@ type Colony struct {
 		AvailableToInstall int
 		Needed             int
 	}
-	Manufacturing, Mining struct {
-		Auto               bool
+	Manufacturing struct {
+		AutoAUs            int
+		AvailableToInstall int
+		Base               int
+		Needed             int
+	}
+	Mining struct {
+		AutoIUs            int
 		AvailableToInstall int
 		Base               int
 		Needed             int
@@ -51,4 +57,21 @@ type Colony struct {
 	Special     int
 	UseOnAmbush int
 	Message     int
+}
+
+func (c *Colony) SortedInventory() []*Item {
+	var sortedInventory []*Item
+	for _, item := range c.Inventory {
+		if item.Quantity > 0 {
+			sortedInventory = append(sortedInventory, item)
+		}
+	}
+	for i := 0; i < len(sortedInventory); i++ {
+		for j := i + 1; j < len(sortedInventory); j++ {
+			if sortedInventory[j].Code < sortedInventory[i].Code {
+				sortedInventory[i], sortedInventory[j] = sortedInventory[j], sortedInventory[i]
+			}
+		}
+	}
+	return sortedInventory
 }

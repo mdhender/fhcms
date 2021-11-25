@@ -33,8 +33,7 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 	starDataFile := filepath.Join(path, "stars.dat")
 	planetDataFile := filepath.Join(path, "planets.dat")
 	speciesDataPath := path
-	//locationDataFile := filepath.Join(path, "locations.dat")
-	//log.Printf("todo: use locationDataFile %q\n", locationDataFile)
+	locationDataFile := filepath.Join(path, "locations.dat")
 	//transactionDataFile := filepath.Join(path, "transactions.dat")
 	//log.Printf("todo: use transactionDataFile %q\n", transactionDataFile)
 
@@ -71,9 +70,10 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 	}
 
 	ds := &Store{
-		Systems: make(map[string]*System),
-		Planets: make(map[string]*Planet),
-		Species: make(map[string]*Species),
+		Systems:     make(map[string]*System),
+		Planets:     make(map[string]*Planet),
+		Species:     make(map[string]*Species),
+		SpeciesBase: make([]*Species, galaxyData.NumSpecies+1, galaxyData.NumSpecies+1),
 	}
 	ds.Turn = galaxyData.TurnNumber
 	ds.Radius = galaxyData.Radius
@@ -151,6 +151,8 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 		sp.Colonies.ByLocation = make(map[string]*Colony)
 		sp.NamedPlanets.ById = make(map[string]*NamedPlanet)
 		sp.NamedPlanets.ByLocation = make(map[string]*NamedPlanet)
+
+		ds.SpeciesBase[species.Id] = sp
 		ds.Species[speciesId] = sp
 
 		sp.MI = &Technology{Code: "MI", Level: species.TechLevel[0], KnowledgeLevel: species.TechKnowledge[0], ExperiencePoints: species.TechEps[0]}
@@ -159,6 +161,12 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 		sp.GV = &Technology{Code: "GV", Level: species.TechLevel[3], KnowledgeLevel: species.TechKnowledge[3], ExperiencePoints: species.TechEps[3]}
 		sp.LS = &Technology{Code: "LS", Level: species.TechLevel[4], KnowledgeLevel: species.TechKnowledge[4], ExperiencePoints: species.TechEps[4]}
 		sp.BI = &Technology{Code: "BI", Level: species.TechLevel[5], KnowledgeLevel: species.TechKnowledge[5], ExperiencePoints: species.TechEps[5]}
+
+		// We must use the LS tech level at the start of the turn because
+		// the distorted species number must be the same throughout the
+		// turn, even if the tech level changes during production.
+		nibLo, nibHi := sp.No&0x000F, (sp.No>>4)&0x000F // lower and upper four bits
+		sp.DistortedNumber = (sp.LS.Level%5+3)*(4*nibLo+nibHi) + (sp.LS.Level%11 + 7)
 
 		sp.Fleet.Cost = species.FleetCost
 		sp.Fleet.MaintenancePct = species.FleetPercentCost
@@ -185,6 +193,7 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 		sp.HomeWorld.System = sp.HomeWorld.Planet.System
 
 		// add all named planets for this species
+		sp.NamedPlanets.Base = make([]*NamedPlanet, species.NumNamplas, species.NumNamplas)
 		for i := 0; i < species.NumNamplas; i++ {
 			nampla := &species.NamplaBase[i]
 			location := &Coords{X: nampla.X, Y: nampla.Y, Z: nampla.Z, Orbit: nampla.PN}
@@ -192,7 +201,8 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 			if !ok {
 				panic(fmt.Sprintf("species %q has named planet %q which is not in system map", speciesId, nampla.Name))
 			}
-			np := newNamedPlanet(nampla.Name, p)
+			np := newNamedPlanet(nampla.Name, p, i)
+			sp.NamedPlanets.Base[i] = np
 			sp.NamedPlanets.ById[np.Id] = np
 			sp.NamedPlanets.ByLocation[location.Id()] = np
 
@@ -222,16 +232,16 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 			for code, qty := range nampla.ItemQuantity {
 				if qty > 0 {
 					item := itemTranslate(code, qty)
-					cc.Inventory[item.Code] = item
+					cc.Inventory[item.Abbr] = item
 				}
 			}
 
-			cc.Manufacturing.Auto = nampla.AutoAUs != 0
+			cc.Manufacturing.AutoAUs = nampla.AutoAUs
 			cc.Manufacturing.AvailableToInstall = nampla.AUsToInstall
 			cc.Manufacturing.Base = nampla.MaBase
 			cc.Manufacturing.Needed = nampla.AUsNeeded
 			cc.Message = nampla.Message
-			cc.Mining.Auto = nampla.AutoIUs != 0
+			cc.Mining.AutoIUs = nampla.AutoIUs
 			cc.Mining.AvailableToInstall = nampla.IUsToInstall
 			cc.Mining.Base = nampla.MiBase
 			cc.Mining.Needed = nampla.IUsNeeded
@@ -258,12 +268,14 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 				Age:                ship.Age,
 				ArrivedViaWormhole: ship.ArrivedViaWormhole,
 				Class:              shipClassTranslate(ship.Class),
+				Index:              i,
 				Inventory:          make(map[string]*Item),
 				JustJumped:         ship.JustJumped,
 				LoadingPoint:       ship.LoadingPoint,
 				Location:           &Coords{X: ship.X, Y: ship.Y, Z: ship.Z, Orbit: ship.PN},
 				RemainingCost:      ship.RemainingCost,
 				Special:            ship.Special,
+				Species:            sp,
 				Status:             shipStatusTranslate(ship.Status),
 				UnloadingPoint:     ship.UnloadingPoint,
 			}
@@ -283,14 +295,25 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 			if ship.DestX != 0 && ship.DestY != 0 && ship.DestZ != 0 {
 				sh.Destination = &Coords{X: ship.DestX, Y: ship.DestY, Z: ship.DestZ}
 			}
-			sh.Display.Name = strings.TrimSpace(ship.Name)
+			sh.Name = strings.TrimSpace(ship.Name)
+			var sublightFlag string
+			if sh.Class.Is.SubLight {
+				sublightFlag = "S"
+			}
+			if sh.Class.Is.Transport {
+				sh.Display.Name = fmt.Sprintf("%s%d%s %s", sh.Class.Code, sh.Class.Tonnage, sublightFlag, sh.Name)
+			} else {
+				sh.Display.Name = fmt.Sprintf("%s%s %s", sh.Class.Code, sublightFlag, sh.Name)
+			}
+
 			sh.Display.Tonnage = fmt.Sprintf("%dk", 10*ship.Tonnage)
 			for code, qty := range ship.ItemQuantity {
 				if qty > 0 {
 					item := itemTranslate(code, qty)
-					sh.Inventory[item.Code] = item
+					sh.Inventory[item.Abbr] = item
 				}
 			}
+			sp.Fleet.Base = append(sp.Fleet.Base, sh)
 			sp.Fleet.Ships[sh.Id] = sh
 			if sh.Class.Is.Starbase {
 				sp.Fleet.Starbases = append(sp.Fleet.Starbases, sh)
@@ -354,6 +377,16 @@ func FromDat32(path string, bigEndian bool) (*Store, error) {
 		sp.Scanned = append(sp.Scanned, sp.Visited...)
 	}
 
+	ld, err := dat32.ReadLocations(locationDataFile, bo)
+	if err != nil {
+		return nil, err
+	}
+	ds.Locations = make([]SpeciesLocationData, len(ld), len(ld))
+	for i, loc := range ld {
+		ds.Locations[i].Species = ds.SpeciesBase[loc.S]
+		ds.Locations[i].Location = NewCoords(loc.X, loc.Y, loc.Z, 0)
+	}
+
 	// sort some data to keep lists consistent between runs
 
 	return ds, nil
@@ -365,4 +398,12 @@ func loader(name string, a interface{}) error {
 		return err
 	}
 	return json.Unmarshal(b, a)
+}
+
+/* The following routine provides the 'distorted' species number used to
+ *      identify a species that uses field distortion units. The input
+ *      variable 'species_number' is the same number used in filename
+ *      creation for the species. */
+func (sp *Species) Distorted() int {
+	return sp.DistortedNumber
 }

@@ -29,3 +29,18 @@ type System struct {
 	VisitedBy map[string]*Species // list of species that have visited the system
 	Wormhole  *System             // other end of wormhole, nil if not a wormhole
 }
+
+func (ds *Store) ClosestUnvisitedSystem(sp *Species, from *Coords) *Coords {
+	var to *Coords
+	var deltaTo int
+	for _, star := range ds.Systems {
+		if star.VisitedBy[sp.Id] == nil { // star has not yet been visited
+			if to == nil { // this is the first non-visited system, so use it
+				to, deltaTo = star.Location, from.Delta(star.Location)
+			} else if delta := from.Delta(star.Location); delta < deltaTo {
+				to, deltaTo = star.Location, delta
+			}
+		}
+	}
+	return to
+}

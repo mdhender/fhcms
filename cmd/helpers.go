@@ -89,6 +89,14 @@ func lifeSupportNeeded(species *cluster.Species, planet *cluster.Planet) int {
 	return lsn
 }
 
+func sameOrbit(a, b *cluster.Coords) bool {
+	return a != nil && b != nil && a.X == b.X && a.Y == b.Y && a.Z == b.Z && a.Orbit == b.Orbit
+}
+
+func sameSystem(a, b *cluster.Coords) bool {
+	return a != nil && b != nil && a.X == b.X && a.Y == b.Y && a.Z == b.Z
+}
+
 /* Look-up table for ship defensive/offensive power uses ship->tonnage
  * as an index. Each value is equal to 100 * (ship->tonnage)^1.2. The
  * 'power' subroutine uses recursion to calculate values for tonnages
