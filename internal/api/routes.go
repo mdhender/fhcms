@@ -19,10 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/go-chi/oauth"
 	"github.com/mdhender/fhcms/internal/cluster"
 	"github.com/spf13/viper"
 	"log"
@@ -39,13 +41,20 @@ type Server http.Handler
 func Router() http.Handler {
 	r := chi.NewRouter()
 
-	r.Get("/turn", apiGetTurn)
+	r.Get("/games", notImplemented)
+	r.Get("/game/{gameId}", notImplemented)
+	r.Get("/game/{gameId}/turn", apiGetTurn)
+
 	r.Get("/widgets", apiGetWidgets)
 	r.Post("/widgets", apiCreateWidget)
 	r.Post("/widgets/{slug}", apiUpdateWidget)
 	r.Post("/widgets/{slug}/parts", apiCreateWidgetPart)
 	r.Post("/widgets/{slug}/parts/{id:[0-9]+}/update", apiUpdateWidgetPart)
 	r.Post("/widgets/{slug}/parts/{id:[0-9]+}/delete", apiDeleteWidgetPart)
+
+	r.Get("/customers", GetCustomers)
+	r.Get("/customers/{id}/orders", GetOrders)
+	r.Get("/messages", GetMessages)
 
 	// admin protected routes
 	r.Group(func(r chi.Router) {
@@ -271,4 +280,77 @@ func loader(path string, bigEndian bool) (*cluster.Store, error) {
 		}
 	}
 	return cluster.FromDat32(path, bigEndian)
+}
+
+func GetCustomers(w http.ResponseWriter, _ *http.Request) {
+	renderJSON(w, `{
+		"Status":        "verified",
+		"Customer":      "test001",
+		"Customer_name":  "Max",
+		"Customer_email": "test@test.com",
+	}`, http.StatusOK)
+}
+
+func renderJSON(w http.ResponseWriter, v interface{}, statusCode int) {
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetEscapeHTML(true)
+	if err := enc.Encode(v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(statusCode)
+	_, _ = w.Write(buf.Bytes())
+}
+
+func GetMessages(w http.ResponseWriter, r *http.Request) {
+	//ctx = context.WithValue(ctx, CredentialContext, token.Credential)
+	if value, ok := r.Context().Value(oauth.CredentialContext).(string); ok {
+		log.Println("token.Credential", value)
+	}
+
+	type Attributes struct {
+		From    string `json:"from,omitempty"`
+		Dttm    string `json:"dttm,omitempty"`
+		Subject string `json:"subject,omitempty"`
+		Body    string `json:"body,omitempty"`
+	}
+	type Message struct {
+		Id         int        `json:"id,omitempty"`
+		Type       string     `json:"type"`
+		Attributes Attributes `json:"attributes"`
+	}
+	var response struct {
+		Links struct {
+			Self string `json:"self"`
+		} `json:"links"`
+		Data []Message `json:"data"`
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "jwt",
+		Path:     "/",
+		MaxAge:   7 * 24 * 60 * 60,
+		HttpOnly: true,
+	})
+	response.Links.Self = r.URL.Path
+	response.Data = append(response.Data, Message{Id: 1, Type: "messages", Attributes: Attributes{From: "Tomster", Dttm: "2020.07.24, 16:15:03", Subject: "Hey Zoey", Body: "How is it going? Will I see you at EmberConf next year?"}})
+	response.Data = append(response.Data, Message{Id: 2, Type: "messages", Attributes: Attributes{From: "EmberConf", Dttm: "2020.07.21, 16:15:03", Subject: "Registration Confirmation for EmberConf 2021", Body: "Thanks so much for registering to join us at EmberConf! You do NOT need to print this confirmation, but photo ID may be required for entry."}})
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	_ = json.NewEncoder(w).Encode(response)
+	log.Printf("app: json: %s %q: success\n", r.Method, r.URL.Path)
+}
+
+func GetOrders(w http.ResponseWriter, _ *http.Request) {
+	renderJSON(w, `{
+		"status":            "sent",
+		"customer":          "test001",
+		"order_id":          "100234",
+		"total_order_items": "199",
+	}`, http.StatusOK)
+}
+
+func notImplemented(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 }

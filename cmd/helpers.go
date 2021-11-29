@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package cmd
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"github.com/mdhender/fhcms/internal/cluster"
 	"log"
@@ -87,6 +89,15 @@ func lifeSupportNeeded(species *cluster.Species, planet *cluster.Planet) int {
 	}
 
 	return lsn
+}
+
+func mkkey(salt, secret string) string {
+	h, h2 := sha1.New(), sha1.New()
+	_, _ = h.Write([]byte(salt))
+	_, _ = h.Write([]byte(secret))
+	_, _ = h2.Write(h.Sum(nil))
+	_, _ = h2.Write([]byte(salt))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func sameOrbit(a, b *cluster.Coords) bool {
