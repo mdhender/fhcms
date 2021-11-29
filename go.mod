@@ -4,7 +4,9 @@ go 1.16
 
 require (
 	github.com/go-chi/chi/v5 v5.0.5
+	github.com/go-chi/cors v1.2.0
 	github.com/go-chi/jwtauth/v5 v5.0.2
+	github.com/go-chi/oauth v0.0.0-20210913085627-d937e221b3ef
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterbourgon/ff/v3 v3.1.0
