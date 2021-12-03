@@ -25,6 +25,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/mdhender/fhcms/internal/api"
 	"github.com/mdhender/fhcms/internal/app"
 	"github.com/spf13/cobra"
@@ -89,7 +90,7 @@ var serveCmd = &cobra.Command{
 		}))
 
 		// auth/auth routes
-		tokenTimeToLive := 14 * 24 * 60 * 60 * time.Second
+		tokenTimeToLive := 60 * time.Second // 14 * 24 * 60 * 60 * time.Second
 		r.Post("/auth/jwt", func(w http.ResponseWriter, r *http.Request) {
 			var input struct {
 				Username string `json:"username,omitempty"`
@@ -150,7 +151,8 @@ var serveCmd = &cobra.Command{
 		// protected routes
 		r.Route("/api", func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth)) // extract, verify, validate JWT
-			r.Use(jwtauth.Authenticator)       // handle valid and invalid JWT
+			//r.Use(jwtauth.Authenticator)       // handle valid and invalid JWT
+			r.Use(JWTAuthenticator)       // handle valid and invalid JWT
 			r.Mount("/", api.Router())         // mount the api sub-router
 		})
 
@@ -165,4 +167,47 @@ func init() {
 	_ = viper.BindPFlag("host", serveCmd.Flags().Lookup("host"))
 	serveCmd.Flags().StringVarP(&port, "port", "p", "8080", "port to run server on")
 	_ = viper.BindPFlag("port", serveCmd.Flags().Lookup("port"))
+}
+
+// JWTAuthenticator is a default authentication middleware to enforce access from the
+// Verifier middleware request context values. The Authenticator sends a 401 Unauthorized
+// response for any unverified tokens and passes the good ones through. It's just fine
+// until you decide to write something similar and customize your client response.
+func JWTAuthenticator(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if token, _, err := jwtauth.FromContext(r.Context()); err != nil || token == nil || jwt.Validate(token) != nil {
+			if contentType := r.Header.Get("Content-type"); contentType == "application/vnd.api+json" {
+				type errorObject struct {
+					Status string `json:"status"`
+					Code string `json:"code"`
+				}
+				var response struct {
+					Errors []errorObject `json:"errors"`
+				}
+				response.Errors = append(response.Errors, errorObject{
+					Status: fmt.Sprintf("%d", http.StatusUnauthorized),
+					Code:   http.StatusText(http.StatusUnauthorized),
+				})
+				w.Header().Set("Content-Type", "application/vnd.api+json")
+				_ = json.NewEncoder(w).Encode(response)
+				return
+			} else if contentType := r.Header.Get("Content-type"); contentType == "application/json" {
+				response := struct {
+					Status string `json:"status"`
+					Code string `json:"code"`
+				}{
+					Status: fmt.Sprintf("%d", http.StatusUnauthorized),
+					Code: http.StatusText(http.StatusUnauthorized),
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(response)
+				return
+			}
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		// Token is authenticated, pass it through
+		next.ServeHTTP(w, r)
+	})
 }
