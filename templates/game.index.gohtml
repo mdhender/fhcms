@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <link rel="icon" href="/favicon.ico"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#000000"/>
+  <link rel="apple-touch-icon" href="/logo192.png"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <title>{{ .Site.Title }}</title>
+</head>
+<body>
+<h1>Far Horizons</h1>
+<nav>
+  <a href="/">Home</a>
+  <a href="/profile">Profile</a>
+  <a href="/about">About</a>
+  <button type="button" onclick="window.location.href='/logout';">Logout</button>
+</nav>
+<h2>Game {{ .Game.Name }}</h2>
+<h3>Species "NameGoesHere"</h3>
+<p>Information like name, description, government, notes</p>
+<h3>Turns</h3>
+<ul>
+  <li><a href=/game/{{ .Game.Id }}/turn/3>Turn 3</a></li>
+  <li><a href=/game/{{ .Game.Id }}/turn/2>Turn 2</a></li>
+  <li><a href=/game/{{ .Game.Id }}/turn/1>Turn 1</a></li>
+</ul>
+</body>
+</html>

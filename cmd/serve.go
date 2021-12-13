@@ -38,9 +38,6 @@ import (
 	"time"
 )
 
-var host string
-var port string
-
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Serve data for the game",
@@ -152,8 +149,8 @@ var serveCmd = &cobra.Command{
 		r.Route("/api", func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth)) // extract, verify, validate JWT
 			//r.Use(jwtauth.Authenticator)       // handle valid and invalid JWT
-			r.Use(JWTAuthenticator)       // handle valid and invalid JWT
-			r.Mount("/", api.Router())         // mount the api sub-router
+			r.Use(JWTAuthenticator)    // handle valid and invalid JWT
+			r.Mount("/", api.Router()) // mount the api sub-router
 		})
 
 		fmt.Printf("listening on %q using %s router\n", net.JoinHostPort(host, port), routerName)
@@ -179,7 +176,7 @@ func JWTAuthenticator(next http.Handler) http.Handler {
 			if contentType := r.Header.Get("Content-type"); contentType == "application/vnd.api+json" {
 				type errorObject struct {
 					Status string `json:"status"`
-					Code string `json:"code"`
+					Code   string `json:"code"`
 				}
 				var response struct {
 					Errors []errorObject `json:"errors"`
@@ -194,10 +191,10 @@ func JWTAuthenticator(next http.Handler) http.Handler {
 			} else if contentType := r.Header.Get("Content-type"); contentType == "application/json" {
 				response := struct {
 					Status string `json:"status"`
-					Code string `json:"code"`
+					Code   string `json:"code"`
 				}{
 					Status: fmt.Sprintf("%d", http.StatusUnauthorized),
-					Code: http.StatusText(http.StatusUnauthorized),
+					Code:   http.StatusText(http.StatusUnauthorized),
 				}
 				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(response)
