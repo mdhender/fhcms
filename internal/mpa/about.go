@@ -33,7 +33,8 @@ func (s *Server) aboutGetHandler(sf models.SiteFetcher, templates string) http.H
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 			return
 		}
-		t, err := template.ParseFiles(filepath.Join(templates, "about.index.gohtml"))
+
+		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "about.index.gohtml"))
 		if err != nil {
 			log.Printf("mpa: aboutGetHandler: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -46,7 +47,7 @@ func (s *Server) aboutGetHandler(sf models.SiteFetcher, templates string) http.H
 		payload.Site = sf.FetchSite()
 
 		b := &bytes.Buffer{}
-		if err := t.Execute(b, payload); err != nil {
+		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {
 			log.Printf("mpa: aboutGetHandler: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
