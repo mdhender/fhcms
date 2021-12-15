@@ -39,7 +39,7 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, temp
 		gameId := way.Param(r.Context(), "gameId")
 		log.Printf("mpa: gameGetIndex: u.id %q gameId %q\n", u.Id, gameId)
 
-		t, err := template.ParseFiles(filepath.Join(templates, "game.index.gohtml"))
+		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "game.index.gohtml"))
 		if err != nil {
 			log.Printf("mpa: gameGetIndex: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -54,7 +54,7 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, temp
 		payload.Game = gf.FetchGame(u.Id, gameId)
 
 		b := &bytes.Buffer{}
-		if err := t.Execute(b, payload); err != nil {
+		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {
 			log.Printf("mpa: gameGetIndex: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
@@ -75,7 +75,7 @@ func (s *Server) gamesGetIndex(sf models.SiteFetcher, glf models.GamesFetcher, t
 		u := s.currentUser(r)
 		log.Printf("mpa: gamesGetIndex: u.id %q\n", u.Id)
 
-		t, err := template.ParseFiles(filepath.Join(templates, "games.index.gohtml"))
+		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "games.index.gohtml"))
 		if err != nil {
 			log.Printf("mpa: gamesGetIndex: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -90,7 +90,7 @@ func (s *Server) gamesGetIndex(sf models.SiteFetcher, glf models.GamesFetcher, t
 		payload.Games = glf.FetchGames(u.Id)
 
 		b := &bytes.Buffer{}
-		if err := t.Execute(b, payload); err != nil {
+		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {
 			log.Printf("mpa: gamesGetIndex: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
