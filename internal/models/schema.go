@@ -59,6 +59,36 @@ type GamesFetcher interface {
 	FetchGames(uid string) Games
 }
 
+type Specie struct {
+	Id   string
+	Name string
+}
+
+type Species []Specie
+
+// Len implements the Sorter interface
+func (s Species) Len() int {
+	return len(s)
+}
+
+// Less implements the Sorter interface
+func (s Species) Less(i, j int) bool {
+	return s[i].Name < s[j].Name
+}
+
+// Swap implements the Sorter interface
+func (s Species) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+type SpecieFetcher interface {
+	FetchSpecie(gid, spid string) *Specie
+}
+
+type SpeciesFetcher interface {
+	FetchSpecies(gid string) Species
+}
+
 type User struct {
 	Id      string
 	Name    string

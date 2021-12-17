@@ -19,16 +19,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package domain
 
 import (
+	"encoding/binary"
+	"github.com/mdhender/fhcms/internal/dat32"
 	"github.com/mdhender/fhcms/internal/models"
 	"github.com/mdhender/fhcms/internal/repos/accounts"
 	"github.com/mdhender/fhcms/internal/repos/games"
+	"github.com/spf13/viper"
 	"log"
+	"path/filepath"
 	"sort"
 )
 
 type Store struct {
 	Accounts *accounts.AccountList
 	Games    *games.GameList
+	Species  *games.SpecieList
 }
 
 func New(opts ...func(*Store) error) (*Store, error) {
@@ -80,6 +85,42 @@ func (s *Store) FetchGames(uid string) models.Games {
 	sort.Sort(set)
 	log.Printf("domain: FetchGames %q returning %d games\n", uid, len(set))
 	return set
+}
+
+func (s *Store) FetchSpecie(uid, gid string) *models.Specie {
+	log.Printf("domain: FetchSpecie %q %q\n", uid, gid)
+	bigEndian := viper.GetBool("files.big_endian")
+	var bo binary.ByteOrder
+	if bigEndian {
+		bo = binary.BigEndian
+	} else {
+		bo = binary.LittleEndian
+	}
+
+	u, ok := s.Accounts.ById[uid]
+	if !ok || u == nil {
+		log.Printf("domain: FetchSpecie %q %q: no such user\n", uid, gid)
+		return &models.Specie{}
+	}
+	g, ok := s.Games.ById[gid]
+	if !ok || u == nil {
+		log.Printf("domain: FetchSpecie %q %q: no such game\n", uid, gid)
+		return &models.Specie{}
+	}
+	spid, ok := g.Players[uid]
+	if !ok || u == nil {
+		log.Printf("domain: FetchSpecie %q %q: no such player\n", uid, gid)
+		return &models.Specie{}
+	}
+	sp, err := dat32.ReadSpecies(filepath.Join(g.Files, "sp"+spid+".dat"), 0, bo)
+	if err != nil {
+		log.Printf("[domain] FetchSpecies %q %+v\n", spid, err)
+		return &models.Specie{}
+	}
+	return &models.Specie{
+		Id:   spid,
+		Name: sp.Name,
+	}
 }
 
 func (s *Store) FetchUser(uid string) *models.User {

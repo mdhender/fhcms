@@ -18,15 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package games
 
-type Game struct {
-	Id      string             `json:"id"`
-	Name    string             `json:"name,omitempty"`
-	Files   string             `json:"files,omitempty"`
-	Players map[string]string  `json:"players,omitempty"` // map of user id to species number
-	Species map[string]*Specie `json:"species,omitempty"` // map of species id to specie
+type Specie struct {
+	Id   string `json:"id"`
+	Name string `json:"name,omitempty"`
 }
 
-type GameList struct {
-	ById     map[string]*Game   // map of game id to game
-	ByPlayer map[string][]*Game // map of user id to slice of games
+type SpecieList struct {
+	ById   map[string]*Specie   // map of specie id to specie
+	ByGame map[string][]*Specie // map of game id to slice of specie
 }

@@ -29,7 +29,7 @@ import (
 )
 
 // fetch specific game for the current user
-func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, templates string) http.HandlerFunc {
+func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf models.SpecieFetcher, templates string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -47,11 +47,14 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, temp
 		}
 
 		var payload struct {
-			Site *models.Site
-			Game *models.Game
+			Site   *models.Site
+			Game   *models.Game
+			Specie *models.Specie
 		}
 		payload.Site = sf.FetchSite()
 		payload.Game = gf.FetchGame(u.Id, gameId)
+		log.Printf("mpa: gameGetIndex: u.id %q gameId %q\n", u.Id, gameId)
+		payload.Specie = spf.FetchSpecie(u.Id, gameId)
 
 		b := &bytes.Buffer{}
 		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {

@@ -1,11 +1,11 @@
 {{define "content"}}
-<h2>Game {{ .Game.Name }}</h2>
-<h3>Species "NameGoesHere"</h3>
-<p>Information like name, description, government, notes</p>
-<h3>Turns</h3>
-<ul>
-  <li><a href=/game/{{ .Game.Id }}/turn/3>Turn 3</a></li>
-  <li><a href=/game/{{ .Game.Id }}/turn/2>Turn 2</a></li>
-  <li><a href=/game/{{ .Game.Id }}/turn/1>Turn 1</a></li>
-</ul>
+  <h2>Game {{.Game.Name}}</h2>
+  <h3>Species "{{.Specie.Name}}" - {{.Specie.Id}}</h3>
+  <p>Information like name, description, government, notes</p>
+  <h3>Turns</h3>
+  <ul>
+    <li><a href=/game/{{.Game.Id}}/turn/3>Turn 3</a></li>
+    <li><a href=/game/{{.Game.Id}}/turn/2>Turn 2</a></li>
+    <li><a href=/game/{{.Game.Id}}/turn/1>Turn 1</a></li>
+  </ul>
 {{end}}

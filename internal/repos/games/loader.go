@@ -67,7 +67,7 @@ func Load(filename string) (*GameList, error) {
 	}
 	for _, game := range g.ById {
 		for player, species := range game.Players {
-			log.Printf("domain: games.Load: %q player %q: species %d\n", filename, player, species)
+			log.Printf("domain: games.Load: %q player %q: species %q\n", filename, player, species)
 		}
 	}
 	for _, games := range g.ByPlayer {
