@@ -1,10 +1,19 @@
 {{define "content"}}
   <h2>Welcome</h2>
-  <p>Click on <a href="/games">Games</a> on the menu to view the list of current games.</p>
+  <p>Please click <a href="/games">Games</a> in the menu to view your current games.</p>
+
+  <h2>Status</h2>
+  <p>
+    This is a replacement for the web site at https://app.farhorizons.dev.
+  </p>
 
   <h2>To do</h2>
   <p>This is my list of things to fix, improve, or break.</p>
   <ul>
     <li>Profile should probably be renamed Account.</li>
+    <li>Understand User vs Account vs Player.</li>
+    <li>Create loaders for all the 32-bit .dat files.</li>
+    <li>Decide if User should be in the route or in the Bearer Token.</li>
+    <li>Remove all of the hard coded paths.</li>
   </ul>
 {{end}}

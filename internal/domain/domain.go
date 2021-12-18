@@ -50,7 +50,7 @@ func New(opts ...func(*Store) error) (*Store, error) {
 }
 
 func (s *Store) FetchGame(uid, gid string) *models.Game {
-	log.Printf("domain: FetchGame %q %q\n", uid, gid)
+	log.Printf("[domain] FetchGame %q %q\n", uid, gid)
 	if s.Games == nil {
 		return &models.Game{}
 	}
@@ -61,6 +61,7 @@ func (s *Store) FetchGame(uid, gid string) *models.Game {
 				Name:        game.Name,
 				Files:       game.Files,
 				PlayerCount: len(game.Players),
+				CurrentTurn: game.Turns.Current,
 			}
 		}
 	}
@@ -68,7 +69,7 @@ func (s *Store) FetchGame(uid, gid string) *models.Game {
 }
 
 func (s *Store) FetchGames(uid string) models.Games {
-	log.Printf("domain: FetchGames %q\n", uid)
+	log.Printf("[domain] FetchGames %q\n", uid)
 	var set models.Games
 	if s.Games == nil {
 		return set
@@ -99,12 +100,12 @@ func (s *Store) FetchGames(uid string) models.Games {
 		set = append(set, mg)
 	}
 	sort.Sort(set)
-	log.Printf("domain: FetchGames %q returning %d games\n", uid, len(set))
+	log.Printf("[domain] FetchGames %q returning %d games\n", uid, len(set))
 	return set
 }
 
-func (s *Store) FetchSpecie(uid, gid string) *models.Specie {
-	log.Printf("domain: FetchSpecie %q %q\n", uid, gid)
+func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
+	log.Printf("[domain] FetchSpecie %q %q\n", uid, gid)
 	bigEndian := viper.GetBool("files.big_endian")
 	var bo binary.ByteOrder
 	if bigEndian {
@@ -115,26 +116,38 @@ func (s *Store) FetchSpecie(uid, gid string) *models.Specie {
 
 	u, ok := s.Accounts.ById[uid]
 	if !ok || u == nil {
-		log.Printf("domain: FetchSpecie %q %q: no such user\n", uid, gid)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such user\n", uid, gid, spNo, turnNo)
 		return &models.Specie{}
 	}
 	g, ok := s.Games.ById[gid]
 	if !ok || u == nil {
-		log.Printf("domain: FetchSpecie %q %q: no such game\n", uid, gid)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such game\n", uid, gid, spNo, turnNo)
+		return &models.Specie{}
+	}
+	var gtf *games.GameTurnFile
+	for _, file := range g.Turns.Files {
+		if file.Turn == turnNo {
+			gtf = file
+			break
+		}
+	}
+	if gtf == nil {
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such turn\n", uid, gid, spNo, turnNo)
 		return &models.Specie{}
 	}
 	spid, ok := g.Players[uid]
 	if !ok || u == nil {
-		log.Printf("domain: FetchSpecie %q %q: no such player\n", uid, gid)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such player\n", uid, gid, spNo, turnNo)
 		return &models.Specie{}
 	}
-	sp, err := dat32.ReadSpecies(filepath.Join(g.Files, "sp"+spid+".dat"), 0, bo)
+	sp, err := dat32.ReadSpecies(filepath.Join(gtf.Files, "sp"+spid+".dat"), 0, bo)
 	if err != nil {
-		log.Printf("[domain] FetchSpecies %q %+v\n", spid, err)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: %q %+v\n", uid, gid, spNo, turnNo, spid, err)
 		return &models.Specie{}
 	}
 	return &models.Specie{
 		Id:   spid,
+		No:   spNo,
 		Name: sp.Name,
 	}
 }

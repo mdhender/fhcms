@@ -19,23 +19,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package mpa
 
 import (
+	"github.com/mdhender/fhcms/internal/models"
 	"net/http"
 )
 
 func (s *Server) routes(reports, uploads string) {
-	s.router.HandleFunc("GET", "/", s.authOnly(s.homeGetIndex(s.site, s.templates)))
+	var sf models.SiteFetcher = s.site
+	var glf models.GamesFetcher = s.ds
+	var gf models.GameFetcher = s.ds
+	var spf models.SpecieFetcher = s.ds
+
+	s.router.HandleFunc("GET", "/", s.authOnly(s.homeGetIndex(sf, s.templates)))
 	s.router.HandleFunc("GET", "/manifest.json", s.manifestJsonV3)
-	s.router.HandleFunc("GET", "/about", s.authOnly(s.aboutGetHandler(s.site, s.templates)))
+	s.router.HandleFunc("GET", "/about", s.authOnly(s.aboutGetHandler(sf, s.templates)))
 	s.router.HandleFunc("GET", "/favicon.ico", http.NotFound)
-	s.router.HandleFunc("GET", "/game/:gameId", s.authOnly(s.gameGetIndex(s.site, s.ds, s.ds, s.templates)))
-	s.router.HandleFunc("GET", "/game/:gameId/specie/:spNo/turn/:turnId", s.notImplemented)
-	s.router.HandleFunc("GET", "/game/:gameId/specie/:spNo/turn/:turnId/orders", s.notImplemented)
-	s.router.HandleFunc("GET", "/game/:gameId/specie/:spNo/turn/:turnId/reports", s.notImplemented)
-	s.router.HandleFunc("GET", "/games", s.authOnly(s.gamesGetIndex(s.site, s.ds, s.templates)))
+	s.router.HandleFunc("GET", "/games", s.authOnly(s.gamesGetIndex(sf, glf, s.templates)))
+	s.router.HandleFunc("GET", "/games/:gameId", s.authOnly(s.gameGetIndex(sf, gf, spf, s.templates)))
+	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo", s.authOnly(s.gameGetIndex(sf, gf, spf, s.templates)))
+	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnId", s.notImplemented)
+	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnId/orders", s.notImplemented)
+	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnId/reports", s.notImplemented)
 	s.router.HandleFunc("GET", "/logo192.png", http.NotFound)
 	s.router.HandleFunc("GET", "/logout", s.handleLogout)
 	s.router.HandleFunc("GET", "/manifest.json", http.NotFound)
-	s.router.HandleFunc("GET", "/profile", s.authOnly(s.profileGetHandler(s.site, s.ds, s.templates)))
+	s.router.HandleFunc("GET", "/profile", s.authOnly(s.profileGetHandler(sf, s.ds, s.templates)))
 
 	s.router.HandleFunc("POST", "/login", s.handlePostLogin)
 	s.router.HandleFunc("POST", "/logout", s.handleLogout)

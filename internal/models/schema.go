@@ -33,6 +33,7 @@ type Game struct {
 		No   string
 		Name string
 	}
+	CurrentTurn  int
 	Files        string
 	PlayerCount  int
 	SpeciesCount int
@@ -93,6 +94,7 @@ func (g GameTurnFiles) Swap(i, j int) {
 
 type Specie struct {
 	Id   string
+	No   string
 	Name string
 }
 
@@ -114,7 +116,7 @@ func (s Species) Swap(i, j int) {
 }
 
 type SpecieFetcher interface {
-	FetchSpecie(gid, spid string) *Specie
+	FetchSpecie(uid, gid, spNo string, turnNo int) *Specie
 }
 
 type SpeciesFetcher interface {

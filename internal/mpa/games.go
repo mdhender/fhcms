@@ -26,6 +26,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 )
 
 // fetch specific game for the current user
@@ -37,7 +38,22 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf 
 		}
 		u := s.currentUser(r)
 		gameId := way.Param(r.Context(), "gameId")
-		log.Printf("mpa: gameGetIndex: u.id %q gameId %q\n", u.Id, gameId)
+		spNo := way.Param(r.Context(), "spNo")
+		var turnNo int
+		if qParm := way.Param(r.Context(), "turnNo"); qParm != "" {
+			if val, err := strconv.Atoi(qParm); err != nil {
+				log.Printf("mpa: gameGetIndex: u.id %q gameId %q spNo %q turnNo %q: %+v\n", u.Id, gameId, spNo, way.Param(r.Context(), "turnNo"), err)
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			} else {
+				turnNo = val
+			}
+		}
+		log.Printf("mpa: gameGetIndex: u.id %q gameId %q spNo %q turnNo %d\n", u.Id, gameId, spNo, turnNo)
+		if turnNo < 0 {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
 
 		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "fragments", "footer.gohtml"), filepath.Join(templates, "game.index.gohtml"))
 		if err != nil {
@@ -53,8 +69,11 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf 
 		}
 		payload.Site = sf.FetchSite()
 		payload.Game = gf.FetchGame(u.Id, gameId)
-		log.Printf("mpa: gameGetIndex: u.id %q gameId %q\n", u.Id, gameId)
-		payload.Specie = spf.FetchSpecie(u.Id, gameId)
+		if turnNo == 0 {
+			turnNo = payload.Game.CurrentTurn
+			log.Printf("mpa: gameGetIndex: u.id %q gameId %q spNo %q turnNo 0 => %d\n", u.Id, gameId, spNo, turnNo)
+		}
+		payload.Specie = spf.FetchSpecie(u.Id, gameId, spNo, turnNo)
 
 		b := &bytes.Buffer{}
 		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {

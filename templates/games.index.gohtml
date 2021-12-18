@@ -2,11 +2,31 @@
   <h2>Games</h2>
   {{if .Games}}
     <h3>Active Games</h3>
-    <table>
-      <thead><tr><td> Game </td><td> Species </td><td> Current Turn </td><td> # Players </td></tr></thead>
+    <table border="1">
+      <thead>
+      <tr>
+        <td>Game</td>
+        <td>Species</td>
+        <td>Current Turn</td>
+        <td># Players</td>
+        <td>Notes</td>
+      </tr>
+      </thead>
       <tbody>
       {{range .Games}}
-        <tr><td><a href="/game/{{.Id}}/specie/{{.Specie.No}}/turn/{{.Turns.Current}}">{{.Name}}</a></td><td>{{.Specie.Name}}</td><td align="right">{{.Turns.Current}}</td><td align="right">{{ .PlayerCount }}</td></tr>
+        <tr>
+          <td>
+            <a href="/games/{{.Id}}/specie/{{.Specie.No}}">{{.Name}}</a>
+          </td>
+          <td>{{.Specie.Name}}</td>
+          <td align="right">
+            <a href="/game/{{.Id}}/specie/{{.Specie.No}}/turn/{{.Turns.Current}}">{{.Turns.Current}}</a>
+          </td>
+          <td align="right">{{ .PlayerCount }}</td>
+          <td>
+            Orders for Turn 32 are due Monday, December 20th by 7PM MST.
+          </td>
+        </tr>
       {{end}}
       </tbody>
     </table>
