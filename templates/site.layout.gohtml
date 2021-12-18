@@ -140,8 +140,18 @@
 </head>
 <body>
 <h1>Far Horizons</h1>
-{{template "navbar" .}}
-{{template "content" .}}
+{{block "navbar" .}}
+  <button type="button" onclick="window.location.href='/';">Home</button>
+  <button type="button" onclick=" window.open('https://farhorizons.dev','_blank')">Rule Book</button>
+{{end}}
+<hr/>
+{{block "content" .}}
+  <p>This page seems to not be implemented correctly.</p>
+{{end}}
+<hr/>
+{{block "footer" .}}
+  <footer>Far Horizons</footer>
+{{end}}
 </body>
 </html>
 {{end}}

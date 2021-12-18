@@ -34,7 +34,7 @@ func (s *Server) profileGetHandler(sf models.SiteFetcher, uf models.UserFetcher,
 			return
 		}
 
-		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "profile.index.gohtml"))
+		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "fragments", "footer.gohtml"), filepath.Join(templates, "profile.index.gohtml"))
 		if err != nil {
 			log.Printf("mpa: profileGetHandler: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

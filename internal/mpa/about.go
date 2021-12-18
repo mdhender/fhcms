@@ -34,7 +34,7 @@ func (s *Server) aboutGetHandler(sf models.SiteFetcher, templates string) http.H
 			return
 		}
 
-		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "about.index.gohtml"))
+		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "fragments", "footer.gohtml"), filepath.Join(templates, "about.index.gohtml"))
 		if err != nil {
 			log.Printf("mpa: aboutGetHandler: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

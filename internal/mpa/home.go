@@ -36,7 +36,7 @@ func (s *Server) homeGetIndex(sf models.SiteFetcher, templates string) http.Hand
 		u := s.currentUser(r)
 		log.Printf("mpa: homeGetIndex: u.id %q\n", u.Id)
 
-		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "home.index.gohtml"))
+		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "fragments", "footer.gohtml"), filepath.Join(templates, "home.index.gohtml"))
 		if err != nil {
 			log.Printf("mpa: homeGetIndex: %+v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
