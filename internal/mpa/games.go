@@ -73,6 +73,8 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf 
 			turnNo = payload.Game.CurrentTurn
 			log.Printf("mpa: gameGetIndex: u.id %q gameId %q spNo %q turnNo 0 => %d\n", u.Id, gameId, spNo, turnNo)
 		}
+		payload.Game.TurnNo = turnNo
+		payload.Game.Display.Deadline = payload.Game.TurnNo == payload.Game.CurrentTurn
 		payload.Specie = spf.FetchSpecie(u.Id, gameId, spNo, turnNo)
 
 		b := &bytes.Buffer{}

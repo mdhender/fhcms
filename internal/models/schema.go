@@ -34,10 +34,14 @@ type Game struct {
 		Name string
 	}
 	CurrentTurn  int
+	TurnNo       int
 	Files        string
 	PlayerCount  int
 	SpeciesCount int
 	Turns        GameTurns
+	Display      struct {
+		Deadline bool
+	}
 }
 
 type Games []*Game

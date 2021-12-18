@@ -113,6 +113,13 @@ func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
 		log.Printf("[domain] FetchSpecie %q %q %q %d: no such game\n", uid, gid, spNo, turnNo)
 		return &models.Specie{}
 	}
+	if spid, ok := g.Players[uid]; !ok || u == nil {
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such player\n", uid, gid, spNo, turnNo)
+		return &models.Specie{}
+	} else if spNo != spid {
+		log.Printf("[domain] FetchSpecie %q %q %q %d: player spoofing species!\n", uid, gid, spNo, turnNo)
+		return &models.Specie{}
+	}
 	var gtf *games.GameTurnFile
 	for _, file := range g.Turns.Files {
 		if file.Turn == turnNo {
@@ -124,18 +131,13 @@ func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
 		log.Printf("[domain] FetchSpecie %q %q %q %d: no such turn\n", uid, gid, spNo, turnNo)
 		return &models.Specie{}
 	}
-	spid, ok := g.Players[uid]
-	if !ok || u == nil {
-		log.Printf("[domain] FetchSpecie %q %q %q %d: no such player\n", uid, gid, spNo, turnNo)
-		return &models.Specie{}
-	}
 	sp, err := s.loadSpecie(gtf.Files, spNo)
 	if err != nil {
-		log.Printf("[domain] FetchSpecie %q %q %q %d: %q %+v\n", uid, gid, spNo, turnNo, spid, err)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: %+v\n", uid, gid, spNo, turnNo, err)
 		return &models.Specie{}
 	}
 	o := &models.Specie{
-		Id:   spid,
+		Id:   spNo,
 		No:   spNo,
 		Name: sp.Name,
 	}
