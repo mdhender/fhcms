@@ -27,8 +27,16 @@ import (
 )
 
 type Specie struct {
-	No   string
-	Name string
+	No         string
+	Name       string
+	Technology [6]struct {
+		Name             string
+		Code             string
+		InitialLevel     int
+		CurrentLevel     int
+		KnowledgeLevel   int
+		ExperiencePoints int
+	}
 }
 
 func (s *Store) loadSpecie(files, spNo string) (*Specie, error) {
@@ -44,8 +52,35 @@ func (s *Store) loadSpecie(files, spNo string) (*Specie, error) {
 		log.Printf("[domain] loadSpecie %q %q %+v\n", files, spNo, err)
 		return &Specie{}, err
 	}
-	return &Specie{
+	o := &Specie{
 		No:   spNo,
 		Name: sp.Name,
-	}, nil
+	}
+	for i := 0; i < 6; i++ {
+		switch i {
+		case 0:
+			o.Technology[i].Code = "MI"
+			o.Technology[i].Name = "Mining"
+		case 1:
+			o.Technology[i].Code = "MA"
+			o.Technology[i].Name = "Manufacturing"
+		case 2:
+			o.Technology[i].Code = "ML"
+			o.Technology[i].Name = "Military"
+		case 3:
+			o.Technology[i].Code = "GV"
+			o.Technology[i].Name = "Gravitics"
+		case 4:
+			o.Technology[i].Code = "LS"
+			o.Technology[i].Name = "Life Support"
+		case 5:
+			o.Technology[i].Code = "BI"
+			o.Technology[i].Name = "Biology"
+		}
+		o.Technology[i].CurrentLevel = sp.TechLevel[i]
+		o.Technology[i].InitialLevel = sp.InitTechLevel[i]
+		o.Technology[i].KnowledgeLevel = sp.TechKnowledge[i]
+		o.Technology[i].ExperiencePoints = sp.TechEps[i]
+	}
+	return o, nil
 }

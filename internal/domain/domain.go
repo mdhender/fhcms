@@ -19,14 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package domain
 
 import (
-	"encoding/binary"
-	"github.com/mdhender/fhcms/internal/dat32"
 	"github.com/mdhender/fhcms/internal/models"
 	"github.com/mdhender/fhcms/internal/repos/accounts"
 	"github.com/mdhender/fhcms/internal/repos/games"
-	"github.com/spf13/viper"
 	"log"
-	"path/filepath"
 	"sort"
 )
 
@@ -105,14 +101,7 @@ func (s *Store) FetchGames(uid string) models.Games {
 }
 
 func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
-	log.Printf("[domain] FetchSpecie %q %q\n", uid, gid)
-	bigEndian := viper.GetBool("files.big_endian")
-	var bo binary.ByteOrder
-	if bigEndian {
-		bo = binary.BigEndian
-	} else {
-		bo = binary.LittleEndian
-	}
+	log.Printf("[domain] FetchSpecie %q %q %q %d\n", uid, gid, spNo, turnNo)
 
 	u, ok := s.Accounts.ById[uid]
 	if !ok || u == nil {
@@ -140,16 +129,25 @@ func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
 		log.Printf("[domain] FetchSpecie %q %q %q %d: no such player\n", uid, gid, spNo, turnNo)
 		return &models.Specie{}
 	}
-	sp, err := dat32.ReadSpecies(filepath.Join(gtf.Files, "sp"+spid+".dat"), 0, bo)
+	sp, err := s.loadSpecie(gtf.Files, spNo)
 	if err != nil {
 		log.Printf("[domain] FetchSpecie %q %q %q %d: %q %+v\n", uid, gid, spNo, turnNo, spid, err)
 		return &models.Specie{}
 	}
-	return &models.Specie{
+	o := &models.Specie{
 		Id:   spid,
 		No:   spNo,
 		Name: sp.Name,
 	}
+	for i := 0; i < 6; i++ {
+		o.Technology[i].Code = sp.Technology[i].Code
+		o.Technology[i].Name = sp.Technology[i].Name
+		o.Technology[i].CurrentLevel = sp.Technology[i].CurrentLevel
+		o.Technology[i].InitialLevel = sp.Technology[i].InitialLevel
+		o.Technology[i].KnowledgeLevel = sp.Technology[i].KnowledgeLevel
+		o.Technology[i].ExperiencePoints = sp.Technology[i].ExperiencePoints
+	}
+	return o
 }
 
 func (s *Store) FetchUser(uid string) *models.User {

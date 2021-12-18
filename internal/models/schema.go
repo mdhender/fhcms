@@ -93,9 +93,10 @@ func (g GameTurnFiles) Swap(i, j int) {
 }
 
 type Specie struct {
-	Id   string
-	No   string
-	Name string
+	Id         string
+	No         string
+	Name       string
+	Technology [6]Technology
 }
 
 type Species []Specie
@@ -123,6 +124,14 @@ type SpeciesFetcher interface {
 	FetchSpecies(gid string) Species
 }
 
+type Technology struct {
+	Name             string
+	Code             string
+	InitialLevel     int
+	CurrentLevel     int
+	KnowledgeLevel   int
+	ExperiencePoints int
+}
 type User struct {
 	Id      string
 	Name    string

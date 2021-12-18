@@ -35,7 +35,7 @@ func Logger(next http.Handler) http.Handler {
 		start, l := time.Now(), &logger{ResponseWriter: w, status: http.StatusOK}
 		defer func() {
 			elapsed := time.Since(start)
-			_, _ = fmt.Fprintf(os.Stdout, "%v %s %s \"%s %s %s\" %d \"%s\" %v\n",
+			_, _ = fmt.Fprintf(os.Stderr, "%v %s %s \"%s %s %s\" %d \"%s\" %v\n",
 				time.Now().UTC().Format("2006/01/02 15:04:05"),
 				r.Host,
 				r.RemoteAddr,

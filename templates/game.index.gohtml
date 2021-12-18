@@ -11,6 +11,19 @@
   <h4>Technology</h4>
   <h4>Statistics</h4>
   <h4>Species</h4>
+  <table>
+    <tbody>
+    {{range .Specie.Technology}}
+    <tr>
+      <td align="right">{{.Code}}:&nbsp;</td>
+      <td align="right">{{.CurrentLevel}}&nbsp;</td>
+      <td>/</td><td align="right">&nbsp;{{.KnowledgeLevel}}</td>
+      <td align="right">{{with .ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+
   <h4>Colonies</h4>
   <h4>Starbases</h4>
   <h4>Warships</h4>
