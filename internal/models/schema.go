@@ -107,6 +107,7 @@ type Specie struct {
 		Name string
 	}
 	Technology [6]Technology
+	Statistics []*SpecieStatistic
 }
 
 type Species []Specie
@@ -132,6 +133,12 @@ type SpecieFetcher interface {
 
 type SpeciesFetcher interface {
 	FetchSpecies(gid string) Species
+}
+
+type SpecieStatistic struct {
+	Label string
+	Value int
+	Units string
 }
 
 type Technology struct {

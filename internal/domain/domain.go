@@ -151,6 +151,13 @@ func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
 		o.Technology[i].KnowledgeLevel = sp.Technology[i].KnowledgeLevel
 		o.Technology[i].ExperiencePoints = sp.Technology[i].ExperiencePoints
 	}
+	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Production", Units: "EU"})
+	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Banked", Units: "EU"})
+	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Colonies"})
+	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Ships"})
+	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Shipyards"})
+	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Offensive Power"})
+	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Defensive Power"})
 	return o
 }
 

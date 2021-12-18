@@ -26,6 +26,17 @@
     </tbody>
   </table>
   <h4>Statistics</h4>
+  <table>
+    <tbody>
+    {{range .Specie.Statistics}}
+      <tr>
+        <td align="right">{{.Label}}:&nbsp;</td>
+        <td align="right">{{.Value}}&nbsp;</td>
+        <td>&nbsp;{{.Units}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
   <h4>Species</h4>
   <h4>Colonies</h4>
   <h4>Starbases</h4>
