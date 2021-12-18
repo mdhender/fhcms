@@ -36,7 +36,7 @@ func (s *Server) routes(reports, uploads string) {
 	s.router.HandleFunc("GET", "/games", s.authOnly(s.gamesGetIndex(sf, glf, s.templates)))
 	s.router.HandleFunc("GET", "/games/:gameId", s.authOnly(s.gameGetIndex(sf, gf, spf, s.templates)))
 	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo", s.authOnly(s.gameGetIndex(sf, gf, spf, s.templates)))
-	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnNo", s.authOnly(s.gameGetIndex(sf, gf, spf, s.templates)))
+	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnNo", s.authOnly(s.gamesSpecieTurnGetIndex(sf, gf, spf, s.templates)))
 	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnNo/orders", s.notImplemented)
 	s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnNo/reports", s.notImplemented)
 	s.router.HandleFunc("GET", "/logo192.png", http.NotFound)

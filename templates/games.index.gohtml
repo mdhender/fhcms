@@ -18,9 +18,9 @@
           <td>
             <a href="/games/{{.Id}}/specie/{{.Specie.No}}">{{.Name}}</a>
           </td>
-          <td>{{.Specie.Name}}</td>
+          <td>{{.Specie.Government.Name}}</td>
           <td align="right">
-            <a href="/game/{{.Id}}/specie/{{.Specie.No}}/turn/{{.Turns.Current}}">{{.Turns.Current}}</a>
+            <a href="/games/{{.Id}}/specie/{{.Specie.No}}/turn/{{.Turns.Current}}">{{.Turns.Current}}</a>
           </td>
           <td align="right">{{ .PlayerCount }}</td>
           <td>

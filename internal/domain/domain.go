@@ -78,7 +78,7 @@ func (s *Store) FetchGames(uid string) models.Games {
 			PlayerCount: len(game.Players),
 		}
 		mg.Specie.No = "00"
-		mg.Specie.Name = "(missing name)"
+		mg.Specie.Government.Name = "(missing name)"
 		if spNo, ok := game.Players[uid]; ok {
 			for _, file := range game.Turns.Files {
 				if file.Turn == game.Turns.Current {
@@ -87,6 +87,7 @@ func (s *Store) FetchGames(uid string) models.Games {
 					} else {
 						mg.Specie.No = spNo
 						mg.Specie.Name = sp.Name
+						mg.Specie.Government.Name = sp.Government.Name
 					}
 					break
 				}
@@ -141,6 +142,7 @@ func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
 		No:   spNo,
 		Name: sp.Name,
 	}
+	o.Government.Name = sp.Government.Name
 	for i := 0; i < 6; i++ {
 		o.Technology[i].Code = sp.Technology[i].Code
 		o.Technology[i].Name = sp.Technology[i].Name

@@ -6,36 +6,16 @@
       MST is 7 hours behind London.
     </p>
   {{end}}
-  <h3>SP{{.Specie.Id}} "{{.Specie.Name}}"</h3>
+  <h3>SP{{.Specie.Id}} {{.Specie.Government.Name}}</h3>
   <p>
     Information like name, description, government, notes.
   </p>
-  <h4>Technology</h4>
-  <h4>Statistics</h4>
-  <h4>Species</h4>
-  <table>
-    <tbody>
-    {{range .Specie.Technology}}
-      <tr>
-        <td align="right">{{.Name}}:&nbsp;</td>
-        <td align="right">{{.Code}}:&nbsp;</td>
-        <td align="right">{{.CurrentLevel}}&nbsp;</td>
-        <td>/</td>
-        <td align="right">&nbsp;{{.KnowledgeLevel}}</td>
-        <td align="right">{{with .ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td>
-      </tr>
-    {{end}}
-    </tbody>
-  </table>
 
-  <h4>Colonies</h4>
-  <h4>Starbases</h4>
-  <h4>Warships</h4>
-  <h4>Transports</h4>
   <h3>Turns</h3>
   <ul>
-    <li><a href=/game/{{.Game.Id}}/turn/3>Turn 3</a></li>
-    <li><a href=/game/{{.Game.Id}}/turn/2>Turn 2</a></li>
-    <li><a href=/game/{{.Game.Id}}/turn/1>Turn 1</a></li>
+    <li><a href=/games/{{.Game.Id}}/specie/{{.Specie.Id}}/turn/32>Turn 32</a></li>
+    <li><a href=/games/{{.Game.Id}}/specie/{{.Specie.Id}}/turn/31>Turn 31</a></li>
+    <li><a href=/games/{{.Game.Id}}/specie/{{.Specie.Id}}/turn/30>Turn 30</a></li>
+    <li><a href=/games/{{.Game.Id}}/specie/{{.Specie.Id}}/turn/29>Turn 29</a></li>
   </ul>
 {{end}}

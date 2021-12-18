@@ -30,8 +30,11 @@ type Game struct {
 	Id     string
 	Name   string
 	Specie struct {
-		No   string
-		Name string
+		No         string
+		Name       string
+		Government struct {
+			Name string
+		}
 	}
 	CurrentTurn  int
 	TurnNo       int
@@ -100,6 +103,9 @@ type Specie struct {
 	Id         string
 	No         string
 	Name       string
+	Government struct {
+		Name string
+	}
 	Technology [6]Technology
 }
 
@@ -112,7 +118,7 @@ func (s Species) Len() int {
 
 // Less implements the Sorter interface
 func (s Species) Less(i, j int) bool {
-	return s[i].Name < s[j].Name
+	return s[i].Government.Name < s[j].Government.Name
 }
 
 // Swap implements the Sorter interface

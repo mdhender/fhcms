@@ -29,6 +29,9 @@ import (
 type Specie struct {
 	No         string
 	Name       string
+	Government struct {
+		Name string
+	}
 	Technology [6]struct {
 		Name             string
 		Code             string
@@ -56,6 +59,7 @@ func (s *Store) loadSpecie(files, spNo string) (*Specie, error) {
 		No:   spNo,
 		Name: sp.Name,
 	}
+	o.Government.Name = sp.GovtName
 	for i := 0; i < 6; i++ {
 		switch i {
 		case 0:

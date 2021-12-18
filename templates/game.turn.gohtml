@@ -1,0 +1,34 @@
+{{define "content"}}
+  <h2>{{.Game.Name}} - Turn {{.Game.TurnNo}}</h2>
+  {{if .Game.Display.Deadline}}
+    <p>
+      Orders for Turn {{.Game.CurrentTurn}} are due Monday, December 20th by 7PM MST.
+      MST is 7 hours behind London.
+    </p>
+  {{end}}
+  <h3>SP{{.Specie.Id}} {{.Specie.Government.Name}}</h3>
+  <p>
+    Information like name, description, government, notes.
+  </p>
+  <h4>Technology</h4>
+  <table>
+    <tbody>
+    {{range .Specie.Technology}}
+      <tr>
+        <td align="right">{{.Name}}:&nbsp;</td>
+        <td align="right">{{.Code}}:&nbsp;</td>
+        <td align="right">{{.CurrentLevel}}&nbsp;</td>
+        <td>/</td>
+        <td align="right">&nbsp;{{.KnowledgeLevel}}</td>
+        <td align="right">{{with .ExperiencePoints}}&nbsp;({{.}} xp){{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  <h4>Statistics</h4>
+  <h4>Species</h4>
+  <h4>Colonies</h4>
+  <h4>Starbases</h4>
+  <h4>Warships</h4>
+  <h4>Transports</h4>
+{{end}}

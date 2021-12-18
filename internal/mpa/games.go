@@ -124,3 +124,63 @@ func (s *Server) gamesGetIndex(sf models.SiteFetcher, glf models.GamesFetcher, t
 		_, _ = w.Write(b.Bytes())
 	}
 }
+
+// fetch specific game turn for the current user
+func (s *Server) gamesSpecieTurnGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf models.SpecieFetcher, templates string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		u := s.currentUser(r)
+		gameId := way.Param(r.Context(), "gameId")
+		spNo := way.Param(r.Context(), "spNo")
+		var turnNo int
+		if qParm := way.Param(r.Context(), "turnNo"); qParm != "" {
+			if val, err := strconv.Atoi(qParm); err != nil {
+				log.Printf("mpa: gamesSpecieTurnGetIndex: u.id %q gameId %q spNo %q turnNo %q: %+v\n", u.Id, gameId, spNo, way.Param(r.Context(), "turnNo"), err)
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+				return
+			} else {
+				turnNo = val
+			}
+		}
+		log.Printf("mpa: gamesSpecieTurnGetIndex: u.id %q gameId %q spNo %q turnNo %d\n", u.Id, gameId, spNo, turnNo)
+		if turnNo < 0 {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "fragments", "footer.gohtml"), filepath.Join(templates, "game.turn.gohtml"))
+		if err != nil {
+			log.Printf("mpa: gamesSpecieTurnGetIndex: u.id %q gameId %q spNo %q turnNo %q: %+v\n", u.Id, gameId, spNo, way.Param(r.Context(), "turnNo"), err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var payload struct {
+			Site   *models.Site
+			Game   *models.Game
+			Specie *models.Specie
+		}
+		payload.Site = sf.FetchSite()
+		payload.Game = gf.FetchGame(u.Id, gameId)
+		if turnNo == 0 {
+			turnNo = payload.Game.CurrentTurn
+			log.Printf("mpa: gamesSpecieTurnGetIndex: u.id %q gameId %q spNo %q turnNo 0 => %d\n", u.Id, gameId, spNo, turnNo)
+		}
+		payload.Game.TurnNo = turnNo
+		payload.Game.Display.Deadline = payload.Game.TurnNo == payload.Game.CurrentTurn
+		payload.Specie = spf.FetchSpecie(u.Id, gameId, spNo, turnNo)
+
+		b := &bytes.Buffer{}
+		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {
+			log.Printf("mpa: gamesSpecieTurnGetIndex: u.id %q gameId %q spNo %q turnNo %d: %+v\n", u.Id, gameId, spNo, turnNo, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(b.Bytes())
+	}
+}
