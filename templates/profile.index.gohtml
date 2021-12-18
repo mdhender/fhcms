@@ -1,9 +1,9 @@
 {{define "content"}}
-<h2>Player Profile</h2>
-<table border="2">
-  <thead><tr><td> Name </td><td> Admin? </td><td> ID </td></tr></thead>
-  <tbody>
-  <tr><td> {{ .User.Name }} </td><td> {{ .User.IsAdmin }} </td><td> {{ .User.Id }}</td></tr>
-  </tbody>
-</table>
+  <h2>Player Profile</h2>
+  <table border="2">
+    <thead><tr><td> Name </td><td> Admin? </td><td> ID </td></tr></thead>
+    <tbody>
+    <tr><td> {{ .User.Name }} </td><td> {{ .User.IsAdmin }} </td><td> {{ .User.Id }}</td></tr>
+    </tbody>
+  </table>
 {{end}}

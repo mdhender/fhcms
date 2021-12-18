@@ -2,10 +2,10 @@
 <h2>List of Games</h2>
 {{ if .Games }}
   <table border="2">
-    <thead><tr><td> Game </td><td> # Players </td><td> # Species </td></tr></thead>
+    <thead><tr><td> Game </td><td> Current Turn </td><td> Species No </td><td> # Players </td></tr></thead>
     <tbody>
     {{ range .Games }}
-      <tr><td> <a href="/game/{{ .Id }}">{{ .Name }}</a> </td><td align="right"> {{ .PlayerCount }} </td><td align="right"> (todo) </td></tr>
+      <tr><td> <a href="/game/{{ .Id }}">{{ .Name }}</a> </td><td align="right"> {{ .Turns.Current }} </td><td align="right"> (todo) </td><td align="right"> {{ .PlayerCount }} </td></tr>
     {{ end }}
     </tbody>
   </table>

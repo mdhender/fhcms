@@ -23,7 +23,7 @@ import (
 )
 
 func (s *Server) routes(reports, uploads string) {
-	s.router.HandleFunc("GET", "/", s.authOnly(s.gamesGetIndex(s.site, s.ds, s.templates)))
+	s.router.HandleFunc("GET", "/", s.authOnly(s.homeGetIndex(s.site, s.templates)))
 	s.router.HandleFunc("GET", "/about", s.authOnly(s.aboutGetHandler(s.site, s.templates)))
 	s.router.HandleFunc("GET", "/favicon.ico", http.NotFound)
 	s.router.HandleFunc("GET", "/game/:gameId", s.authOnly(s.gameGetIndex(s.site, s.ds, s.ds, s.templates)))

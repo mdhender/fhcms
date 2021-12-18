@@ -32,6 +32,7 @@ type Game struct {
 	Files        string
 	PlayerCount  int
 	SpeciesCount int
+	Turns        GameTurns
 }
 
 type Games []*Game
@@ -57,6 +58,33 @@ type GameFetcher interface {
 
 type GamesFetcher interface {
 	FetchGames(uid string) Games
+}
+
+type GameTurns struct {
+	Current int `json:"current"`
+	Files   GameTurnFiles
+}
+
+type GameTurnFile struct {
+	Turn  int
+	Files string
+}
+
+type GameTurnFiles []*GameTurnFile
+
+// Len implements the Sorter interface
+func (g GameTurnFiles) Len() int {
+	return len(g)
+}
+
+// Less implements the Sorter interface
+func (g GameTurnFiles) Less(i, j int) bool {
+	return g[i].Turn < g[j].Turn
+}
+
+// Swap implements the Sorter interface
+func (g GameTurnFiles) Swap(i, j int) {
+	g[i], g[j] = g[j], g[i]
 }
 
 type Specie struct {
