@@ -1,17 +1,17 @@
 {{define "content"}}
   <h2>Games</h2>
-  {{ if .Games }}
+  {{if .Games}}
     <h3>Active Games</h3>
     <table>
-      <thead><tr><td> Game </td><td> Current Turn </td><td> Species No </td><td> # Players </td></tr></thead>
+      <thead><tr><td> Game </td><td> Species </td><td> Current Turn </td><td> # Players </td></tr></thead>
       <tbody>
-      {{ range .Games }}
-        <tr><td> <a href="/game/{{ .Id }}">{{ .Name }}</a> </td><td align="right"> {{ .Turns.Current }} </td><td align="right"> (todo) </td><td align="right"> {{ .PlayerCount }} </td></tr>
-      {{ end }}
+      {{range .Games}}
+        <tr><td><a href="/game/{{.Id}}/specie/{{.Specie.No}}/turn/{{.Turns.Current}}">{{.Name}}</a></td><td>{{.Specie.Name}}</td><td align="right">{{.Turns.Current}}</td><td align="right">{{ .PlayerCount }}</td></tr>
+      {{end}}
       </tbody>
     </table>
-  {{ else }}
+  {{else}}
     <p>No active games.</p>
-  {{ end }}
+  {{end}}
   <h3>Completed Games</h3>
 {{end}}

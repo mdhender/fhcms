@@ -80,6 +80,22 @@ func (s *Store) FetchGames(uid string) models.Games {
 			Files:       game.Files,
 			PlayerCount: len(game.Players),
 		}
+		mg.Specie.No = "00"
+		mg.Specie.Name = "(missing name)"
+		if spNo, ok := game.Players[uid]; ok {
+			for _, file := range game.Turns.Files {
+				if file.Turn == game.Turns.Current {
+					if sp, err := s.loadSpecie(file.Files, spNo); err != nil {
+						log.Printf("[domain] FetchGames %q %q %+v\n", uid, spNo, err)
+					} else {
+						mg.Specie.No = spNo
+						mg.Specie.Name = sp.Name
+					}
+					break
+				}
+			}
+		}
+		mg.Turns.Current = game.Turns.Current
 		set = append(set, mg)
 	}
 	sort.Sort(set)

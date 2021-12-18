@@ -27,8 +27,12 @@ type SiteFetcher interface {
 }
 
 type Game struct {
-	Id           string
-	Name         string
+	Id     string
+	Name   string
+	Specie struct {
+		No   string
+		Name string
+	}
 	Files        string
 	PlayerCount  int
 	SpeciesCount int

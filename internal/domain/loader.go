@@ -16,27 +16,36 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package games
+package domain
 
-type Game struct {
-	Id      string            `json:"id"`
-	Name    string            `json:"name,omitempty"`
-	Files   string            `json:"files,omitempty"`
-	Players map[string]string `json:"players,omitempty"` // map of user id to species number
-	Turns   GameTurn          `json:"turns"`
+import (
+	"encoding/binary"
+	"github.com/mdhender/fhcms/internal/dat32"
+	"github.com/spf13/viper"
+	"log"
+	"path/filepath"
+)
+
+type Specie struct {
+	No   string
+	Name string
 }
 
-type GameTurn struct {
-	Current int             `json:"current"`
-	Files   []*GameTurnFile `json:"files"`
-}
-
-type GameTurnFile struct {
-	Turn  int    `json:"turn"`
-	Files string `json:"files"`
-}
-
-type GameList struct {
-	ById     map[string]*Game   // map of game id to game
-	ByPlayer map[string][]*Game // map of user id to slice of games
+func (s *Store) loadSpecie(files, spNo string) (*Specie, error) {
+	bigEndian := viper.GetBool("files.big_endian")
+	var bo binary.ByteOrder
+	if bigEndian {
+		bo = binary.BigEndian
+	} else {
+		bo = binary.LittleEndian
+	}
+	sp, err := dat32.ReadSpecies(filepath.Join(files, "sp"+spNo+".dat"), 0, bo)
+	if err != nil {
+		log.Printf("[domain] loadSpecie %q %q %+v\n", files, spNo, err)
+		return &Specie{}, err
+	}
+	return &Specie{
+		No:   spNo,
+		Name: sp.Name,
+	}, nil
 }

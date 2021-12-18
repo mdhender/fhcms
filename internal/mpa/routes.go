@@ -24,6 +24,7 @@ import (
 
 func (s *Server) routes(reports, uploads string) {
 	s.router.HandleFunc("GET", "/", s.authOnly(s.homeGetIndex(s.site, s.templates)))
+	s.router.HandleFunc("GET", "/manifest.json", s.manifestJsonV3)
 	s.router.HandleFunc("GET", "/about", s.authOnly(s.aboutGetHandler(s.site, s.templates)))
 	s.router.HandleFunc("GET", "/favicon.ico", http.NotFound)
 	s.router.HandleFunc("GET", "/game/:gameId", s.authOnly(s.gameGetIndex(s.site, s.ds, s.ds, s.templates)))
@@ -54,6 +55,15 @@ func (s *Server) routes(reports, uploads string) {
 	s.router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 	})
+}
+
+func (s *Server) manifestJsonV3(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"manifest_version":3,"name":"My Extension","version":"versionString"}`))
 }
 
 func (s *Server) notImplemented(w http.ResponseWriter, r *http.Request) {
