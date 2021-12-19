@@ -31,6 +31,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"path/filepath"
 )
 
 var host string
@@ -42,11 +43,13 @@ var mpaCmd = &cobra.Command{
 	Short: "Serve multi-page app",
 	Long:  `Provide a multi-page application for the game.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		siteFile := "D:\\GoLand\\fhcms\\testdata\\site.json"
+		rootDir := viper.Get("files.path").(string)
+		templatesDir := viper.Get("templates").(string)
+		siteFile := filepath.Join(rootDir, "site.json")
 		siteStore, err := site.New(siteFile)
 		cobra.CheckErr(err)
 
-		accountsFile := "D:\\GoLand\\fhcms\\testdata\\accounts.json"
+		accountsFile := filepath.Join(rootDir, "accounts.json")
 		accts, err := accounts.Load(accountsFile)
 		cobra.CheckErr(err)
 
@@ -59,10 +62,10 @@ var mpaCmd = &cobra.Command{
 		fSigner, err := jot.NewHS256Signer([]byte(authSecret))
 		cobra.CheckErr(err)
 
-		ds, err := domain.New(domain.WithAccounts("D:\\GoLand\\fhcms\\testdata\\accounts.json"), domain.WithGames("D:\\GoLand\\fhcms\\testdata\\games.json"))
+		ds, err := domain.New(domain.WithAccounts(filepath.Join(rootDir, "accounts.json")), domain.WithGames(filepath.Join(rootDir, "games.json")))
 		cobra.CheckErr(err)
 
-		s, err := mpa.New(host, port, mpa.WithTemplates("D:\\GoLand\\fhcms\\templates"), mpa.WithDomain(ds), mpa.WithAccounts(accts), mpa.WithJotFactory(jot.NewFactory("raven", fSigner)), mpa.WithSite(siteStore))
+		s, err := mpa.New(host, port, mpa.WithTemplates(templatesDir), mpa.WithDomain(ds), mpa.WithAccounts(accts), mpa.WithJotFactory(jot.NewFactory("raven", fSigner)), mpa.WithSite(siteStore))
 		cobra.CheckErr(err)
 
 		fmt.Printf("listening on %q serving multi-page router\n", net.JoinHostPort(host, port))
