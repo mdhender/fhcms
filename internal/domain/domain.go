@@ -155,7 +155,13 @@ func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
 	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Banked", Units: "EU"})
 	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Colonies"})
 	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Ships"})
-	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Shipyards"})
+	for _, stat := range sp.Stats {
+		o.Statistics = append(o.Statistics, &models.SpecieStatistic{
+			Label: stat.Label,
+			Value: stat.Value,
+			Units: stat.Units,
+		})
+	}
 	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Offensive Power"})
 	o.Statistics = append(o.Statistics, &models.SpecieStatistic{Label: "Defensive Power"})
 	return o

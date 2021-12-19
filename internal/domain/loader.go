@@ -40,6 +40,13 @@ type Specie struct {
 		KnowledgeLevel   int
 		ExperiencePoints int
 	}
+	Stats []*SpecieStat
+}
+
+type SpecieStat struct {
+	Label string
+	Value float64
+	Units string
 }
 
 func (s *Store) loadSpecie(files, spNo string) (*Specie, error) {
@@ -86,5 +93,26 @@ func (s *Store) loadSpecie(files, spNo string) (*Specie, error) {
 		o.Technology[i].KnowledgeLevel = sp.TechKnowledge[i]
 		o.Technology[i].ExperiencePoints = sp.TechEps[i]
 	}
+
+	shipyards := 0
+	for _, nampla := range sp.NamplaBase {
+		if nampla.PN == 99 {
+			continue
+		}
+		shipyards += nampla.Shipyards
+	}
+	o.Stats = append(o.Stats, &SpecieStat{Label: "Shipyards", Value: float64(shipyards), Units: "yards"})
+
+	// why the check on fleet maintenance cost?
+	var fleetMaintenancePct float64
+	if sp.FleetPercentCost < 0 {
+		fleetMaintenancePct = 0
+	} else if sp.FleetPercentCost < 10000 {
+		fleetMaintenancePct = float64(sp.FleetPercentCost) / 100
+	} else {
+		fleetMaintenancePct = 100
+	}
+	o.Stats = append(o.Stats, &SpecieStat{Label: "Fleet Maintenance", Value: fleetMaintenancePct, Units: "%"})
+
 	return o, nil
 }

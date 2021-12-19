@@ -137,7 +137,7 @@ type SpeciesFetcher interface {
 
 type SpecieStatistic struct {
 	Label string
-	Value int
+	Value float64
 	Units string
 }
 
