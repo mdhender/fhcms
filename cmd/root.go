@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"log"
+	"path/filepath"
 	"strings"
 )
 
@@ -90,7 +91,7 @@ func bindConfig(cmd *cobra.Command) error {
 		}
 	} else {
 		log.Printf("viper: using config file: %q\n", viper.ConfigFileUsed())
-		if err = viper.WriteConfigAs("D:\\GoLand\\fhcms\\testdata\\viper.json"); err != nil {
+		if err = viper.WriteConfigAs(filepath.Join(viper.Get("files.path").(string), "viper.json")); err != nil {
 			return err
 		}
 	}
