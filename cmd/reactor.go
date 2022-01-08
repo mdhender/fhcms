@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"github.com/mdhender/fhcms/internal/adapters"
 	"github.com/mdhender/fhcms/internal/jot"
-	"github.com/mdhender/fhcms/internal/mpa"
+	"github.com/mdhender/fhcms/internal/reactor"
 	"github.com/mdhender/fhcms/internal/repos/cdb"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -39,15 +39,15 @@ var host string
 var port string
 var debugDumpRequests bool
 
-var mpaCmd = &cobra.Command{
-	Use:   "mpa",
+var reactorCmd = &cobra.Command{
+	Use:   "reactor",
 	Short: "Serve multi-page app",
 	Long:  `Provide a multi-page application for the game.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		rootDir := viper.Get("files.path").(string)
-		log.Printf("[mpa] rootDir %q\n", rootDir)
+		log.Printf("[reactor] rootDir %q\n", rootDir)
 		templatesDir := viper.Get("templates").(string)
-		log.Printf("[mpa] templatesDir %q\n", templatesDir)
+		log.Printf("[reactor] templatesDir %q\n", templatesDir)
 
 		authSecret, ok := viper.Get("server.secret").(string)
 		if !ok || len(authSecret) < 1 {
@@ -73,7 +73,7 @@ var mpaCmd = &cobra.Command{
 			db.Close()
 		}(db)
 
-		s, err := mpa.New(host, port, mpa.WithAuthStore(db), mpa.WithGamesStore(db), mpa.WithJotFactory(jot.NewFactory("raven", fSigner)), mpa.WithProfileStore(db), mpa.WithSiteStore(db), mpa.WithTemplates(templatesDir))
+		s, err := reactor.New(host, port, reactor.WithAuthStore(db), reactor.WithGamesStore(db), reactor.WithJotFactory(jot.NewFactory("raven", fSigner)), reactor.WithProfileStore(db), reactor.WithSiteStore(db), reactor.WithTemplates(templatesDir))
 		cobra.CheckErr(err)
 
 		fmt.Printf("listening on %q serving multi-page router\n", net.JoinHostPort(host, port))
@@ -86,9 +86,9 @@ var mpaCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(mpaCmd)
-	mpaCmd.Flags().StringVar(&host, "host", "", "interface to run server on")
-	_ = viper.BindPFlag("host", mpaCmd.Flags().Lookup("host"))
-	mpaCmd.Flags().StringVarP(&port, "port", "p", "8080", "port to run server on")
-	_ = viper.BindPFlag("port", mpaCmd.Flags().Lookup("port"))
+	rootCmd.AddCommand(reactorCmd)
+	reactorCmd.Flags().StringVar(&host, "host", "", "interface to run server on")
+	_ = viper.BindPFlag("host", reactorCmd.Flags().Lookup("host"))
+	reactorCmd.Flags().StringVarP(&port, "port", "p", "8080", "port to run server on")
+	_ = viper.BindPFlag("port", reactorCmd.Flags().Lookup("port"))
 }

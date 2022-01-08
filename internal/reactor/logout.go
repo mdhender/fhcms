@@ -16,10 +16,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
-import "github.com/mdhender/fhcms/internal/models"
+import (
+	"github.com/mdhender/fhcms/internal/jot"
+	"net/http"
+)
 
-type SiteStore interface {
-	FetchSite() (models.Site, bool)
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	jot.DeleteCookie(w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

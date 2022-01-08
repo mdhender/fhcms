@@ -16,14 +16,20 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
 import (
-	"github.com/mdhender/fhcms/internal/jot"
-	"net/http"
+	"path"
+	"strings"
 )
 
-func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	jot.DeleteCookie(w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+// shiftPath splits the given path into the first segment (head) and the rest (tail).
+// for example, "/foo/bar/baz" gives head = "foo", tail = "/bar/baz".
+func shiftPath(p string) (head, tail string) {
+	p = path.Clean("/" + p)
+	if i := strings.Index(p[1:], "/") + 1; i <= 0 {
+		return p[1:], "/"
+	} else {
+		return p[1:i], p[i:]
+	}
 }

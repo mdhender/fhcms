@@ -16,20 +16,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
-import (
-	"path"
-	"strings"
-)
+import "github.com/mdhender/fhcms/internal/models"
 
-// shiftPath splits the given path into the first segment (head) and the rest (tail).
-// for example, "/foo/bar/baz" gives head = "foo", tail = "/bar/baz".
-func shiftPath(p string) (head, tail string) {
-	p = path.Clean("/" + p)
-	if i := strings.Index(p[1:], "/") + 1; i <= 0 {
-		return p[1:], "/"
-	} else {
-		return p[1:i], p[i:]
-	}
+type SiteStore interface {
+	FetchSite() (models.Site, bool)
 }

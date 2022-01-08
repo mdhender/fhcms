@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
 import (
 	"fmt"
@@ -32,7 +32,7 @@ func (s *Server) handleGetLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	jot.DeleteCookie(w)
 	page := fmt.Sprintf(`<body>
-				<h1>Far Horizons Login</h1>
+				<h1>Far Horizons Reactor</h1>
 				<form action="/login"" method="post">
 					<table>
 						<tr><td align="right">Username&nbsp;</td><td><input type="text" name="username"></td></tr>

@@ -24,7 +24,7 @@ import (
 	"log"
 )
 
-// Authenticate implements the mpa.AuthStore interface
+// Authenticate implements the reactor.AuthStore interface
 func (db *DB) Authenticate(username, password string) (models.Account, bool) {
 	log.Printf("[cdb] authenticate username %q password %q\n", username, password)
 	var account struct {

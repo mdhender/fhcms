@@ -23,7 +23,7 @@ import (
 	"github.com/mdhender/fhcms/internal/models"
 )
 
-// FetchAccount implements the mpa.AuthStore interface
+// FetchAccount implements the reactor.AuthStore interface
 func (db *DB) FetchAccount(id int) (models.Account, bool) {
 	var account struct {
 		Admin  bool
@@ -41,7 +41,7 @@ func (db *DB) FetchAccount(id int) (models.Account, bool) {
 	return models.Account{Id: id, IsActive: account.Active, IsAdmin: account.Admin, IsAuthenticated: false}, true
 }
 
-// FetchProfile implements the mpa.ProfileStore interface
+// FetchProfile implements the reactor.ProfileStore interface
 func (db *DB) FetchProfile(id int) (models.Profile, bool) {
 	var profile struct {
 		Id       int
