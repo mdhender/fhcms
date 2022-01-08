@@ -23,6 +23,7 @@ import (
 	"github.com/mdhender/fhcms/internal/jot"
 	"github.com/mdhender/fhcms/internal/models"
 	"github.com/mdhender/fhcms/internal/way"
+	"log"
 	"net"
 	"net/http"
 	"time"
@@ -66,5 +67,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) currentUser(r *http.Request) models.Account {
+	log.Printf("[reactor] server.currentUser\n")
 	return models.CurrentUser(r)
 }

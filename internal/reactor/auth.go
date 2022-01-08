@@ -39,12 +39,14 @@ func (s *Server) authOnly(h http.HandlerFunc) http.HandlerFunc {
 		if j := jot.FromRequest(r); s.jf.Validate(j) == nil {
 			if id, ok := j.UserID(); ok {
 				if x, ok := s.auth.FetchAccount(id); ok {
-					a.Id, a.IsActive, a.IsAdmin, a.IsAuthenticated = x.Id, x.IsActive, x.IsAdmin, true
+					a.Id, a.UserName, a.IsActive, a.IsAuthenticated = x.Id, x.UserName, x.IsActive, true
+					// the weird triple check for admin below prevents unauthenticated or inactive users from slipping through
+					a.IsAdmin = a.IsActive && a.IsAuthenticated && x.IsAdmin
 				}
 			}
 		}
 		if !a.IsAuthenticated {
-			log.Printf("mw: authOnly: %s %s: !authenticated\n", r.Method, r.URL.Path)
+			log.Printf("[reactor] mw: authOnly: %s %s: !authenticated\n", r.Method, r.URL.Path)
 			s.handleGetLogin(w, r)
 			return
 		}
@@ -57,12 +59,12 @@ func (s *Server) handlePostLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
-	log.Printf("server: %s %q: handlePostLogin\n", r.Method, r.URL.Path)
+	log.Printf("[reactor] %s %q: handlePostLogin\n", r.Method, r.URL.Path)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	log.Printf("server: %s %q: %v\n", r.Method, r.URL.Path, r.PostForm)
+	log.Printf("[reactor] %s %q: %v\n", r.Method, r.URL.Path, r.PostForm)
 	var input struct {
 		username string
 		password string
@@ -91,16 +93,18 @@ func (s *Server) handlePostLogin(w http.ResponseWriter, r *http.Request) {
 	//}
 	//hashedPassword := hex.EncodeToString(sh)
 
-	log.Printf("server: %s %q: handlePostLogin: username %q password %q\n", r.Method, r.URL.Path, input.username, input.password)
+	log.Printf("[reactor] %s %q: handlePostLogin: username %q password %q\n", r.Method, r.URL.Path, input.username, input.password)
 	a, ok := s.auth.Authenticate(input.username, input.password)
 	if !ok {
-		log.Printf("server: %s %q: handlePostLogin: account %q not found\n", r.Method, r.URL.Path, input.username)
+		log.Printf("[reactor] %s %q: handlePostLogin: account %q not found\n", r.Method, r.URL.Path, input.username)
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
-	j, err := s.jf.NewToken(time.Hour*24*7, a.Id)
+	log.Printf("[reactor] %s %q: handlePostLogin: found username %q\n", r.Method, r.URL.Path, a.UserName)
+	// the weird triple check for admin below prevents unauthenticated or inactive users from slipping through
+	j, err := s.jf.NewToken(time.Hour*24*7, a.Id, a.UserName, a.IsAuthenticated && a.IsActive && a.IsAdmin)
 	if err != nil {
-		log.Printf("server: %s %q: handlePostLogin: token %+v\n", r.Method, r.URL.Path, err)
+		log.Printf("[reactor] %s %q: handlePostLogin: token %+v\n", r.Method, r.URL.Path, err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

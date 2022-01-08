@@ -33,14 +33,21 @@ func (db *DB) Authenticate(username, password string) (models.Account, bool) {
 		Admin    bool
 		Active   bool
 	}
-	conn, err := db.pool.Acquire(context.Background())
+	ctx := context.Background()
+	conn, err := db.pool.Acquire(ctx)
 	if err != nil {
 		return models.Account{}, false
 	}
 	defer conn.Release()
-	err = conn.QueryRow(context.Background(), "select id, username, admin, active from accounts where username = $1 and password = $2", username, password).Scan(&account.Id, &account.UserName, &account.Admin, &account.Active)
+	err = conn.QueryRow(ctx, "select id, username, admin, active from accounts where username = $1 and password = $2", username, password).Scan(&account.Id, &account.UserName, &account.Admin, &account.Active)
 	if err != nil {
 		return models.Account{}, false
 	}
-	return models.Account{Id: account.Id, IsActive: account.Active, IsAdmin: account.Admin, IsAuthenticated: true}, true
+	return models.Account{
+		Id:              account.Id,
+		UserName:        username,
+		IsActive:        account.Active,
+		IsAdmin:         account.Active && account.Admin,
+		IsAuthenticated: true,
+	}, true
 }

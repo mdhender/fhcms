@@ -21,9 +21,11 @@ package cdb
 import (
 	"context"
 	"github.com/mdhender/fhcms/internal/models"
+	"log"
 )
 
 func (db *DB) FetchSite() (models.Site, bool) {
+	log.Printf("[cdb] fetchSite\n")
 	var site struct {
 		Title string
 	}
@@ -34,6 +36,7 @@ func (db *DB) FetchSite() (models.Site, bool) {
 	defer conn.Release()
 	err = conn.QueryRow(context.Background(), "select title from site").Scan(&site.Title)
 	if err != nil {
+		log.Printf("[cdb] fetchSite: %+v\n", err)
 		return models.Site{Title: "Far Horizons"}, true
 	}
 	return models.Site{Title: site.Title}, true

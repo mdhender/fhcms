@@ -20,6 +20,7 @@ package models
 
 import (
 	"context"
+	"log"
 	"net/http"
 )
 
@@ -58,9 +59,11 @@ func AccountFromContext(ctx context.Context) (Account, bool) {
 }
 
 func CurrentUser(r *http.Request) Account {
+	log.Printf("[models] currentUser\n")
 	a, ok := AccountFromContext(r.Context())
 	if !ok {
 		return Account{}
 	}
+	log.Printf("[models] currentUser: id %d name %q admin %v\n", a.Id, a.UserName, a.IsAdmin)
 	return a
 }

@@ -21,7 +21,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/mdhender/fhcms/internal/adapters"
 	"github.com/mdhender/fhcms/internal/jot"
 	"github.com/mdhender/fhcms/internal/reactor"
@@ -54,7 +53,7 @@ var reactorCmd = &cobra.Command{
 			log.Fatal("server.secret must be at least 1 character long")
 		}
 		authSecret = mkkey("fhapp", authSecret)
-		log.Printf("mkkey(secretKey) %q\n", authSecret)
+		log.Printf("[reactor] mkkey(secretKey) %q\n", authSecret)
 		fSigner, err := jot.NewHS256Signer([]byte(authSecret))
 		cobra.CheckErr(err)
 
@@ -76,7 +75,7 @@ var reactorCmd = &cobra.Command{
 		s, err := reactor.New(host, port, reactor.WithAuthStore(db), reactor.WithGamesStore(db), reactor.WithJotFactory(jot.NewFactory("raven", fSigner)), reactor.WithProfileStore(db), reactor.WithSiteStore(db), reactor.WithTemplates(templatesDir))
 		cobra.CheckErr(err)
 
-		fmt.Printf("listening on %q serving multi-page router\n", net.JoinHostPort(host, port))
+		log.Printf("[reactor] listening on %q\n", net.JoinHostPort(host, port))
 		if debugDumpRequests {
 			log.Fatal(http.ListenAndServe(net.JoinHostPort(host, port), adapters.Logger(adapters.DumpRequest(s))))
 		} else {

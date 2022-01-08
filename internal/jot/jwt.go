@@ -26,12 +26,14 @@ import (
 // NewToken will return an unsigned JWT.
 // userId is the user id to assign to the JWT.
 // You must use a Factory to sign the token.
-func NewToken(ttl time.Duration, userId int) (*JWT, error) {
+func NewToken(ttl time.Duration, userId int, userName string, isAdmin bool) (*JWT, error) {
 	var j JWT
 	j.h.TokenType = "JWT"
 	j.p.IssuedAt = time.Now().Unix()
 	j.p.ExpirationTime = time.Now().Add(ttl).Unix()
 	j.p.UserID = userId
+	j.p.UserName = userName
+	j.p.IsAdmin = isAdmin
 	return &j, nil
 }
 
@@ -66,8 +68,10 @@ type JWT struct {
 		// Case sensitive unique identifier of the token even among different issuers.
 		JWTID string `json:"jti,omitempty"`
 		// Private data for use by the application.
-		UserID int    `json:"user_id,omitempty"` // this is the user id
-		b64    string // payload marshalled to JSON and then base-64 encoded
+		UserID   int    `json:"user_id,omitempty"` // this is the user id
+		UserName string `json:"user_name,omitempty"`
+		IsAdmin  bool   `json:"is_admin,omitempty"`
+		b64      string // payload marshalled to JSON and then base-64 encoded
 	}
 	s        string // signature base-64 encoded
 	isSigned bool   // true only if the signature has been verified
