@@ -27,7 +27,7 @@ import (
 	"path/filepath"
 )
 
-func (s *Server) aboutGetHandler(sf models.SiteFetcher, templates string) http.HandlerFunc {
+func (s *Server) aboutGetHandler(sf SiteStore, templates string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -42,9 +42,9 @@ func (s *Server) aboutGetHandler(sf models.SiteFetcher, templates string) http.H
 		}
 
 		var payload struct {
-			Site *models.Site
+			Site models.Site
 		}
-		payload.Site = sf.FetchSite()
+		payload.Site, _ = sf.FetchSite()
 
 		b := &bytes.Buffer{}
 		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {

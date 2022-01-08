@@ -19,15 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package mpa
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"github.com/mdhender/fhcms/internal/jot"
-	"github.com/mdhender/fhcms/internal/repos/accounts"
-	"log"
 	"net/http"
-	"time"
-	"unicode/utf8"
 )
 
 func (s *Server) handleGetLogin(w http.ResponseWriter, r *http.Request) {
@@ -48,80 +42,4 @@ func (s *Server) handleGetLogin(w http.ResponseWriter, r *http.Request) {
 				</form>
 			</body>`)
 	_, _ = w.Write([]byte(page))
-}
-
-func (s *Server) handlePostLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		return
-	}
-	log.Printf("server: %s %q: handlePostLogin\n", r.Method, r.URL.Path)
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	log.Printf("server: %s %q: %v\n", r.Method, r.URL.Path, r.PostForm)
-	var input struct {
-		username string
-		password string
-	}
-	for k, v := range r.Form {
-		switch k {
-		case "username":
-			if len(v) != 1 || !utf8.ValidString(v[0]) {
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				return
-			}
-			input.username = v[0]
-		case "password":
-			if len(v) != 1 || !utf8.ValidString(v[0]) {
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				return
-			}
-			input.password = v[0]
-		}
-	}
-
-	// hash the password to prevent simple timing attacks
-	var sh []byte
-	for _, b := range sha256.Sum256([]byte(input.password)) {
-		sh = append(sh, b)
-	}
-	hashedPassword := hex.EncodeToString(sh)
-	var a *accounts.Account
-	log.Printf("server: %s %q: handlePostLogin: username %q password %q hashed %q\n", r.Method, r.URL.Path, input.username, input.password, hashedPassword)
-	acct, ok := s.accts.ByUser[input.username]
-	if !ok {
-		log.Printf("server: %s %q: handlePostLogin: account %q not found\n", r.Method, r.URL.Path, input.username)
-	}
-	if acct == nil {
-		log.Printf("server: %s %q: handlePostLogin: account %q is nil\n", r.Method, r.URL.Path, input.username)
-	} else {
-		if acct.Password != input.password {
-			log.Printf("server: %s %q: handlePostLogin: account %q pass %q != input %q\n", r.Method, r.URL.Path, acct.Password, input.password)
-		}
-		if acct.HashedPassword != hashedPassword {
-			log.Printf("server: %s %q: handlePostLogin: account %q pass %q != input %q\n", r.Method, r.URL.Path, acct.HashedPassword, hashedPassword)
-		}
-	}
-	if ok && acct != nil && acct.HashedPassword == hashedPassword {
-		if acct.Password == input.password {
-			log.Printf("matched!\n")
-			a = acct
-		}
-	}
-	if a == nil {
-		log.Printf("not matched!\n")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-	j, err := s.jf.NewToken(time.Hour*24*7, acct.Id)
-	if err != nil {
-		log.Printf("server: %s %q: handlePostLogin: token %+v\n", r.Method, r.URL.Path, err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	j.SetCookie(w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-	return
 }

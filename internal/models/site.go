@@ -16,18 +16,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package accounts
+package models
 
-type Account struct {
-	Id       int    `json:"id"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-	Password string `json:"password"`
-	// hash the password to prevent simple timing attacks
-	HashedPassword string `json:"hashed_password"`
-}
-
-type AccountList struct {
-	ById   map[int]*Account    // by account id
-	ByUser map[string]*Account // by username
+type Site struct {
+	Title       string
+	Description string
+	DomainName  string
+	Active      bool
 }

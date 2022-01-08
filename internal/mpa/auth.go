@@ -20,27 +20,91 @@ package mpa
 
 import (
 	"github.com/mdhender/fhcms/internal/jot"
-	"github.com/mdhender/fhcms/internal/users"
+	"github.com/mdhender/fhcms/internal/models"
 	"log"
 	"net/http"
+	"time"
+	"unicode/utf8"
 )
+
+type AuthStore interface {
+	Authenticate(username, password string) (models.Account, bool)
+	FetchAccount(uid int) (models.Account, bool)
+}
 
 // we must serve only the login page to unauthenticated visitors
 func (s *Server) authOnly(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var u users.User
+		var a models.Account
 		if j := jot.FromRequest(r); s.jf.Validate(j) == nil {
-			u.Id = j.UserID()
-			if acct, ok := s.accts.ById[u.Id]; ok {
-				u.Name = acct.Username
-				u.IsAuthenticated = u.Id != ""
+			if id, ok := j.UserID(); ok {
+				if x, ok := s.auth.FetchAccount(id); ok {
+					a.Id, a.IsActive, a.IsAdmin, a.IsAuthenticated = x.Id, x.IsActive, x.IsAdmin, true
+				}
 			}
 		}
-		if !u.IsAuthenticated {
+		if !a.IsAuthenticated {
 			log.Printf("mw: authOnly: %s %s: !authenticated\n", r.Method, r.URL.Path)
 			s.handleGetLogin(w, r)
 			return
 		}
-		h(w, r.WithContext(u.NewContext(r.Context())))
+		h(w, r.WithContext(a.NewContext(r.Context())))
 	}
+}
+
+func (s *Server) handlePostLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	log.Printf("server: %s %q: handlePostLogin\n", r.Method, r.URL.Path)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	log.Printf("server: %s %q: %v\n", r.Method, r.URL.Path, r.PostForm)
+	var input struct {
+		username string
+		password string
+	}
+	for k, v := range r.Form {
+		switch k {
+		case "username":
+			if len(v) != 1 || !utf8.ValidString(v[0]) {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+			input.username = v[0]
+		case "password":
+			if len(v) != 1 || !utf8.ValidString(v[0]) {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+			input.password = v[0]
+		}
+	}
+
+	//// hash the password to prevent simple timing attacks
+	//var sh []byte
+	//for _, b := range sha256.Sum256([]byte(input.password)) {
+	//	sh = append(sh, b)
+	//}
+	//hashedPassword := hex.EncodeToString(sh)
+
+	log.Printf("server: %s %q: handlePostLogin: username %q password %q\n", r.Method, r.URL.Path, input.username, input.password)
+	a, ok := s.auth.Authenticate(input.username, input.password)
+	if !ok {
+		log.Printf("server: %s %q: handlePostLogin: account %q not found\n", r.Method, r.URL.Path, input.username)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+	j, err := s.jf.NewToken(time.Hour*24*7, a.Id)
+	if err != nil {
+		log.Printf("server: %s %q: handlePostLogin: token %+v\n", r.Method, r.URL.Path, err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	j.SetCookie(w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+	return
 }

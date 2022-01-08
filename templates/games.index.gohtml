@@ -16,11 +16,11 @@
       {{range .Games}}
         <tr>
           <td>
-            <a href="/games/{{.Id}}/specie/{{.Specie.No}}">{{.Name}}</a>
+            <a href="/games/{{.Id}}/specie/{{.Specie.Id}}">{{.Name}}</a>
           </td>
-          <td>{{.Specie.Government.Name}}</td>
+          <td>{{.Specie.Name}}</td>
           <td align="right">
-            <a href="/games/{{.Id}}/specie/{{.Specie.No}}/turn/{{.Turns.Current}}">{{.Turns.Current}}</a>
+            <a href="/games/{{.Id}}/specie/{{.Specie.Id}}/turn/{{.Turns.Current}}">{{.Turns.Current}}</a>
           </td>
           <td align="right">{{ .PlayerCount }}</td>
           <td>

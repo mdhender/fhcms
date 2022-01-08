@@ -28,9 +28,9 @@ import (
 func Load(filename string) (*GameList, error) {
 	log.Printf("domain: games.Load: %q\n", filename)
 	var input struct {
-		Games map[string]*Game `json:"games"`
+		Games map[int]*Game `json:"games"`
 	}
-	input.Games = make(map[string]*Game)
+	input.Games = make(map[int]*Game)
 	if data, err := ioutil.ReadFile(filename); err != nil {
 		log.Printf("domain: games.Load: %q %+v\n", filename, err)
 		return nil, err
@@ -39,7 +39,7 @@ func Load(filename string) (*GameList, error) {
 		return nil, err
 	}
 
-	g := &GameList{ById: make(map[string]*Game), ByPlayer: make(map[string][]*Game)}
+	g := &GameList{ById: make(map[int]*Game), ByPlayer: make(map[int][]*Game)}
 
 	for id, game := range input.Games {
 		game.Id = id
@@ -50,21 +50,31 @@ func Load(filename string) (*GameList, error) {
 	}
 
 	// sort each player's games.
-	// the bubbly sort assumes that the strings it is using as keys are actually small integer values.
+	//// the bubbly sort assumes that the strings it is using as keys are actually small integer values.
+	//for _, list := range g.ByPlayer {
+	//	for i := 0; i < len(list); i++ {
+	//		for j := i + 1; j < len(list); j++ {
+	//			if len(list[i].Id) < len(list[j].Id) {
+	//				continue
+	//			} else if len(list[i].Id) == len(list[j].Id) {
+	//				if list[i].Id < list[j].Id {
+	//					continue
+	//				}
+	//			}
+	//			list[i], list[j] = list[j], list[i]
+	//		}
+	//	}
+	//}
 	for _, list := range g.ByPlayer {
 		for i := 0; i < len(list); i++ {
 			for j := i + 1; j < len(list); j++ {
-				if len(list[i].Id) < len(list[j].Id) {
-					continue
-				} else if len(list[i].Id) == len(list[j].Id) {
-					if list[i].Id < list[j].Id {
-						continue
-					}
+				if list[i].Id > list[j].Id {
+					list[i], list[j] = list[j], list[i]
 				}
-				list[i], list[j] = list[j], list[i]
 			}
 		}
 	}
+
 	for _, game := range g.ById {
 		for player, species := range game.Players {
 			log.Printf("domain: games.Load: %q player %q: species %q\n", filename, player, species)

@@ -27,7 +27,11 @@ import (
 	"path/filepath"
 )
 
-func (s *Server) profileGetHandler(sf models.SiteFetcher, uf models.UserFetcher, templates string) http.HandlerFunc {
+type ProfileStore interface {
+	FetchProfile(id int) (models.Profile, bool)
+}
+
+func (s *Server) profileGetHandler(sf SiteStore, pf ProfileStore, templates string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -42,11 +46,11 @@ func (s *Server) profileGetHandler(sf models.SiteFetcher, uf models.UserFetcher,
 		}
 
 		var payload struct {
-			Site *models.Site
-			User *models.User
+			Site    models.Site
+			Profile models.Profile
 		}
-		payload.Site = sf.FetchSite()
-		payload.User = uf.FetchUser(s.currentUser(r).Id)
+		payload.Site, _ = sf.FetchSite()
+		payload.Profile, _ = pf.FetchProfile(s.currentUser(r).Id)
 
 		b := &bytes.Buffer{}
 		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {

@@ -8,3 +8,6 @@ Precision limitations on integer values
 3. Integers between 254 and 255 = 36,028,797,018,963,968 round to a multiple of 4
 
 Sourced from https://en.wikipedia.org/wiki/Double-precision_floating-point_format.
+
+# MariaDB
+

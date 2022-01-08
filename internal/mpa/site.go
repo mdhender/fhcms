@@ -16,18 +16,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package accounts
+package mpa
 
-type Account struct {
-	Id       int    `json:"id"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-	Password string `json:"password"`
-	// hash the password to prevent simple timing attacks
-	HashedPassword string `json:"hashed_password"`
-}
+import "github.com/mdhender/fhcms/internal/models"
 
-type AccountList struct {
-	ById   map[int]*Account    // by account id
-	ByUser map[string]*Account // by username
+type SiteStore interface {
+	FetchSite() (models.Site, bool)
 }

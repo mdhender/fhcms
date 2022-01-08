@@ -19,15 +19,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package cmd
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/mdhender/fhcms/internal/adapters"
-	"github.com/mdhender/fhcms/internal/domain"
 	"github.com/mdhender/fhcms/internal/jot"
 	"github.com/mdhender/fhcms/internal/mpa"
-	"github.com/mdhender/fhcms/internal/repos/accounts"
-	"github.com/mdhender/fhcms/internal/repos/site"
+	"github.com/mdhender/fhcms/internal/repos/cdb"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -44,14 +45,9 @@ var mpaCmd = &cobra.Command{
 	Long:  `Provide a multi-page application for the game.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		rootDir := viper.Get("files.path").(string)
+		log.Printf("[mpa] rootDir %q\n", rootDir)
 		templatesDir := viper.Get("templates").(string)
-		siteFile := filepath.Join(rootDir, "site.json")
-		siteStore, err := site.New(siteFile)
-		cobra.CheckErr(err)
-
-		accountsFile := filepath.Join(rootDir, "accounts.json")
-		accts, err := accounts.Load(accountsFile)
-		cobra.CheckErr(err)
+		log.Printf("[mpa] templatesDir %q\n", templatesDir)
 
 		authSecret, ok := viper.Get("server.secret").(string)
 		if !ok || len(authSecret) < 1 {
@@ -62,10 +58,22 @@ var mpaCmd = &cobra.Command{
 		fSigner, err := jot.NewHS256Signer([]byte(authSecret))
 		cobra.CheckErr(err)
 
-		ds, err := domain.New(domain.WithAccounts(filepath.Join(rootDir, "accounts.json")), domain.WithGames(filepath.Join(rootDir, "games.json")))
-		cobra.CheckErr(err)
+		//ds, err := domain.New(domain.WithAccounts(filepath.Join(rootDir, "accounts.json")), domain.WithGames(filepath.Join(rootDir, "games.json")))
+		//cobra.CheckErr(err)
 
-		s, err := mpa.New(host, port, mpa.WithTemplates(templatesDir), mpa.WithDomain(ds), mpa.WithAccounts(accts), mpa.WithJotFactory(jot.NewFactory("raven", fSigner)), mpa.WithSite(siteStore))
+		dbConfig := &cdb.DBConfig{}
+		data, err := ioutil.ReadFile(filepath.Join("D:\\GoLand\\fhcms\\testdata", "database.json"))
+		cobra.CheckErr(err)
+		err = json.Unmarshal(data, dbConfig)
+		cobra.CheckErr(err)
+		db, err := cdb.New(context.Background(), dbConfig)
+		cobra.CheckErr(err)
+		defer func(db *cdb.DB) {
+			log.Printf("[cdb] closing connection\n")
+			db.Close()
+		}(db)
+
+		s, err := mpa.New(host, port, mpa.WithAuthStore(db), mpa.WithGamesStore(db), mpa.WithJotFactory(jot.NewFactory("raven", fSigner)), mpa.WithProfileStore(db), mpa.WithSiteStore(db), mpa.WithTemplates(templatesDir))
 		cobra.CheckErr(err)
 
 		fmt.Printf("listening on %q serving multi-page router\n", net.JoinHostPort(host, port))

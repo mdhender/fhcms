@@ -21,8 +21,6 @@ package mpa
 import (
 	"github.com/mdhender/fhcms/internal/domain"
 	"github.com/mdhender/fhcms/internal/jot"
-	"github.com/mdhender/fhcms/internal/repos/accounts"
-	"github.com/mdhender/fhcms/internal/repos/site"
 	"path/filepath"
 )
 
@@ -40,9 +38,9 @@ func Options(opts ...Option) Option {
 	}
 }
 
-func WithAccounts(accts *accounts.AccountList) Option {
+func WithAuthStore(auth AuthStore) Option {
 	return func(s *Server) (err error) {
-		s.accts = accts
+		s.auth = auth
 		return nil
 	}
 }
@@ -54,6 +52,13 @@ func WithDomain(ds *domain.Store) Option {
 	}
 }
 
+func WithGamesStore(games GamesStore) Option {
+	return func(s *Server) (err error) {
+		s.games = games
+		return nil
+	}
+}
+
 func WithJotFactory(jf *jot.Factory) Option {
 	return func(s *Server) (err error) {
 		s.jf = jf
@@ -61,9 +66,16 @@ func WithJotFactory(jf *jot.Factory) Option {
 	}
 }
 
-func WithSite(ds *site.Store) Option {
+func WithProfileStore(profile ProfileStore) Option {
 	return func(s *Server) (err error) {
-		s.site = ds
+		s.profiles = profile
+		return nil
+	}
+}
+
+func WithSiteStore(site SiteStore) Option {
+	return func(s *Server) (err error) {
+		s.site = site
 		return nil
 	}
 }

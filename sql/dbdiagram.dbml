@@ -1,0 +1,106 @@
+// https://dbdiagram.io/d rocks!
+
+// Creating references
+// > many-to-one; < one-to-many; - one-to-one
+
+Table site as S {
+  title       varchar [not null]
+  description varchar
+  domain_name varchar
+}
+
+Table accounts as U {
+  id         int       [pk, increment] // primary key, auto-increment
+  email      varchar   [not null, unique]
+  password   varchar   [not null]
+  notes      varchar   [not null]
+  admin      boolean   [not null, default false]
+  active     boolean   [not null, default false]
+  created_at timestamp [not null, default: `now()`]
+}
+
+Table galaxies as G {
+  id          int       [pk, increment] // primary key, auto-increment
+  name        varchar   [not null, unique]
+  radius      int       [not null, note: 'galactic radius in parsecs']
+  num_species int       [not null]
+  turn_number int       [not null, default: 0]
+  active      boolean   [not null, default: false]
+  created_at  timestamp [not null, default: `now()`]
+}
+
+Table systems as SY {
+  id        int     [pk, increment] // primary key, auto-increment
+  galaxy_id int     [not null, ref: > G.id]
+  coords    varchar [not null]
+
+  Indexes {
+    (galaxy_id, coords) [unique]
+  }
+}
+
+Table planets as PL {
+  id        int [pk, increment] // primary key, auto-increment
+  system_id int [not null, ref: > SY.id]
+  orbit     int [not null] // must be 0 or more
+
+  Indexes {
+    (system_id, orbit) [unique]
+  }
+}
+
+Table species as SP {
+  id         int     [pk, increment] // primary key, auto-increment
+  galaxy_id  int     [not null, ref: > G.id]
+  account_id int     [ref: > U.id]
+  name       varchar
+}
+
+Table colonies as CO {
+  id         int     [pk, increment] // primary key, auto-increment
+  planet_id  int     [not null, ref: > PL.id]
+  species_id int     [not null, ref: > SP.id]
+  homeworld  boolean [not null, default: false]
+
+  Indexes {
+    (planet_id, species_id) [unique]
+  }
+}
+
+Table ships as SH {
+  id         int     [pk, increment] // primary key, auto-increment
+  species_id int     [not null, ref: > SP.id]
+  name       varchar [not null]
+  coords     varchar [not null]
+
+  Indexes {
+    (species_id, name) [unique]
+  }
+}
+
+Table items as I {
+  code         varchar [pk] // primary key
+  name         varchar [not null, unique]
+  cargo_spaces int     [not null, default: 1]
+  descr        varchar
+}
+
+Table colony_inventory as COI {
+  colony_id int     [not null, ref: > CO.id]
+  item_code varchar [not null, ref: > I.code]
+  quantity  int     [not null, default: 0]
+
+  Indexes {
+    (colony_id, item_code) [pk]
+  }
+}
+
+Table ship_inventory as SHI {
+  ship_id   int     [not null, ref: > SH.id]
+  item_code varchar [not null, ref: > I.code]
+  quantity  int     [not null, default: 0]
+
+  Indexes {
+    (ship_id, item_code) [pk]
+  }
+}
