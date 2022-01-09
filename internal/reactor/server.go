@@ -16,15 +16,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
 import (
 	"github.com/mdhender/fhcms/internal/domain"
 	"github.com/mdhender/fhcms/internal/jot"
-	"github.com/mdhender/fhcms/internal/repos/accounts"
-	"github.com/mdhender/fhcms/internal/repos/site"
-	"github.com/mdhender/fhcms/internal/users"
+	"github.com/mdhender/fhcms/internal/models"
 	"github.com/mdhender/fhcms/internal/way"
+	"log"
 	"net"
 	"net/http"
 	"time"
@@ -56,8 +55,10 @@ type Server struct {
 	router    *way.Router
 	ds        *domain.Store
 	jf        *jot.Factory
-	accts     *accounts.AccountList
-	site      *site.Store
+	auth      AuthStore
+	games     GamesStore
+	profiles  ProfileStore
+	site      SiteStore
 	templates string // path to templates directory
 }
 
@@ -65,9 +66,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-func (s *Server) currentUser(r *http.Request) *users.User {
-	if u := users.Current(r); u != nil {
-		return u
-	}
-	return &users.User{}
+func (s *Server) currentUser(r *http.Request) models.Account {
+	log.Printf("[reactor] server.currentUser\n")
+	return models.CurrentUser(r)
 }

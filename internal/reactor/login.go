@@ -16,18 +16,30 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package accounts
+package reactor
 
-type Account struct {
-	Id       int    `json:"id"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-	Password string `json:"password"`
-	// hash the password to prevent simple timing attacks
-	HashedPassword string `json:"hashed_password"`
-}
+import (
+	"fmt"
+	"github.com/mdhender/fhcms/internal/jot"
+	"net/http"
+)
 
-type AccountList struct {
-	ById   map[int]*Account    // by account id
-	ByUser map[string]*Account // by username
+func (s *Server) handleGetLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	jot.DeleteCookie(w)
+	page := fmt.Sprintf(`<body>
+				<h1>Far Horizons Reactor</h1>
+				<form action="/login"" method="post">
+					<table>
+						<tr><td align="right">Username&nbsp;</td><td><input type="text" name="username"></td></tr>
+						<tr><td align="right">Password&nbsp;</td><td><input type="password" name="password"></td></tr>
+						<tr><td>&nbsp;</td><td align="right"><input type="submit" value="Login"></td></tr>
+					</table>
+				</form>
+			</body>`)
+	_, _ = w.Write([]byte(page))
 }

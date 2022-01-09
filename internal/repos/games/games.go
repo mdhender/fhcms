@@ -19,11 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package games
 
 type Game struct {
-	Id      string            `json:"id"`
-	Name    string            `json:"name,omitempty"`
-	Files   string            `json:"files,omitempty"`
-	Players map[string]string `json:"players,omitempty"` // map of user id to species number
-	Turns   GameTurn          `json:"turns"`
+	Id      int            `json:"id"`
+	Name    string         `json:"name,omitempty"`
+	Files   string         `json:"files,omitempty"`
+	Players map[int]string `json:"players,omitempty"` // map of user id to species number
+	Turns   GameTurn       `json:"turns"`
 }
 
 type GameTurn struct {
@@ -37,6 +37,6 @@ type GameTurnFile struct {
 }
 
 type GameList struct {
-	ById     map[string]*Game   // map of game id to game
-	ByPlayer map[string][]*Game // map of user id to slice of games
+	ById     map[int]*Game   // map of game id to game
+	ByPlayer map[int][]*Game // map of user id to slice of games
 }

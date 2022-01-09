@@ -45,14 +45,14 @@ func New(opts ...func(*Store) error) (*Store, error) {
 	return s, nil
 }
 
-func (s *Store) FetchGame(uid, gid string) *models.Game {
+func (s *Store) FetchGalaxy(uid, gid int) *models.Galaxy {
 	log.Printf("[domain] FetchGame %q %q\n", uid, gid)
 	if s.Games == nil {
-		return &models.Game{}
+		return &models.Galaxy{}
 	}
 	for _, game := range s.Games.ByPlayer[uid] {
 		if game.Id == gid {
-			return &models.Game{
+			return &models.Galaxy{
 				Id:          game.Id,
 				Name:        game.Name,
 				Files:       game.Files,
@@ -61,23 +61,23 @@ func (s *Store) FetchGame(uid, gid string) *models.Game {
 			}
 		}
 	}
-	return &models.Game{}
+	return &models.Galaxy{}
 }
 
-func (s *Store) FetchGames(uid string) models.Games {
+func (s *Store) FFetchGames(uid int) models.Galaxies {
 	log.Printf("[domain] FetchGames %q\n", uid)
-	var set models.Games
+	var set models.Galaxies
 	if s.Games == nil {
 		return set
 	}
 	for _, game := range s.Games.ByPlayer[uid] {
-		mg := &models.Game{
+		mg := &models.Galaxy{
 			Id:          game.Id,
 			Name:        game.Name,
 			Files:       game.Files,
 			PlayerCount: len(game.Players),
 		}
-		mg.Specie.No = "00"
+		mg.Specie.Id = 0
 		mg.Specie.Government.Name = "(missing name)"
 		if spNo, ok := game.Players[uid]; ok {
 			for _, file := range game.Turns.Files {
@@ -85,7 +85,7 @@ func (s *Store) FetchGames(uid string) models.Games {
 					if sp, err := s.loadSpecie(file.Files, spNo); err != nil {
 						log.Printf("[domain] FetchGames %q %q %+v\n", uid, spNo, err)
 					} else {
-						mg.Specie.No = spNo
+						//mg.Specie.Id = spId
 						mg.Specie.Name = sp.Name
 						mg.Specie.Government.Name = sp.Government.Name
 					}
@@ -101,24 +101,24 @@ func (s *Store) FetchGames(uid string) models.Games {
 	return set
 }
 
-func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
-	log.Printf("[domain] FetchSpecie %q %q %q %d\n", uid, gid, spNo, turnNo)
+func (s *Store) FetchSpecie(uid, gid, spid int, turnNo int) *models.Specie {
+	log.Printf("[domain] FetchSpecie %q %q %q %d\n", uid, gid, spid, turnNo)
 
 	u, ok := s.Accounts.ById[uid]
 	if !ok || u == nil {
-		log.Printf("[domain] FetchSpecie %q %q %q %d: no such user\n", uid, gid, spNo, turnNo)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such user\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
 	}
 	g, ok := s.Games.ById[gid]
 	if !ok || u == nil {
-		log.Printf("[domain] FetchSpecie %q %q %q %d: no such game\n", uid, gid, spNo, turnNo)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such game\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
 	}
 	if spid, ok := g.Players[uid]; !ok || u == nil {
-		log.Printf("[domain] FetchSpecie %q %q %q %d: no such player\n", uid, gid, spNo, turnNo)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such player\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
-	} else if spNo != spid {
-		log.Printf("[domain] FetchSpecie %q %q %q %d: player spoofing species!\n", uid, gid, spNo, turnNo)
+	} else if spid != spid {
+		log.Printf("[domain] FetchSpecie %q %q %q %d: player spoofing species!\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
 	}
 	var gtf *games.GameTurnFile
@@ -129,17 +129,17 @@ func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
 		}
 	}
 	if gtf == nil {
-		log.Printf("[domain] FetchSpecie %q %q %q %d: no such turn\n", uid, gid, spNo, turnNo)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: no such turn\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
 	}
+	spNo := "sp18" // todo: remove this hack
 	sp, err := s.loadSpecie(gtf.Files, spNo)
 	if err != nil {
-		log.Printf("[domain] FetchSpecie %q %q %q %d: %+v\n", uid, gid, spNo, turnNo, err)
+		log.Printf("[domain] FetchSpecie %q %q %q %d: %+v\n", uid, gid, spid, turnNo, err)
 		return &models.Specie{}
 	}
 	o := &models.Specie{
-		Id:   spNo,
-		No:   spNo,
+		Id:   spid,
 		Name: sp.Name,
 	}
 	o.Government.Name = sp.Government.Name
@@ -167,7 +167,7 @@ func (s *Store) FetchSpecie(uid, gid, spNo string, turnNo int) *models.Specie {
 	return o
 }
 
-func (s *Store) FetchUser(uid string) *models.User {
+func (s *Store) FFetchUser(uid int) *models.User {
 	if s.Accounts == nil {
 		return &models.User{}
 	}
@@ -177,7 +177,7 @@ func (s *Store) FetchUser(uid string) *models.User {
 	}
 	return &models.User{
 		Id:      u.Id,
-		Name:    u.Username,
-		IsAdmin: u.Username == "mdhender",
+		Name:    u.UserName,
+		IsAdmin: u.UserName == "mdhender",
 	}
 }

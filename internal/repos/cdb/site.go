@@ -16,18 +16,28 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package accounts
+package cdb
 
-type Account struct {
-	Id       int    `json:"id"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-	Password string `json:"password"`
-	// hash the password to prevent simple timing attacks
-	HashedPassword string `json:"hashed_password"`
-}
+import (
+	"context"
+	"github.com/mdhender/fhcms/internal/models"
+	"log"
+)
 
-type AccountList struct {
-	ById   map[int]*Account    // by account id
-	ByUser map[string]*Account // by username
+func (db *DB) FetchSite() (models.Site, bool) {
+	log.Printf("[cdb] fetchSite\n")
+	var site struct {
+		Title string
+	}
+	conn, err := db.pool.Acquire(context.Background())
+	if err != nil {
+		return models.Site{}, false
+	}
+	defer conn.Release()
+	err = conn.QueryRow(context.Background(), "select title from site").Scan(&site.Title)
+	if err != nil {
+		log.Printf("[cdb] fetchSite: %+v\n", err)
+		return models.Site{Title: "Far Horizons"}, true
+	}
+	return models.Site{Title: site.Title}, true
 }

@@ -16,18 +16,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package accounts
+package reactor
 
-type Account struct {
-	Id       int    `json:"id"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-	Password string `json:"password"`
-	// hash the password to prevent simple timing attacks
-	HashedPassword string `json:"hashed_password"`
-}
+import (
+	"github.com/mdhender/fhcms/internal/jot"
+	"net/http"
+)
 
-type AccountList struct {
-	ById   map[int]*Account    // by account id
-	ByUser map[string]*Account // by username
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	jot.DeleteCookie(w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

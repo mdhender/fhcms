@@ -28,16 +28,16 @@ import (
 
 func Load(filename string) (*AccountList, error) {
 	var input struct {
-		Accounts map[string]*Account `json:"accounts"`
+		Accounts map[int]*Account `json:"accounts"`
 	}
-	input.Accounts = make(map[string]*Account)
+	input.Accounts = make(map[int]*Account)
 	if data, err := ioutil.ReadFile(filename); err != nil {
 		return nil, err
 	} else if err = json.Unmarshal(data, &input); err != nil {
 		return nil, err
 	}
 	accts := &AccountList{
-		ById:   make(map[string]*Account),
+		ById:   make(map[int]*Account),
 		ByUser: make(map[string]*Account),
 	}
 	for id, acct := range input.Accounts {
@@ -50,7 +50,7 @@ func Load(filename string) (*AccountList, error) {
 		acct.HashedPassword = hex.EncodeToString(h)
 		log.Printf("accounts: id %q acct %v\n", id, *acct)
 		accts.ById[acct.Id] = acct
-		accts.ByUser[acct.Username] = acct
+		accts.ByUser[acct.UserName] = acct
 	}
 	return accts, nil
 }

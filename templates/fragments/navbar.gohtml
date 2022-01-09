@@ -1,6 +1,7 @@
 {{define "navbar"}}
   <nav>
     <button type="button" onclick="window.location.href='/';">Home</button>
+    {{ if .Account.IsAdmin }}<button type="button" onclick="window.location.href='/admin';">Admin</button>{{ end }}
     <button type="button" onclick="window.location.href='/games';">Games</button>
     <button type="button" onclick="window.location.href='/profile';">Profile</button>
     <button type="button" onclick="window.location.href='/about';">About</button>

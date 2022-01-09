@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
 import (
 	"bytes"
@@ -27,35 +27,40 @@ import (
 	"path/filepath"
 )
 
-func (s *Server) profileGetHandler(sf models.SiteFetcher, uf models.UserFetcher, templates string) http.HandlerFunc {
+func (s *Server) homeGetIndex(sf SiteStore, templates string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 			return
 		}
-
-		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "fragments", "footer.gohtml"), filepath.Join(templates, "profile.index.gohtml"))
-		if err != nil {
-			log.Printf("mpa: profileGetHandler: %+v\n", err)
+		u := s.currentUser(r)
+		log.Printf("[reactor] homeGetIndex: u.id %d\n", u.Id)
+		if b, err := renderHome(sf, u, templates); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
+		} else {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(b)
 		}
-
-		var payload struct {
-			Site *models.Site
-			User *models.User
-		}
-		payload.Site = sf.FetchSite()
-		payload.User = uf.FetchUser(s.currentUser(r).Id)
-
-		b := &bytes.Buffer{}
-		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {
-			log.Printf("mpa: profileGetHandler: %+v\n", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(b.Bytes())
 	}
+}
+
+func renderHome(sf SiteStore, a models.Account, templates string) ([]byte, error) {
+	t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "fragments", "footer.gohtml"), filepath.Join(templates, "home.index.gohtml"))
+	if err != nil {
+		log.Printf("[reactor] renderHome: %+v\n", err)
+		return nil, err
+	}
+	var payload struct {
+		Site    models.Site
+		Account models.Account
+	}
+	payload.Site, _ = sf.FetchSite()
+	payload.Account = a
+	b := &bytes.Buffer{}
+	if err = t.ExecuteTemplate(b, "layout", payload); err != nil {
+		log.Printf("[reactor] renderHome: %+v\n", err)
+		return nil, err
+	}
+
+	return b.Bytes(), nil
 }

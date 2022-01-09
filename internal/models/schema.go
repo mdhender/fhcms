@@ -18,19 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package models
 
-type Site struct {
-	Title string
-}
-
-type SiteFetcher interface {
-	FetchSite() *Site
-}
-
-type Game struct {
-	Id     string
+type Galaxy struct {
+	Id     int
 	Name   string
 	Specie struct {
-		No         string
+		Id         int
 		Name       string
 		Government struct {
 			Name string
@@ -47,29 +39,29 @@ type Game struct {
 	}
 }
 
-type Games []*Game
+type Galaxies []*Galaxy
 
 // Len implements the Sorter interface
-func (g Games) Len() int {
+func (g Galaxies) Len() int {
 	return len(g)
 }
 
 // Less implements the Sorter interface
-func (g Games) Less(i, j int) bool {
+func (g Galaxies) Less(i, j int) bool {
 	return g[i].Name < g[j].Name
 }
 
 // Swap implements the Sorter interface
-func (g Games) Swap(i, j int) {
+func (g Galaxies) Swap(i, j int) {
 	g[i], g[j] = g[j], g[i]
 }
 
-type GameFetcher interface {
-	FetchGame(uid, gid string) *Game
+type GalaxyFetcher interface {
+	FetchGalaxy(uid, gid int) *Galaxy
 }
 
-type GamesFetcher interface {
-	FetchGames(uid string) Games
+type GalaxiesFetcher interface {
+	FetchGalaxies(uid int) Galaxies
 }
 
 type GameTurns struct {
@@ -100,8 +92,7 @@ func (g GameTurnFiles) Swap(i, j int) {
 }
 
 type Specie struct {
-	Id         string
-	No         string
+	Id         int
 	Name       string
 	Government struct {
 		Name string
@@ -128,7 +119,7 @@ func (s Species) Swap(i, j int) {
 }
 
 type SpecieFetcher interface {
-	FetchSpecie(uid, gid, spNo string, turnNo int) *Specie
+	FetchSpecie(uid, gid, spNo int, turnNo int) *Specie
 }
 
 type SpeciesFetcher interface {
@@ -149,12 +140,13 @@ type Technology struct {
 	KnowledgeLevel   int
 	ExperiencePoints int
 }
+
 type User struct {
-	Id      string
+	Id      int
 	Name    string
 	IsAdmin bool
 }
 
 type UserFetcher interface {
-	FetchUser(uid string) *User
+	FetchUser(uid int) *User
 }

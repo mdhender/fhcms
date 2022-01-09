@@ -16,31 +16,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
-import (
-	"github.com/mdhender/fhcms/internal/jot"
-	"github.com/mdhender/fhcms/internal/users"
-	"log"
-	"net/http"
-)
+import "github.com/mdhender/fhcms/internal/models"
 
-// we must serve only the login page to unauthenticated visitors
-func (s *Server) authOnly(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var u users.User
-		if j := jot.FromRequest(r); s.jf.Validate(j) == nil {
-			u.Id = j.UserID()
-			if acct, ok := s.accts.ById[u.Id]; ok {
-				u.Name = acct.Username
-				u.IsAuthenticated = u.Id != ""
-			}
-		}
-		if !u.IsAuthenticated {
-			log.Printf("mw: authOnly: %s %s: !authenticated\n", r.Method, r.URL.Path)
-			s.handleGetLogin(w, r)
-			return
-		}
-		h(w, r.WithContext(u.NewContext(r.Context())))
-	}
+type SiteStore interface {
+	FetchSite() (models.Site, bool)
 }

@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
 import (
 	"github.com/mdhender/fhcms/internal/models"
@@ -24,10 +24,11 @@ import (
 )
 
 func (s *Server) routes(reports, uploads string) {
-	var sf models.SiteFetcher = s.site
-	var glf models.GamesFetcher = s.ds
-	var gf models.GameFetcher = s.ds
+	var sf SiteStore = s.site
+	var glf GamesStore = s.games
+	var gf models.GalaxyFetcher = s.ds
 	var spf models.SpecieFetcher = s.ds
+	var pf ProfileStore = s.profiles
 
 	s.router.HandleFunc("GET", "/", s.authOnly(s.homeGetIndex(sf, s.templates)))
 	s.router.HandleFunc("GET", "/manifest.json", s.manifestJsonV3)
@@ -42,7 +43,7 @@ func (s *Server) routes(reports, uploads string) {
 	s.router.HandleFunc("GET", "/logo192.png", http.NotFound)
 	s.router.HandleFunc("GET", "/logout", s.handleLogout)
 	s.router.HandleFunc("GET", "/manifest.json", http.NotFound)
-	s.router.HandleFunc("GET", "/profile", s.authOnly(s.profileGetHandler(sf, s.ds, s.templates)))
+	s.router.HandleFunc("GET", "/profile", s.authOnly(s.profileGetHandler(sf, pf, s.templates)))
 
 	s.router.HandleFunc("POST", "/login", s.handlePostLogin)
 	s.router.HandleFunc("POST", "/logout", s.handleLogout)

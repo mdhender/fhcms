@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # ignore everything
 *
 # except this file
 !.gitignore
+=======
+*.sql
+>>>>>>> add-mariadb-backend

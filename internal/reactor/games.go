@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package mpa
+package reactor
 
 import (
 	"bytes"
@@ -29,8 +29,12 @@ import (
 	"strconv"
 )
 
+type GamesStore interface {
+	FetchGalaxies(uid int) (models.Galaxies, bool)
+}
+
 // fetch specific game for the current user
-func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf models.SpecieFetcher, templates string) http.HandlerFunc {
+func (s *Server) gameGetIndex(sf SiteStore, gf models.GalaxyFetcher, spf models.SpecieFetcher, templates string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -38,7 +42,17 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf 
 		}
 		u := s.currentUser(r)
 		gameId := way.Param(r.Context(), "gameId")
+		gid, err := strconv.Atoi(gameId)
+		if err != nil || gid < 1 {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
 		spNo := way.Param(r.Context(), "spNo")
+		spid, err := strconv.Atoi(spNo)
+		if err != nil || spid < 1 {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
 		var turnNo int
 		if qParm := way.Param(r.Context(), "turnNo"); qParm != "" {
 			if val, err := strconv.Atoi(qParm); err != nil {
@@ -63,19 +77,19 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf 
 		}
 
 		var payload struct {
-			Site   *models.Site
-			Game   *models.Game
+			Site   models.Site
+			Game   *models.Galaxy
 			Specie *models.Specie
 		}
-		payload.Site = sf.FetchSite()
-		payload.Game = gf.FetchGame(u.Id, gameId)
+		payload.Site, _ = sf.FetchSite()
+		payload.Game = gf.FetchGalaxy(u.Id, gid)
 		if turnNo == 0 {
 			turnNo = payload.Game.CurrentTurn
 			log.Printf("mpa: gameGetIndex: u.id %q gameId %q spNo %q turnNo 0 => %d\n", u.Id, gameId, spNo, turnNo)
 		}
 		payload.Game.TurnNo = turnNo
 		payload.Game.Display.Deadline = payload.Game.TurnNo == payload.Game.CurrentTurn
-		payload.Specie = spf.FetchSpecie(u.Id, gameId, spNo, turnNo)
+		payload.Specie = spf.FetchSpecie(u.Id, gid, spid, turnNo)
 
 		b := &bytes.Buffer{}
 		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {
@@ -90,14 +104,14 @@ func (s *Server) gameGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf 
 }
 
 // fetch list of games for the current user
-func (s *Server) gamesGetIndex(sf models.SiteFetcher, glf models.GamesFetcher, templates string) http.HandlerFunc {
+func (s *Server) gamesGetIndex(sf SiteStore, glf GamesStore, templates string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 			return
 		}
 		u := s.currentUser(r)
-		log.Printf("mpa: gamesGetIndex: u.id %q\n", u.Id)
+		log.Printf("mpa: gamesGetIndex: u.id %d\n", u.Id)
 
 		t, err := template.ParseFiles(filepath.Join(templates, "site.layout.gohtml"), filepath.Join(templates, "fragments", "navbar.gohtml"), filepath.Join(templates, "fragments", "footer.gohtml"), filepath.Join(templates, "games.index.gohtml"))
 		if err != nil {
@@ -107,11 +121,11 @@ func (s *Server) gamesGetIndex(sf models.SiteFetcher, glf models.GamesFetcher, t
 		}
 
 		var payload struct {
-			Site  *models.Site
-			Games models.Games
+			Site  models.Site
+			Games models.Galaxies
 		}
-		payload.Site = sf.FetchSite()
-		payload.Games = glf.FetchGames(u.Id)
+		payload.Site, _ = sf.FetchSite()
+		payload.Games, _ = glf.FetchGalaxies(u.Id)
 
 		b := &bytes.Buffer{}
 		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {
@@ -126,7 +140,7 @@ func (s *Server) gamesGetIndex(sf models.SiteFetcher, glf models.GamesFetcher, t
 }
 
 // fetch specific game turn for the current user
-func (s *Server) gamesSpecieTurnGetIndex(sf models.SiteFetcher, gf models.GameFetcher, spf models.SpecieFetcher, templates string) http.HandlerFunc {
+func (s *Server) gamesSpecieTurnGetIndex(sf SiteStore, gf models.GalaxyFetcher, spf models.SpecieFetcher, templates string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -134,7 +148,17 @@ func (s *Server) gamesSpecieTurnGetIndex(sf models.SiteFetcher, gf models.GameFe
 		}
 		u := s.currentUser(r)
 		gameId := way.Param(r.Context(), "gameId")
+		gid, err := strconv.Atoi(gameId)
+		if err != nil || gid < 1 {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
 		spNo := way.Param(r.Context(), "spNo")
+		spid, err := strconv.Atoi(spNo)
+		if err != nil || spid < 1 {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
 		var turnNo int
 		if qParm := way.Param(r.Context(), "turnNo"); qParm != "" {
 			if val, err := strconv.Atoi(qParm); err != nil {
@@ -159,19 +183,19 @@ func (s *Server) gamesSpecieTurnGetIndex(sf models.SiteFetcher, gf models.GameFe
 		}
 
 		var payload struct {
-			Site   *models.Site
-			Game   *models.Game
+			Site   models.Site
+			Game   *models.Galaxy
 			Specie *models.Specie
 		}
-		payload.Site = sf.FetchSite()
-		payload.Game = gf.FetchGame(u.Id, gameId)
+		payload.Site, _ = sf.FetchSite()
+		payload.Game = gf.FetchGalaxy(u.Id, gid)
 		if turnNo == 0 {
 			turnNo = payload.Game.CurrentTurn
 			log.Printf("mpa: gamesSpecieTurnGetIndex: u.id %q gameId %q spNo %q turnNo 0 => %d\n", u.Id, gameId, spNo, turnNo)
 		}
 		payload.Game.TurnNo = turnNo
 		payload.Game.Display.Deadline = payload.Game.TurnNo == payload.Game.CurrentTurn
-		payload.Specie = spf.FetchSpecie(u.Id, gameId, spNo, turnNo)
+		payload.Specie = spf.FetchSpecie(u.Id, gid, spid, turnNo)
 
 		b := &bytes.Buffer{}
 		if err = t.ExecuteTemplate(b, "layout", payload); err != nil {

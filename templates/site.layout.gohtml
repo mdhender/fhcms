@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#000000"/>
   <link rel="apple-touch-icon" href="/logo192.png"/>
   <link rel="manifest" href="/manifest.json"/>
-  <title>{{ .Site.Title }}</title>
+  <title>{{.Site.Title}}</title>
   <style>
       /*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
       html {
@@ -139,7 +139,7 @@
   </style>
 </head>
 <body>
-<h1>Far Horizons</h1>
+<h1>{{.Site.Title}}</h1>
 {{block "navbar" .}}
   <button type="button" onclick="window.location.href='/';">Home</button>
   <button type="button" onclick=" window.open('https://farhorizons.dev','_blank')">Rule Book</button>
