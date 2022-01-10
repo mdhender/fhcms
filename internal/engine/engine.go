@@ -18,12 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package engine
 
-import "github.com/mdhender/fhcms/internal/cluster"
-
-func FromBinary(ds *cluster.Store) *Engine {
-	return &Engine{}
-}
-
-func FromJson() *Engine {
+func New() *Engine {
 	return &Engine{}
 }

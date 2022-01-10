@@ -19,13 +19,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package cmd
 
 import (
+	"encoding/binary"
 	"github.com/mdhender/fhcms/internal/engine"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"log"
 )
+
+var processInputPath string
 
 func init() {
 	rootCmd.AddCommand(processCmd)
+	processCmd.Flags().StringVar(&processInputPath, "input", "", "path to data files for turn")
 }
 
 var processCmd = &cobra.Command{
@@ -33,9 +38,15 @@ var processCmd = &cobra.Command{
 	Short: "Process the current turn",
 	Long:  `Load orders and process the current turn.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ds, err := loader(viper.GetString("files.path"), viper.GetBool("files.big_endian"))
-		cobra.CheckErr(err)
-		e := engine.FromBinary(ds)
+		e := engine.New()
+		var endian binary.ByteOrder
+		if viper.GetBool("files.big_endian") {
+			endian = binary.BigEndian
+		} else {
+			endian = binary.LittleEndian
+		}
+		log.Printf("[engine] input path is %q\n", processInputPath)
+		cobra.CheckErr(e.LoadBinary(processInputPath, endian))
 		cobra.CheckErr(e.Run())
 	},
 }
