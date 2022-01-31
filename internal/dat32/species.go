@@ -152,15 +152,16 @@ func ReadSpecies(name string, no int, bo binary.ByteOrder) (*Species, error) {
 	species.EconUnits = int(sd.Species.EconUnits)
 	species.FleetCost = int(sd.Species.FleetCost)
 	species.FleetPercentCost = int(sd.Species.FleetPercentCost)
-	for sp := 1; sp <= MAX_SPECIES; sp++ {
-		if sp < 64 && (sd.Species.Contact[0]&(1<<(sp-1))) != 0 {
-			species.Contact = append(species.Contact, sp)
+	for spIndex := 0; spIndex < MAX_SPECIES; spIndex++ {
+		spNo := spIndex + 1
+		if spIndex < 63 && (sd.Species.Contact[0]&(1<<spIndex)) != 0 {
+			species.Contact = append(species.Contact, spNo)
 		}
-		if sp < 64 && (sd.Species.Ally[0]&(1<<(sp-1))) != 0 {
-			species.Ally = append(species.Ally, sp)
+		if spIndex < 63 && (sd.Species.Ally[0]&(1<<spIndex)) != 0 {
+			species.Ally = append(species.Ally, spNo)
 		}
-		if sp < 64 && (sd.Species.Enemy[0]&(1<<(sp-1))) != 0 {
-			species.Enemy = append(species.Enemy, sp)
+		if spIndex < 63 && (sd.Species.Enemy[0]&(1<<spIndex)) != 0 {
+			species.Enemy = append(species.Enemy, spNo)
 		}
 	}
 	species.NamplaBase = make([]NamedPlanet, species.NumNamplas, species.NumNamplas)

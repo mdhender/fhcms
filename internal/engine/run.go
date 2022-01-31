@@ -27,12 +27,13 @@ func (e *Engine) Run() error {
 	log.Printf("[engine] created %d/%d locations\n", e.num_locs, len(e.loc))
 	log.Printf("[engine] running NoOrders.......\n")
 	e.no_orders()
-	for i, b := range e.spec_orders {
-		if i == 17 && b != nil {
-			log.Printf("orders: SP%02d\n%s\n", i+1, string(b))
-		}
-	}
+	//for i, b := range e.spec_orders {
+	//	if (i == 4 || i == 17) && b != nil {
+	//		log.Printf("orders: SP%02d\n%s\n", i+1, string(b))
+	//	}
+	//}
 	log.Printf("[engine] running Combat.........\n")
+	e.combat()
 	log.Printf("[engine] running PreDeparture...\n")
 	log.Printf("[engine] running Jump...........\n")
 	log.Printf("[engine] running Production.....\n")

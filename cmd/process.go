@@ -26,11 +26,15 @@ import (
 	"log"
 )
 
+var processFilePrefix string
 var processInputPath string
+var processPromptGM bool
 
 func init() {
 	rootCmd.AddCommand(processCmd)
+	processCmd.Flags().StringVar(&processFilePrefix, "prefix", "", "prefix for turn-based files")
 	processCmd.Flags().StringVar(&processInputPath, "input", "", "path to data files for turn")
+	processCmd.Flags().BoolVar(&processPromptGM, "prompt-gm", false, "prompt gm and log to stdout")
 }
 
 var processCmd = &cobra.Command{
@@ -38,7 +42,7 @@ var processCmd = &cobra.Command{
 	Short: "Process the current turn",
 	Long:  `Load orders and process the current turn.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		e := engine.New()
+		e := engine.New(processPromptGM)
 		var endian binary.ByteOrder
 		if viper.GetBool("files.big_endian") {
 			endian = binary.BigEndian
@@ -46,7 +50,8 @@ var processCmd = &cobra.Command{
 			endian = binary.LittleEndian
 		}
 		log.Printf("[engine] input path is %q\n", processInputPath)
-		cobra.CheckErr(e.LoadBinary(processInputPath, endian))
+		cobra.CheckErr(e.LoadBinary(processInputPath, processFilePrefix, endian))
+		cobra.CheckErr(e.LoadOrders(processInputPath, processFilePrefix))
 		cobra.CheckErr(e.Run())
 	},
 }

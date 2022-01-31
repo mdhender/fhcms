@@ -18,7 +18,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package engine
 
-import "bytes"
+import (
+	"bytes"
+	"github.com/mdhender/fhcms/cms/prng"
+)
 
 type Engine struct {
 	galaxy galaxy_data
@@ -29,28 +32,91 @@ type Engine struct {
 	planet_base []*planet_data
 	home_planet *planet_data
 
+	// named planet globals
 	namp_data   [][]*nampla_data // zero-based index by species of nampla
 	nampla_base []*nampla_data   // single species nampla
 	nampla      *nampla_data     // single nampla
 
-	ship_data [][]*ship_data // zero-based index by species of ship
-	ship_base []*ship_data   // single species ship
-	ship      *ship_data     // single ship
+	// ship globals
+	ship_data                 [][]*ship_data // zero-based index by species of ship
+	ship_base                 []*ship_data   // single species ship
+	abbr_index                int
+	abbr_type                 int
+	correct_spelling_required int // TRUE or FALSE
+	input_abbr                []byte
+	original_name             []byte
+	ship                      *ship_data // single ship
+	ship_index                int        // zero-based
+	sub_light                 int        // TRUE or FALSE
+	tonnage                   int
+	upper_name                []byte
 
+	// species globals
 	spec_data      []*species_data // zero-based index by species
+	spec_logs      []*bytes.Buffer // zero-based index by species
+	spec_orders    [][]byte        // zero-based index by species
 	species        *species_data
 	species_index  int
 	species_number int
-	spec_orders    [][]byte        // zero-based index by species
-	spec_logs      []*bytes.Buffer // zero-based index by species
 
-	loc      []*sp_loc_data
-	num_locs int
+	// location globals
+	loc            []*sp_loc_data
+	locations_base []*sp_loc_data
+	num_locs       int
+
+	// combat globals
+	ambush_took_place  int // TRUE or FALSE
+	attacking_ML       int
+	battle_base        []*battle_data
+	c_nampla           [MAX_SPECIES][]*nampla_data // indexed by species_no
+	c_ship             [MAX_SPECIES][]*ship_data   // indexed by species_no
+	c_species          [MAX_SPECIES]*species_data  // indexed by species_no
+	combat_location    [1000]int
+	combat_log         *FILE
+	combat_option      [1000]int
+	defending_ML       int
+	deep_space_defense int              // TRUE or FALSE, maybe?
+	field_distorted    [MAX_SPECIES]int // indexed by species, TRUE or FALSE
+	first_battle       int              // TRUE or FALSE
+	germ_bombs_used    [MAX_SPECIES][MAX_SPECIES]int
+	make_enemy         [MAX_SPECIES][MAX_SPECIES]int // zero-based index, matrix of species that are enemies, content is one-based species_number
+	num_combat_options int
+	num_transactions   int
+	strike_phase       int
+	temp_log           [MAX_SPECIES]*bytes.Buffer // zero-based indexed by species_no
+	transaction        [MAX_TRANSACTIONS]trans_data
+	x_attacked_y       [MAX_SPECIES][MAX_SPECIES]int
+
+	// input and output hacks
+	append_log         [MAX_SPECIES]int // zero-based index by species
+	end_of_file        int
+	input_file         *FILE
+	just_opened_file   int
+	input_line         []byte
+	input_line_pointer []byte
+	log_indentation    int // number of spaces to indent
+	log_file           *FILE
+	log_line           []byte
+	log_position       int
+	log_to_file        int // TRUE or FALSE
+	log_start_of_line  int // TRUE or FALSE
+	log_stdout         int // TRUE or FALSE
+	log_summary        int // TRUE or FALSE
+	logging_disabled   int
+	original_line      []byte
+	stderr             *FILE
+	stdout             *FILE
+	summary_file       *FILE
 
 	// miscellaneous globals
+	defaultPRNG             *prng.PRNG
 	ignore_field_distorters int
 	orders_file             *bytes.Buffer
+	prompt_gm               bool
+	test_mode               int
 	truncate_name           int
+	value                   int // set by get_value()
+	verbose_mode            int
 	x, y, z                 int
 }
 
@@ -165,9 +231,9 @@ type species_data struct {
 	econ_units         int     /* Number of economic units. */
 	fleet_cost         int     /* Total fleet maintenance cost. */
 	fleet_percent_cost int     /* Fleet maintenance cost as a percentage times one hundred. */
-	contact            []int   /* A bit is set if corresponding species has been met. */
-	ally               []int   /* A bit is set if corresponding species is considered an ally. */
-	enemy              []int   /* A bit is set if corresponding species is considered an enemy. */
+	contact            []int   /* zero based, true if corresponding species has been met. */
+	ally               []int   /* zero based, true if corresponding species is considered an ally. */
+	enemy              []int   /* zero based, true if corresponding species is considered an enemy. */
 	padding            [12]int /* Use for expansion. Initialized to all zeroes. */
 }
 
@@ -188,6 +254,42 @@ type star_data struct {
 	reserved3              int   /* Reserved for future use. Zero for now. */
 	reserved4              int   /* Reserved for future use. Zero for now. */
 	reserved5              int   /* Reserved for future use. Zero for now. */
+}
+
+type action_data struct {
+	num_units_fighting     int
+	fighting_species_index [MAX_SHIPS]int
+	num_shots              [MAX_SHIPS]int
+	shots_left             [MAX_SHIPS]int
+	weapon_damage          [MAX_SHIPS]int
+	shield_strength        [MAX_SHIPS]int
+	shield_strength_left   [MAX_SHIPS]int
+	original_age_or_PDs    [MAX_SHIPS]int
+	bomb_damage            [MAX_SHIPS]int
+	surprised              [MAX_SHIPS]int
+	unit_type              [MAX_SHIPS]int
+	fighting_unit          [MAX_SHIPS]interface{} // either *ship_data or *nampla_data
+}
+
+type battle_data struct {
+	x, y, z                   int
+	num_species_here          int
+	spec_num                  [MAX_SPECIES]int
+	summary_only              [MAX_SPECIES]int
+	transport_withdraw_age    [MAX_SPECIES]int
+	warship_withdraw_age      [MAX_SPECIES]int
+	fleet_withdraw_percentage [MAX_SPECIES]int
+	haven_x                   [MAX_SPECIES]int
+	haven_y                   [MAX_SPECIES]int
+	haven_z                   [MAX_SPECIES]int
+	special_target            [MAX_SPECIES]int
+	hijacker                  [MAX_SPECIES]int
+	can_be_surprised          [MAX_SPECIES]int
+	enemy_mine                [MAX_SPECIES][MAX_SPECIES]int
+	num_engage_options        [MAX_SPECIES]int
+	engage_option             [MAX_SPECIES][MAX_ENGAGE_OPTIONS]int
+	engage_planet             [MAX_SPECIES][MAX_ENGAGE_OPTIONS]int
+	ambush_amount             [MAX_SPECIES]int
 }
 
 type trans_data struct {

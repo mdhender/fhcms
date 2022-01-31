@@ -18,19 +18,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package engine
 
-import "github.com/mdhender/fhcms/cms/prng"
-
-func New(promptGM bool) *Engine {
-	return &Engine{
-		correct_spelling_required: FALSE,
-		defaultPRNG:               prng.New(0xBADC0FFEE),
-		input_abbr:                make([]byte, 256, 256),
-		input_line:                make([]byte, 256, 256),
-		log_line:                  make([]byte, 1024, 1024),
-		original_line:             make([]byte, 256, 256),
-		original_name:             make([]byte, 32, 32),
-		prompt_gm:                 promptGM,
-		stderr:                    fopen("*stderr*", nil),
-		upper_name:                make([]byte, 32, 32),
+func (e *Engine) consolidate_option(option, location int) {
+	// only attack options go in list
+	if option < DEEP_SPACE_FIGHT {
+		return
 	}
+
+	// make sure pre-requisites are already in the list.
+	// bombardment, and germ warfare must follow a successful planet attack.
+	if option > PLANET_ATTACK {
+		e.consolidate_option(PLANET_ATTACK, location)
+	}
+
+	/* Check if option and location are already in list. */
+	for i := 0; i < e.num_combat_options; i++ {
+		if option == e.combat_option[i] && location == e.combat_location[i] {
+			return
+		}
+	}
+
+	// add new option to list
+	e.combat_option[e.num_combat_options] = option
+	e.combat_location[e.num_combat_options] = location
+	e.num_combat_options++
 }

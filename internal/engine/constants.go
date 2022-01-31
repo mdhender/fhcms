@@ -364,3 +364,39 @@ var command_name = [NUM_COMMANDS]string{
 	"Scan", "Send", "Shipyard", "Start", "Summary", "Surrender", "Target",
 	"Teach", "Tech", "Telescope", "Terraform", "Transfer", "Unload",
 	"Upgrade", "Visited", "Withdraw", "Wormhole", "ZZZ"}
+
+// constants from combat.h
+
+/* Maximum number of battle locations for all players. */
+const MAX_BATTLES = 50
+
+/* Maximum number of ships at a single battle. */
+const MAX_SHIPS = 200
+
+/* Maximum number of engagement options that a player may specify for a single battle. */
+const MAX_ENGAGE_OPTIONS = 20
+
+/* Types of combatants. */
+const SHIP = 1
+const NAMPLA = 2
+const GENOCIDE_NAMPLA = 3
+const BESIEGED_NAMPLA = 4
+
+/* Types of special targets. */
+const TARGET_WARSHIPS = 1
+const TARGET_TRANSPORTS = 2
+const TARGET_STARBASES = 3
+const TARGET_PDS = 4
+
+/* Types of actions. */
+const DEFENSE_IN_PLACE = 0
+const DEEP_SPACE_DEFENSE = 1
+const PLANET_DEFENSE = 2
+const DEEP_SPACE_FIGHT = 3
+const PLANET_ATTACK = 4
+const PLANET_BOMBARDMENT = 5
+const GERM_WARFARE = 6
+const SIEGE = 7
+
+/* Special types. */
+const NON_COMBATANT = 1

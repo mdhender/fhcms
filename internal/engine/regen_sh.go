@@ -18,19 +18,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package engine
 
-import "github.com/mdhender/fhcms/cms/prng"
+// regenerate_shields restores by 5 + LS/10 percent of original shield strength per round.
+func (e *Engine) regenerate_shields(act *action_data) {
+	for unit_index := 0; unit_index < act.num_units_fighting; unit_index++ {
+		species_index := act.fighting_species_index[unit_index]
 
-func New(promptGM bool) *Engine {
-	return &Engine{
-		correct_spelling_required: FALSE,
-		defaultPRNG:               prng.New(0xBADC0FFEE),
-		input_abbr:                make([]byte, 256, 256),
-		input_line:                make([]byte, 256, 256),
-		log_line:                  make([]byte, 1024, 1024),
-		original_line:             make([]byte, 256, 256),
-		original_name:             make([]byte, 32, 32),
-		prompt_gm:                 promptGM,
-		stderr:                    fopen("*stderr*", nil),
-		upper_name:                make([]byte, 32, 32),
+		// percent is the amount regenerated per round
+		percent := (e.c_species[species_index].tech_level[LS] / 10) + 5
+
+		// max strength is the original strength, which we can't go above
+		max_shield_strength := act.shield_strength[unit_index]
+
+		act.shield_strength_left[unit_index] += (percent * max_shield_strength) / 100
+		if act.shield_strength_left[unit_index] > max_shield_strength {
+			act.shield_strength_left[unit_index] = max_shield_strength
+		}
 	}
 }

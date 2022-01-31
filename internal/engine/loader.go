@@ -23,13 +23,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/mdhender/fhcms/internal/dat32"
+	"io/ioutil"
 	"log"
 	"path/filepath"
 )
 
 // LoadBinary load all data from the original binary files
-func (e *Engine) LoadBinary(root string, endian binary.ByteOrder) error {
-	galaxy, err := dat32.ReadGalaxy(filepath.Join(root, "galaxy.dat"), endian)
+func (e *Engine) LoadBinary(root, prefix string, endian binary.ByteOrder) error {
+	galaxy, err := dat32.ReadGalaxy(filepath.Join(root, prefix+"galaxy.dat"), endian)
 	if err != nil {
 		return err
 	}
@@ -39,7 +40,7 @@ func (e *Engine) LoadBinary(root string, endian binary.ByteOrder) error {
 	e.galaxy.turn_number = galaxy.TurnNumber
 	log.Printf("[engine] loadBinary: loaded galaxy turn %6d\n", e.galaxy.turn_number)
 
-	stars, err := dat32.ReadStars(filepath.Join(root, "stars.dat"), endian)
+	stars, err := dat32.ReadStars(filepath.Join(root, prefix+"stars.dat"), endian)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func (e *Engine) LoadBinary(root string, endian binary.ByteOrder) error {
 	e.num_stars = len(stars.Stars)
 	log.Printf("[engine] loadBinary: loaded %6d stars\n", e.num_stars)
 
-	planets, err := dat32.ReadPlanets(filepath.Join(root, "planets.dat"), endian)
+	planets, err := dat32.ReadPlanets(filepath.Join(root, prefix+"planets.dat"), endian)
 	if err != nil {
 		return err
 	}
@@ -101,7 +102,8 @@ func (e *Engine) LoadBinary(root string, endian binary.ByteOrder) error {
 	e.ship_data = make([][]*ship_data, e.galaxy.num_species, e.galaxy.num_species)
 	for i := 0; i < galaxy.NumSpecies; i++ {
 		e.spec_logs[i] = &bytes.Buffer{}
-		sp, err := dat32.ReadSpecies(filepath.Join(root, fmt.Sprintf("sp%02d.dat", i+1)), i+1, endian)
+
+		sp, err := dat32.ReadSpecies(filepath.Join(root, prefix+fmt.Sprintf("sp%02d.dat", i+1)), i+1, endian)
 		if err != nil {
 			return err
 		}
@@ -126,9 +128,9 @@ func (e *Engine) LoadBinary(root string, endian binary.ByteOrder) error {
 			econ_units:         sp.EconUnits,
 			fleet_cost:         sp.FleetCost,
 			fleet_percent_cost: sp.FleetPercentCost,
-			contact:            make([]int, e.galaxy.num_species+1, e.galaxy.num_species+1),
-			ally:               make([]int, e.galaxy.num_species+1, e.galaxy.num_species+1),
-			enemy:              make([]int, e.galaxy.num_species+1, e.galaxy.num_species+1),
+			contact:            make([]int, MAX_SPECIES, MAX_SPECIES),
+			ally:               make([]int, MAX_SPECIES, MAX_SPECIES),
+			enemy:              make([]int, MAX_SPECIES, MAX_SPECIES),
 		}
 		if sp.AutoOrders {
 			sd.auto_orders = TRUE
@@ -140,18 +142,21 @@ func (e *Engine) LoadBinary(root string, endian binary.ByteOrder) error {
 			sd.poison_gas[j] = sp.PoisonGas[j]
 		}
 		for v := 0; v < len(sp.Contact); v++ {
-			if sp.Contact[v] <= e.galaxy.num_species {
-				sd.contact[sp.Contact[v]] = TRUE
+			spNo, spIndex := sp.Contact[v], sp.Contact[v]-1
+			if 0 < spNo && spNo <= e.galaxy.num_species {
+				sd.contact[spIndex] = TRUE
 			}
 		}
 		for v := 0; v < len(sp.Ally); v++ {
-			if sp.Ally[v] <= e.galaxy.num_species {
-				sd.ally[sp.Ally[v]] = TRUE
+			spNo, spIndex := sp.Ally[v], sp.Ally[v]-1
+			if 0 < spNo && spNo <= e.galaxy.num_species {
+				sd.ally[spIndex] = TRUE
 			}
 		}
 		for v := 0; v < len(sp.Enemy); v++ {
-			if sp.Enemy[v] <= e.galaxy.num_species {
-				sd.enemy[sp.Enemy[v]] = TRUE
+			spNo, spIndex := sp.Enemy[v], sp.Enemy[v]-1
+			if 0 < spNo && spNo <= e.galaxy.num_species {
+				sd.enemy[spIndex] = TRUE
 			}
 		}
 		for j := 0; j < sp.NumNamplas; j++ {
@@ -239,6 +244,17 @@ func (e *Engine) LoadBinary(root string, endian binary.ByteOrder) error {
 	//	}
 	//}
 
+	return nil
+}
+
+func (e *Engine) LoadOrders(root, prefix string) error {
+	for i := 0; i < e.galaxy.num_species; i++ {
+		ordersFile := filepath.Join(root, prefix+fmt.Sprintf("sp%02d.ord", i+1))
+		if orders, err := ioutil.ReadFile(ordersFile); err == nil {
+			log.Printf("[engine] loaded %q\n", ordersFile)
+			e.spec_orders[i] = orders
+		}
+	}
 	return nil
 }
 
