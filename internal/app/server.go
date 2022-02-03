@@ -66,6 +66,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) currentUser(r *http.Request) models.Account {
-	log.Printf("[reactor] server.currentUser\n")
+	log.Printf("[app] server.currentUser\n")
 	return models.CurrentUser(r)
 }
