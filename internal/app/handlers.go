@@ -27,11 +27,36 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 	"unicode/utf8"
 )
 
 func contact(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprint(w, "contact\n")
+}
+
+func (s *Server) homeHandler(render func(p homePayload) ([]byte, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		u := s.currentUser(r)
+		log.Printf("[app] homeHandler: u.id %q\n", u.Id)
+		var p homePayload
+		p.Account = s.currentUser(r)
+		b, err := render(p)
+		if err != nil {
+			log.Printf("[app] homeHandler: render %+v\n", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(b)
+		//_, _ = fmt.Fprintf(w, `<h1>HOME</h1>`)
+		//_, _ = fmt.Fprintf(w, `<p>%+v</p>`, s.currentUser(r))
+		//_, _ = fmt.Fprintf(w, `<p>todo: implement render</p>`)
+	}
 }
 
 func (s *Server) loginGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -175,12 +200,24 @@ func (s *Server) loginPostHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(response)
 	case "application/x-www-form-urlencoded":
 		log.Printf("[app] form: %s %q: success: username %q password %q\n", r.Method, r.URL.Path, input.Username, input.Password)
-		http.SetCookie(w, &http.Cookie{Name: "jwt", Path: "/", Value: "value", MaxAge: 7 * 24 * 60 * 60, HttpOnly: true})
-		http.Redirect(w, r, "/", http.StatusFound)
+		j, err := s.jf.Token(time.Hour*24*7, acct.Id)
+		if err != nil {
+			log.Printf("[app] form: %s %q: loginPostHandler: token %+v\n", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		j.SetCookie(w)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	case "text/html":
 		log.Printf("[app] html: %s %q: success: username %q password %q\n", r.Method, r.URL.Path, input.Username, input.Password)
-		http.SetCookie(w, &http.Cookie{Name: "jwt", Path: "/", Value: "value", MaxAge: 7 * 24 * 60 * 60, HttpOnly: true})
-		http.Redirect(w, r, "/", http.StatusFound)
+		j, err := s.jf.Token(time.Hour*24*7, acct.Id)
+		if err != nil {
+			log.Printf("[app] html: %s %q: loginPostHandler: token %+v\n", r.Method, r.URL.Path, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		j.SetCookie(w)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	default:
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}

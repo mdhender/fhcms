@@ -102,7 +102,7 @@ func (s *Server) handlePostLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("[reactor] %s %q: handlePostLogin: found username %q\n", r.Method, r.URL.Path, a.UserName)
 	// the weird triple check for admin below prevents unauthenticated or inactive users from slipping through
-	j, err := s.jf.NewToken(time.Hour*24*7, a.Id, a.UserName, a.IsAuthenticated && a.IsActive && a.IsAdmin)
+	j, err := s.jf.NewTokenOld(time.Hour*24*7, a.Id, a.UserName, a.IsAuthenticated && a.IsActive && a.IsAdmin)
 	if err != nil {
 		log.Printf("[reactor] %s %q: handlePostLogin: token %+v\n", r.Method, r.URL.Path, err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

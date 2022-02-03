@@ -80,11 +80,11 @@ var reactorCmd = &cobra.Command{
 		cobra.CheckErr(err)
 
 		log.Printf("[reactor] listening on %q\n", net.JoinHostPort(globalReactor.host, globalReactor.port))
-		if globalReactor.debug.dumpRequests {
-			log.Fatal(http.ListenAndServe(net.JoinHostPort(globalReactor.host, globalReactor.port), adapters.Logger(adapters.DumpRequest(s))))
-		} else {
-			log.Fatal(http.ListenAndServe(net.JoinHostPort(globalReactor.host, globalReactor.port), adapters.Logger(s)))
-		}
+		//if globalReactor.debug.dumpRequests {
+		log.Fatal(http.ListenAndServe(net.JoinHostPort(globalReactor.host, globalReactor.port), adapters.Logger(adapters.DumpRequest(s))))
+		//} else {
+		//	log.Fatal(http.ListenAndServe(net.JoinHostPort(globalReactor.host, globalReactor.port), adapters.Logger(s)))
+		//}
 	},
 }
 

@@ -19,8 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package app
 
 import (
+	"github.com/mdhender/fhcms/internal/jot"
 	"github.com/mdhender/fhcms/internal/models"
 	"net"
+	"path/filepath"
 	"time"
 )
 
@@ -45,6 +47,13 @@ func WithAccountStore(ds models.AccountStore) Option {
 	}
 }
 
+func WithData(root string) Option {
+	return func(s *Server) (err error) {
+		s.data = filepath.Clean(root)
+		return nil
+	}
+}
+
 func WithHost(host string) Option {
 	return func(s *Server) (err error) {
 		s.args.host = host
@@ -60,6 +69,13 @@ func WithMaxBodyLength(l int) Option {
 	}
 }
 
+func WithJotFactory(jf *jot.Factory) Option {
+	return func(s *Server) (err error) {
+		s.jf = jf
+		return nil
+	}
+}
+
 func WithPort(port string) Option {
 	return func(s *Server) (err error) {
 		s.args.port = port
@@ -71,6 +87,13 @@ func WithPort(port string) Option {
 func WithReadTimeout(d time.Duration) Option {
 	return func(s *Server) (err error) {
 		s.ReadTimeout = d
+		return nil
+	}
+}
+
+func WithTemplates(root string) Option {
+	return func(s *Server) (err error) {
+		s.templates = filepath.Clean(root)
 		return nil
 	}
 }

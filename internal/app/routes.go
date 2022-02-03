@@ -30,7 +30,7 @@ func (s *Server) routes(reports, uploads string) {
 	//var pf ProfileStore = s.profiles
 
 	//s.router.HandleFunc("GET", "/", s.authOnly(s.homeGetIndex(sf, s.templates)))
-	s.router.HandleFunc("GET", "/", s.notImplementedHandler)
+	s.router.HandleFunc("GET", "/", s.homeHandler(s.renderHome))
 	s.router.HandleFunc("GET", "/login", s.loginGetHandler)
 	s.router.HandleFunc("POST", "/login", s.loginPostHandler)
 	s.router.HandleFunc("*", "/logout", s.logoutHandler)

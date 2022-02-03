@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package app
 
 import (
+	"github.com/mdhender/fhcms/internal/jot"
 	"github.com/mdhender/fhcms/internal/models"
 	"github.com/mdhender/fhcms/internal/way"
 	"log"
@@ -28,9 +29,9 @@ import (
 )
 
 // New returns an initialized application server.
-func New(opts ...Option) (*Server, error) {
+func New(opts ...Option) (s *Server, err error) {
 	// create a server with default values
-	s := &Server{}
+	s = &Server{}
 	s.args.host, s.args.port = "", "8080"
 	s.router = way.NewRouter()
 	s.Addr = net.JoinHostPort(s.args.host, s.args.port)
@@ -40,9 +41,13 @@ func New(opts ...Option) (*Server, error) {
 
 	// apply the list of options to the server
 	for _, opt := range opts {
-		if err := opt(s); err != nil {
+		if err = opt(s); err != nil {
 			return nil, err
 		}
+	}
+
+	if s.renderHome, err = homeRenderer(s.templates); err != nil {
+		return nil, err
 	}
 
 	s.routes("reports", "uploads")
@@ -52,13 +57,16 @@ func New(opts ...Option) (*Server, error) {
 
 type Server struct {
 	http.Server
-	router    *way.Router
-	templates string // path to templates directory
-	args      struct {
+	router *way.Router
+	args   struct {
 		host string
 		port string
 	}
+	data         string // path to data directory
+	templates    string // path to templates directory
 	accountStore models.AccountStore
+	jf           *jot.Factory
+	renderHome   func(p homePayload) ([]byte, error)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

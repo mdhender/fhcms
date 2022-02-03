@@ -27,11 +27,11 @@ import (
 )
 
 // Logger returns an adapter that will log the request.
-func Logger(next http.Handler) http.Handler {
+func Logger(h http.HandlerFunc) http.HandlerFunc {
 	log.Printf("[logger] initializing\n")
 	defer log.Printf("[logger] initialized\n")
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		start, l := time.Now(), &logger{ResponseWriter: w, status: http.StatusOK}
 		defer func() {
 			elapsed := time.Since(start)
@@ -47,8 +47,8 @@ func Logger(next http.Handler) http.Handler {
 				elapsed,
 			)
 		}()
-		next.ServeHTTP(l, r)
-	})
+		h(l, r)
+	}
 }
 
 // create a custom response writer so that we can save the status for logging.
