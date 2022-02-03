@@ -24,7 +24,7 @@ import (
 	"log"
 )
 
-func (db *DB) FetchGalaxies(uid int) (models.Galaxies, bool) {
+func (db *DB) FetchGalaxies(uid string) (models.Galaxies, bool) {
 	var galaxies models.Galaxies
 	conn, err := db.pool.Acquire(context.Background())
 	if err != nil {

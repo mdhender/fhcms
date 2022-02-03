@@ -30,7 +30,7 @@ import (
 )
 
 type GamesStore interface {
-	FetchGalaxies(uid int) (models.Galaxies, bool)
+	FetchGalaxies(uid string) (models.Galaxies, bool)
 }
 
 // fetch specific game for the current user

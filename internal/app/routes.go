@@ -19,194 +19,114 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package app
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/go-chi/chi/v5"
-	"io"
-	"log"
 	"net/http"
-	"unicode/utf8"
 )
 
-// Router returns a router that will serve static files for the EmberJS front end.
-func Router() http.Handler {
-	r := chi.NewRouter()
+func (s *Server) routes(reports, uploads string) {
+	//var sf SiteStore = s.site
+	//var glf GamesStore = s.games
+	//var gf models.GalaxyFetcher = s.ds
+	//var spf models.SpecieFetcher = s.ds
+	//var pf ProfileStore = s.profiles
 
-	r.Get("/", home)
-	r.Get("/logout", GetLogout)
-	r.Post("/login", PostLogin)
-	r.Get("/messages", GetMessages)
+	//s.router.HandleFunc("GET", "/", s.authOnly(s.homeGetIndex(sf, s.templates)))
+	s.router.HandleFunc("GET", "/", s.notImplementedHandler)
+	s.router.HandleFunc("GET", "/login", s.loginGetHandler)
+	s.router.HandleFunc("POST", "/login", s.loginPostHandler)
+	s.router.HandleFunc("*", "/logout", s.logoutHandler)
+	s.router.HandleFunc("*", "/manifest.json", s.manifestJsonV3)
 
-	r.Get("/contact", contact)
-	r.Get("/{slug}", widgetGet)
-	r.Get("/{slug}/admin", widgetAdmin)
-	r.Post("/{slug}/image", widgetImage)
+	//s.router.HandleFunc("GET", "/about", s.authOnly(s.aboutGetHandler(sf, s.templates)))
+	//s.router.HandleFunc("GET", "/favicon.ico", http.NotFound)
+	//s.router.HandleFunc("GET", "/games", s.authOnly(s.gamesGetIndex(sf, glf, s.templates)))
+	//s.router.HandleFunc("GET", "/games/:gameId", s.authOnly(s.gameGetIndex(sf, gf, spf, s.templates)))
+	//s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo", s.authOnly(s.gameGetIndex(sf, gf, spf, s.templates)))
+	//s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnNo", s.authOnly(s.gamesSpecieTurnGetIndex(sf, gf, spf, s.templates)))
+	//s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnNo/orders", s.notImplemented)
+	//s.router.HandleFunc("GET", "/games/:gameId/specie/:spNo/turn/:turnNo/reports", s.notImplemented)
+	//s.router.HandleFunc("GET", "/logo192.png", http.NotFound)
+	//s.router.HandleFunc("GET", "/logout", s.handleLogout)
+	//s.router.HandleFunc("GET", "/profile", s.authOnly(s.profileGetHandler(sf, pf, s.templates)))
+	//
+	//s.router.HandleFunc("POST", "/login", s.handlePostLogin)
+	//s.router.HandleFunc("POST", "/game/:gameId/specie/:spNo/turn/:turnId/orders", s.notImplemented)
 
-	return r
-}
+	//////s.router.HandleFunc("GET", "/admin", s.adminOnly(s.handleAdminIndex()))
+	////s.router.HandleFunc("GET", "/home", s.handleHomePage(reports))
+	////s.router.HandleFunc("GET", "/turn/:turn/orders", s.handleTurnOrders(reports))
+	////s.router.HandleFunc("GET", "/turn/:turn/report", s.handleTurnReport(reports))
+	////s.router.HandleFunc("GET", "/turn/:turn/upload", s.handleTurnUpload(uploads))
+	////s.router.HandleFunc("POST", "/api/authenticate", s.handleAuthenticate())
+	////s.router.HandleFunc("POST", "/api/turn/:turn/orders", s.postTurnOrders(uploads))
+	////
+	//////s.router.HandleFunc("GET", "/api/get-cookie", s.handleGetCookie())
+	//////s.router.HandleFunc("GET", "/api/set-cookie", s.handleSetCookie())
 
-func home(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprint(w, "home\n")
-}
-
-func contact(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprint(w, "contact\n")
-}
-
-func widgetGet(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-	_, _ = fmt.Fprintf(w, "widget %s\n", slug)
-}
-
-func widgetAdmin(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-	_, _ = fmt.Fprintf(w, "widgetAdmin %s\n", slug)
-}
-
-func widgetImage(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-	_, _ = fmt.Fprintf(w, "widgetImage %s\n", slug)
-}
-
-func GetLogout(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "jwt",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
+	s.router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 	})
 }
 
-func GetMessages(w http.ResponseWriter, r *http.Request) {
-	if token := r.Header.Get("Token"); token == "" {
-		log.Printf("app: %s %q: token missing from header\n", r.Method, r.URL.Path)
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-
-	type Attributes struct {
-		From    string `json:"from,omitempty"`
-		Dttm    string `json:"dttm,omitempty"`
-		Subject string `json:"subject,omitempty"`
-		Body    string `json:"body,omitempty"`
-	}
-	type Message struct {
-		Id         int        `json:"id,omitempty"`
-		Type       string     `json:"type"`
-		Attributes Attributes `json:"attributes"`
-	}
-	var response struct {
-		Links struct {
-			Self string `json:"self"`
-		} `json:"links"`
-		Data []Message `json:"data"`
-	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     "jwt",
-		Path:     "/",
-		MaxAge:   7 * 24 * 60 * 60,
-		HttpOnly: true,
-	})
-	response.Links.Self = r.URL.Path
-	response.Data = append(response.Data, Message{Id: 1, Type: "messages", Attributes: Attributes{From: "Tomster", Dttm: "2020.07.24, 16:15:03", Subject: "Hey Zoey", Body: "How is it going? Will I see you at EmberConf next year?"}})
-	response.Data = append(response.Data, Message{Id: 2, Type: "messages", Attributes: Attributes{From: "EmberConf", Dttm: "2020.07.21, 16:15:03", Subject: "Registration Confirmation for EmberConf 2021", Body: "Thanks so much for registering to join us at EmberConf! You do NOT need to print this confirmation, but photo ID may be required for entry."}})
-	w.Header().Set("Content-Type", "application/vnd.api+json")
-	_ = json.NewEncoder(w).Encode(response)
-	log.Printf("app: json: %s %q: success\n", r.Method, r.URL.Path)
-}
-
-func PostLogin(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Username string `json:"username,omitempty"`
-		Password string `json:"password,omitempty"`
-	}
-
-	contentType := r.Header.Get("Content-type")
-	log.Printf("app: %s %q: %q\n", r.Method, r.URL.Path, contentType)
-
-	switch contentType {
-	case "application/json":
-		// enforce a maximum read of 1kb from the response body
-		r.Body = http.MaxBytesReader(w, r.Body, 1024)
-		// create a json decoder that will accept only our specific fields
-		dec := json.NewDecoder(r.Body)
-		dec.DisallowUnknownFields()
-		if err := dec.Decode(&input); err != nil {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		// call decode again to confirm that the request contained only a single JSON object
-		if err := dec.Decode(&struct{}{}); err != io.EOF {
-			http.Error(w, "request body must only contain a single JSON object", http.StatusBadRequest)
-			return
-		}
-		log.Printf("app: json: %s %q: username %q password %q\n", r.Method, r.URL.Path, input.Username, input.Password)
-	case "application/x-www-form-urlencoded", "text/html":
-		if err := r.ParseForm(); err != nil {
-			log.Printf("app: html: %s %q: %+v\n", r.Method, r.URL.Path, err)
-			http.SetCookie(w, &http.Cookie{
-				Name:     "jwt",
-				Path:     "/",
-				MaxAge:   -1,
-				HttpOnly: true,
-			})
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		log.Printf("app: html: %s %q: %v\n", r.Method, r.URL.Path, r.PostForm)
-		for k, v := range r.Form {
-			switch k {
-			case "username":
-				if len(v) != 1 || !utf8.ValidString(v[0]) {
-					http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-					return
-				}
-				input.Username = v[0]
-			case "password":
-				if len(v) != 1 || !utf8.ValidString(v[0]) {
-					http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-					return
-				}
-				input.Password = v[0]
-			}
-		}
-		log.Printf("app: html: %s %q: username %q password %q\n", r.Method, r.URL.Path, input.Username, input.Password)
-	default:
-		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
-	}
-
-	log.Printf("app: %s %q: username %q password %q\n", r.Method, r.URL.Path, input.Username, input.Password)
-	if !(input.Username == "username" && input.Password == "password") {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	switch contentType {
-	case "application/json":
-		log.Printf("app: json: %s %q: success: username %q password %q\n", r.Method, r.URL.Path, input.Username, input.Password)
-		var response struct {
-			Links struct {
-				Self string `json:"self"`
-			} `json:"links"`
-			Data struct {
-				Token string `json:"token"`
-			} `json:"data,omitempty"`
-		}
-		response.Links.Self = r.URL.Path
-		response.Data.Token = "value"
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(response)
-	case "application/x-www-form-urlencoded", "text/html":
-		log.Printf("app: html: %s %q: success: username %q password %q\n", r.Method, r.URL.Path, input.Username, input.Password)
-		http.SetCookie(w, &http.Cookie{
-			Name:     "jwt",
-			Path:     "/",
-			Value:    "value",
-			MaxAge:   7 * 24 * 60 * 60,
-			HttpOnly: true,
-		})
-		http.Redirect(w, r, "/", http.StatusFound)
-	default:
-		http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
-	}
-}
+//import (
+//	"encoding/json"
+//	"fmt"
+//	"github.com/go-chi/chi/v5"
+//	"github.com/go-chi/chi/v5/middleware"
+//	"github.com/go-chi/cors"
+//	"github.com/mdhender/fhcms/internal/api"
+//	"io"
+//	"log"
+//	"net/http"
+//	"unicode/utf8"
+//)
+//
+//// Routes is routes and returns a chi.Mux.
+//func Routes() *chi.Mux {
+//	r := chi.NewRouter()
+//	r.Use(middleware.Logger)
+//	r.Use(middleware.Recoverer)
+//	r.Use(cors.Handler(cors.Options{
+//		AllowedOrigins: []string{"*"},
+//		AllowedMethods: []string{
+//			"GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS",
+//		},
+//		AllowedHeaders: []string{
+//			"Accept", "Accept-Encoding", "Accept-Language", "Authorization", "Cache-Control", "Connection", "Content-Type", "DNT", "Host", "Origin", "Pragma", "Referer", "User-Agent",
+//		},
+//		ExposedHeaders:   []string{"Link"},
+//		AllowCredentials: true,
+//		MaxAge:           300, // Maximum value not ignored by any of major browsers
+//	}))
+//
+//	//// auth/auth routes
+//	//tokenTimeToLive := 60 * time.Second // 14 * 24 * 60 * 60 * time.Second
+//	//r.Post("/auth/jwt")
+//
+//	// protected api routes
+//	r.Route("/api", func(r chi.Router) {
+//		//r.Use(jwtauth.Verifier(tokenAuth)) // extract, verify, validate JWT
+//		////r.Use(jwtauth.Authenticator)       // handle valid and invalid JWT
+//		//r.Use(JWTAuthenticator)    // handle valid and invalid JWT
+//		r.Mount("/", api.Router()) // mount the api sub-router
+//	})
+//
+//	// protected ui routes
+//	r.Route("/ui", func(r chi.Router) {
+//		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+//			_, _ = fmt.Fprint(w, "home\n")
+//		})
+//	})
+//
+//	r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
+//		_, _ = fmt.Fprint(w, "login\n")
+//	})
+//	r.Post("/login", PostLogin)
+//	r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
+//		http.SetCookie(w, &http.Cookie{Name: "jwt", Path: "/", MaxAge: -1, HttpOnly: true})
+//	})
+//	r.Post("/logout", func(w http.ResponseWriter, r *http.Request) {
+//		http.SetCookie(w, &http.Cookie{Name: "jwt", Path: "/", MaxAge: -1, HttpOnly: true})
+//	})
+//
+//	return r
+//}

@@ -25,8 +25,8 @@ import (
 )
 
 // FetchAccount implements the reactor.AuthStore interface
-func (db *DB) FetchAccount(id int) (models.Account, bool) {
-	log.Printf("[cdb] fetchAccount: id %d\n", id)
+func (db *DB) FetchAccount(id string) (models.Account, bool) {
+	log.Printf("[cdb] fetchAccount: id %q\n", id)
 	var account struct {
 		UserName string
 		Admin    bool
@@ -50,10 +50,10 @@ func (db *DB) FetchAccount(id int) (models.Account, bool) {
 }
 
 // FetchProfile implements the reactor.ProfileStore interface
-func (db *DB) FetchProfile(id int) (models.Profile, bool) {
+func (db *DB) FetchProfile(id string) (models.Profile, bool) {
 	log.Printf("[cdb] fetchProfile: id %d\n", id)
 	var profile struct {
-		Id       int
+		Id       string
 		UserName string
 		IsAdmin  bool
 	}

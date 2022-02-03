@@ -1,6 +1,6 @@
 /*******************************************************************************
 Far Horizons Engine
-Copyright (C) 2021  Michael D Henderson
+Copyright (C) 2022  Michael D Henderson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -16,39 +16,24 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package accounts
+package jsonapi
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
+	"net/http"
 )
 
-func Load(filename string) (*Repository, error) {
-	r := &Repository{}
-	input := make(map[string]*Account)
-	if data, err := ioutil.ReadFile(filename); err != nil {
-		return r, err
-	} else if err = json.Unmarshal(data, &input); err != nil {
-		return r, err
-	}
-	for id, acct := range input {
-		acct.Id = id
-		if acct.HashedPassword == "" {
-			acct.HashedPassword = hashPassword(acct.Salt, acct.Password)
-		}
-		acct.Password = ""
-		r.data = append(r.data, acct)
-	}
-	return r, nil
+type ErrorResponse struct {
+	Details []ErrorDetail `json:"errors"`
 }
 
-// hashPassword returns the SHA-256 hash of the plaintext plus salt.
-func hashPassword(salt, plaintext string) string {
-	var h []byte
-	for _, b := range sha256.Sum256([]byte(salt + plaintext)) {
-		h = append(h, b)
-	}
-	return hex.EncodeToString(h)
+type ErrorDetail struct {
+	Status string `json:"status,omitempty"`
+	Title  string `json:"title,omitempty"`
+	Detail string `json:"detail,omitempty"`
+}
+
+func Error(w http.ResponseWriter, status, detail string) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Details: []ErrorDetail{{Status: status, Detail: detail}}})
 }

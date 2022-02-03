@@ -79,7 +79,7 @@ func (f *Factory) Sign(j *JWT) error {
 
 // NewToken is a helper to create a new, signed JWT.
 // userId is the user id to add to the JWT
-func (f *Factory) NewToken(ttl time.Duration, userId int, userName string, isAdmin bool) (*JWT, error) {
+func (f *Factory) NewToken(ttl time.Duration, userId string, userName string, isAdmin bool) (*JWT, error) {
 	if f == nil || f.kid == "" || f.s == nil {
 		return nil, ErrBadFactory
 	}

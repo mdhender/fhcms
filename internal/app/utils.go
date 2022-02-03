@@ -1,6 +1,6 @@
 /*******************************************************************************
 Far Horizons Engine
-Copyright (C) 2021  Michael D Henderson
+Copyright (C) 2022  Michael D Henderson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -16,39 +16,32 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package accounts
+package app
 
 import (
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/hex"
-	"encoding/json"
-	"io/ioutil"
+	"path"
+	"strings"
 )
 
-func Load(filename string) (*Repository, error) {
-	r := &Repository{}
-	input := make(map[string]*Account)
-	if data, err := ioutil.ReadFile(filename); err != nil {
-		return r, err
-	} else if err = json.Unmarshal(data, &input); err != nil {
-		return r, err
-	}
-	for id, acct := range input {
-		acct.Id = id
-		if acct.HashedPassword == "" {
-			acct.HashedPassword = hashPassword(acct.Salt, acct.Password)
-		}
-		acct.Password = ""
-		r.data = append(r.data, acct)
-	}
-	return r, nil
+func mkkey(salt, secret string) string {
+	h, h2 := sha1.New(), sha1.New()
+	_, _ = h.Write([]byte(salt))
+	_, _ = h.Write([]byte(secret))
+	_, _ = h2.Write(h.Sum(nil))
+	_, _ = h2.Write([]byte(salt))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
-// hashPassword returns the SHA-256 hash of the plaintext plus salt.
-func hashPassword(salt, plaintext string) string {
-	var h []byte
-	for _, b := range sha256.Sum256([]byte(salt + plaintext)) {
-		h = append(h, b)
+// shiftPath splits off the first component of p, which will be cleaned of relative components before processing.
+// head will never contain a slash and tail will always be a rooted path without trailing slash.
+// from https://blog.merovius.de/2017/06/18/how-not-to-use-an-http-router.html
+func shiftPath(p string) (head, tail string) {
+	p = path.Clean("/" + p)
+	i := strings.Index(p[1:], "/") + 1
+	if i <= 0 {
+		return p[1:], "/"
 	}
-	return hex.EncodeToString(h)
+	return p[1:i], p[i:]
 }

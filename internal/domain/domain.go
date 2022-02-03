@@ -27,7 +27,7 @@ import (
 )
 
 type Store struct {
-	Accounts *accounts.AccountList
+	Accounts *accounts.Repository
 	Games    *games.GameList
 	Species  *games.SpecieList
 }
@@ -45,7 +45,7 @@ func New(opts ...func(*Store) error) (*Store, error) {
 	return s, nil
 }
 
-func (s *Store) FetchGalaxy(uid, gid int) *models.Galaxy {
+func (s *Store) FetchGalaxy(uid string, gid int) *models.Galaxy {
 	log.Printf("[domain] FetchGame %q %q\n", uid, gid)
 	if s.Games == nil {
 		return &models.Galaxy{}
@@ -64,7 +64,7 @@ func (s *Store) FetchGalaxy(uid, gid int) *models.Galaxy {
 	return &models.Galaxy{}
 }
 
-func (s *Store) FFetchGames(uid int) models.Galaxies {
+func (s *Store) FFetchGames(uid string) models.Galaxies {
 	log.Printf("[domain] FetchGames %q\n", uid)
 	var set models.Galaxies
 	if s.Games == nil {
@@ -101,23 +101,23 @@ func (s *Store) FFetchGames(uid int) models.Galaxies {
 	return set
 }
 
-func (s *Store) FetchSpecie(uid, gid, spid int, turnNo int) *models.Specie {
+func (s *Store) FetchSpecie(uid string, gid, spid int, turnNo int) *models.Specie {
 	log.Printf("[domain] FetchSpecie %q %q %q %d\n", uid, gid, spid, turnNo)
 
-	u, ok := s.Accounts.ById[uid]
-	if !ok || u == nil {
+	_, ok := s.Accounts.FetchById(uid)
+	if !ok {
 		log.Printf("[domain] FetchSpecie %q %q %q %d: no such user\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
 	}
 	g, ok := s.Games.ById[gid]
-	if !ok || u == nil {
+	if !ok || g == nil {
 		log.Printf("[domain] FetchSpecie %q %q %q %d: no such game\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
 	}
-	if spid, ok := g.Players[uid]; !ok || u == nil {
+	if spid, ok := g.Players[uid]; !ok {
 		log.Printf("[domain] FetchSpecie %q %q %q %d: no such player\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
-	} else if spid != spid {
+	} else if spid != spid { // TODO: what?
 		log.Printf("[domain] FetchSpecie %q %q %q %d: player spoofing species!\n", uid, gid, spid, turnNo)
 		return &models.Specie{}
 	}
@@ -167,11 +167,11 @@ func (s *Store) FetchSpecie(uid, gid, spid int, turnNo int) *models.Specie {
 	return o
 }
 
-func (s *Store) FFetchUser(uid int) *models.User {
+func (s *Store) FFetchUser(uid string) *models.User {
 	if s.Accounts == nil {
 		return &models.User{}
 	}
-	u, ok := s.Accounts.ById[uid]
+	u, ok := s.Accounts.FetchById(uid)
 	if !ok {
 		return &models.User{}
 	}

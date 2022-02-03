@@ -34,9 +34,13 @@ import (
 	"path/filepath"
 )
 
-var host string
-var port string
-var debugDumpRequests bool
+var globalReactor struct {
+	host  string
+	port  string
+	debug struct {
+		dumpRequests bool
+	}
+}
 
 var reactorCmd = &cobra.Command{
 	Use:   "reactor",
@@ -72,22 +76,22 @@ var reactorCmd = &cobra.Command{
 			db.Close()
 		}(db)
 
-		s, err := reactor.New(host, port, reactor.WithAuthStore(db), reactor.WithGamesStore(db), reactor.WithJotFactory(jot.NewFactory("raven", fSigner)), reactor.WithProfileStore(db), reactor.WithSiteStore(db), reactor.WithTemplates(templatesDir))
+		s, err := reactor.New(globalReactor.host, globalReactor.port, reactor.WithAuthStore(db), reactor.WithGamesStore(db), reactor.WithJotFactory(jot.NewFactory("raven", fSigner)), reactor.WithProfileStore(db), reactor.WithSiteStore(db), reactor.WithTemplates(templatesDir))
 		cobra.CheckErr(err)
 
-		log.Printf("[reactor] listening on %q\n", net.JoinHostPort(host, port))
-		if debugDumpRequests {
-			log.Fatal(http.ListenAndServe(net.JoinHostPort(host, port), adapters.Logger(adapters.DumpRequest(s))))
+		log.Printf("[reactor] listening on %q\n", net.JoinHostPort(globalReactor.host, globalReactor.port))
+		if globalReactor.debug.dumpRequests {
+			log.Fatal(http.ListenAndServe(net.JoinHostPort(globalReactor.host, globalReactor.port), adapters.Logger(adapters.DumpRequest(s))))
 		} else {
-			log.Fatal(http.ListenAndServe(net.JoinHostPort(host, port), adapters.Logger(s)))
+			log.Fatal(http.ListenAndServe(net.JoinHostPort(globalReactor.host, globalReactor.port), adapters.Logger(s)))
 		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(reactorCmd)
-	reactorCmd.Flags().StringVar(&host, "host", "", "interface to run server on")
+	reactorCmd.Flags().StringVar(&globalReactor.host, "host", "", "interface to run server on")
 	_ = viper.BindPFlag("host", reactorCmd.Flags().Lookup("host"))
-	reactorCmd.Flags().StringVarP(&port, "port", "p", "8080", "port to run server on")
+	reactorCmd.Flags().StringVarP(&globalReactor.port, "port", "p", "8080", "port to run server on")
 	_ = viper.BindPFlag("port", reactorCmd.Flags().Lookup("port"))
 }

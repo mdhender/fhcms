@@ -27,7 +27,6 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/mdhender/fhcms/internal/api"
-	"github.com/mdhender/fhcms/internal/app"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
@@ -37,6 +36,8 @@ import (
 	"net/http"
 	"time"
 )
+
+var host, port string
 
 var serveCmd = &cobra.Command{
 	Use:   "serve",
@@ -143,7 +144,7 @@ var serveCmd = &cobra.Command{
 		})
 
 		// public routes
-		r.Mount("/", app.Router()) // mount the static sub-router
+		r.Mount("/", api.Router()) // mount the static sub-router
 
 		// protected routes
 		r.Route("/api", func(r chi.Router) {

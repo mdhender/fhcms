@@ -1,6 +1,6 @@
 /*******************************************************************************
 Far Horizons Engine
-Copyright (C) 2021  Michael D Henderson
+Copyright (C) 2022  Michael D Henderson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -23,20 +23,6 @@ import (
 	"log"
 	"net/http"
 )
-
-type Account struct {
-	Id              int
-	UserName        string
-	IsActive        bool
-	IsAdmin         bool
-	IsAuthenticated bool
-}
-
-type Profile struct {
-	Id       int
-	UserName string
-	IsAdmin  bool
-}
 
 // accountKeyType is an unexported type for keys defined in this package.
 // This prevents collisions with keys defined in other packages.

@@ -28,7 +28,7 @@ import (
 func (db *DB) Authenticate(username, password string) (models.Account, bool) {
 	log.Printf("[cdb] authenticate username %q password %q\n", username, password)
 	var account struct {
-		Id       int
+		Id       string
 		UserName string
 		Admin    bool
 		Active   bool

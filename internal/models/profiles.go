@@ -1,6 +1,6 @@
 /*******************************************************************************
 Far Horizons Engine
-Copyright (C) 2021  Michael D Henderson
+Copyright (C) 2022  Michael D Henderson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -16,27 +16,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package games
+package models
 
-type Game struct {
-	Id      int               `json:"id"`
-	Name    string            `json:"name,omitempty"`
-	Files   string            `json:"files,omitempty"`
-	Players map[string]string `json:"players,omitempty"` // map of user id to species number
-	Turns   GameTurn          `json:"turns"`
+type Profile struct {
+	Id       string
+	UserName string
+	IsAdmin  bool
 }
 
-type GameTurn struct {
-	Current int             `json:"current"`
-	Files   []*GameTurnFile `json:"files"`
-}
-
-type GameTurnFile struct {
-	Turn  int    `json:"turn"`
-	Files string `json:"files"`
-}
-
-type GameList struct {
-	ById     map[int]*Game      // map of game id to game
-	ByPlayer map[string][]*Game // map of user id to slice of games
-}
+type Profiles []*Profile

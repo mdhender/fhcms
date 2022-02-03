@@ -57,11 +57,11 @@ func (g Galaxies) Swap(i, j int) {
 }
 
 type GalaxyFetcher interface {
-	FetchGalaxy(uid, gid int) *Galaxy
+	FetchGalaxy(uid string, gid int) *Galaxy
 }
 
 type GalaxiesFetcher interface {
-	FetchGalaxies(uid int) Galaxies
+	FetchGalaxies(uid string) Galaxies
 }
 
 type GameTurns struct {
@@ -119,7 +119,7 @@ func (s Species) Swap(i, j int) {
 }
 
 type SpecieFetcher interface {
-	FetchSpecie(uid, gid, spNo int, turnNo int) *Specie
+	FetchSpecie(uid string, gid, spNo int, turnNo int) *Specie
 }
 
 type SpeciesFetcher interface {
@@ -142,11 +142,11 @@ type Technology struct {
 }
 
 type User struct {
-	Id      int
+	Id      string
 	Name    string
 	IsAdmin bool
 }
 
 type UserFetcher interface {
-	FetchUser(uid int) *User
+	FetchUser(uid string) *User
 }

@@ -28,7 +28,7 @@ import (
 )
 
 type ProfileStore interface {
-	FetchProfile(id int) (models.Profile, bool)
+	FetchProfile(id string) (models.Profile, bool)
 }
 
 func (s *Server) profileGetHandler(sf SiteStore, pf ProfileStore, templates string) http.HandlerFunc {

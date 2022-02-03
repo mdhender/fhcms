@@ -16,39 +16,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-package accounts
+package models
 
-import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"io/ioutil"
-)
-
-func Load(filename string) (*Repository, error) {
-	r := &Repository{}
-	input := make(map[string]*Account)
-	if data, err := ioutil.ReadFile(filename); err != nil {
-		return r, err
-	} else if err = json.Unmarshal(data, &input); err != nil {
-		return r, err
-	}
-	for id, acct := range input {
-		acct.Id = id
-		if acct.HashedPassword == "" {
-			acct.HashedPassword = hashPassword(acct.Salt, acct.Password)
-		}
-		acct.Password = ""
-		r.data = append(r.data, acct)
-	}
-	return r, nil
+type Account struct {
+	Id              string
+	Email           string
+	UserName        string
+	IsActive        bool
+	IsAdmin         bool
+	IsAuthenticated bool
 }
 
-// hashPassword returns the SHA-256 hash of the plaintext plus salt.
-func hashPassword(salt, plaintext string) string {
-	var h []byte
-	for _, b := range sha256.Sum256([]byte(salt + plaintext)) {
-		h = append(h, b)
-	}
-	return hex.EncodeToString(h)
+type Accounts []*Account
+
+type AccountStore interface {
+	Authenticate(name, password string) (Account, bool)
+	FetchById(id string) (Account, bool)
+	FetchByUserName(name string) (Account, bool)
 }

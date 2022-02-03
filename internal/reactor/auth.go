@@ -29,7 +29,7 @@ import (
 
 type AuthStore interface {
 	Authenticate(username, password string) (models.Account, bool)
-	FetchAccount(uid int) (models.Account, bool)
+	FetchAccount(uid string) (models.Account, bool)
 }
 
 // we must serve only the login page to unauthenticated visitors

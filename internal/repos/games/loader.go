@@ -39,7 +39,7 @@ func Load(filename string) (*GameList, error) {
 		return nil, err
 	}
 
-	g := &GameList{ById: make(map[int]*Game), ByPlayer: make(map[int][]*Game)}
+	g := &GameList{ById: make(map[int]*Game), ByPlayer: make(map[string][]*Game)}
 
 	for id, game := range input.Games {
 		game.Id = id
