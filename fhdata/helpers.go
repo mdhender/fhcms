@@ -189,9 +189,9 @@ func shipToClass(i int) (string, string, int, int) {
 	case 2:
 		return "ES", "Escort", 5, 500
 	case 3:
-		return "DD", "Destroyer", 10, 1000
+		return "FF", "Frigate", 10, 1000
 	case 4:
-		return "FG", "Frigate", 15, 1500
+		return "DD", "Destroyer", 15, 1500
 	case 5:
 		return "CL", "Light Cruiser", 20, 2000
 	case 6:

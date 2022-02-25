@@ -664,9 +664,9 @@ func (db *DB) stageSpecies(gs *GalaxySetup, root string, no int, ctx context.Con
 		case 2:
 			code = "ES"
 		case 3:
-			code = "DD"
+			code = "FF"
 		case 4:
-			code = "FG"
+			code = "DD"
 		case 5:
 			code = "CL"
 		case 6:

@@ -196,7 +196,7 @@ var (
 		"PB", "CT", "ES", "FF", "DD", "CL", "CS",
 		"CA", "CC", "BC", "BS", "DN", "SD", "BM",
 		"BW", "BR", "BA", "TR",
-	} // TODO: figure out that const problem between FF, FG, and DD
+	}
 	ship_already_listed [5000]byte
 	ship_base           []*ship_data_ // warning: code expects *ship_data_
 	ship_cost           = []int{      // warning: code assumes [NUM_SHIP_CLASSES]int

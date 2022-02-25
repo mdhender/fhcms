@@ -150,7 +150,7 @@ func shipClassTranslate(i int) *ShipClass {
 			Warship   bool
 		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
 	case DD:
-		return &ShipClass{Code: "DD", Description: "Destroyer", Tonnage: 10, Cost: 1000, Is: struct {
+		return &ShipClass{Code: "DD", Description: "Destroyer", Tonnage: 15, Cost: 1500, Is: struct {
 			Starbase  bool
 			SubLight  bool
 			Transport bool
@@ -170,8 +170,8 @@ func shipClassTranslate(i int) *ShipClass {
 			Transport bool
 			Warship   bool
 		}{Starbase: false, SubLight: true, Transport: false, Warship: true}}
-	case FG:
-		return &ShipClass{Code: "FG", Description: "Frigate", Tonnage: 15, Cost: 1500, Is: struct {
+	case FF:
+		return &ShipClass{Code: "FF", Description: "Frigate", Tonnage: 10, Cost: 1000, Is: struct {
 			Starbase  bool
 			SubLight  bool
 			Transport bool
@@ -206,8 +206,8 @@ func shipClassTranslate(i int) *ShipClass {
 const PB = 0  /* Picketboat. */
 const CT = 1  /* Corvette. */
 const ES = 2  /* Escort. */
-const DD = 3  /* Destroyer. */
-const FG = 4  /* Frigate. */
+const FF = 3  /* Frigate. */
+const DD = 4  /* Destroyer. */
 const CL = 5  /* Light Cruiser. */
 const CS = 6  /* Strike Cruiser. */
 const CA = 7  /* Heavy Cruiser. */
