@@ -118,7 +118,8 @@
 
     {{ with .Player }}
       {{ with .Species }}
-        <div class="trio1">
+        <!-- div class="trio1" -->
+          <hr />
           <h3>Colony Summary</h3>
           {{ with .Colonies }}
             <table border="2">
@@ -131,7 +132,7 @@
                 <td valign="top">&nbsp;{{.X}} {{.Y}} {{.Z}} #{{.Orbit}}&nbsp;</td>
                 {{end}}
                 <td valign="top" align="right">&nbsp;{{.Shipyards}}&nbsp;</td>
-                <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
+                <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Abbr}}&nbsp;<br/>{{end}}</td>
               </tr>
               {{ end }}
               </tbody>
@@ -139,10 +140,11 @@
           {{ else }}
             <p>The species has no colonies.</p>
           {{ end }}
-        </div>
+        <!-- /div -->
 
-        <div class="trio2">
+        <!-- div class="trio2" -->
           {{ with .Fleet.Starbases }}
+            <hr />
             <h3>Starbase Summary</h3>
               <table border="2">
                 <thead><tr><td>&nbsp;Starbase&nbsp;</td><td>&nbsp;Location&nbsp;</td><td>&nbsp;Age&nbsp;</td><td>&nbsp;Tonnage&nbsp;</td><td>&nbsp;Inventory&nbsp;</td></tr></thead>
@@ -155,7 +157,7 @@
                     {{end}}
                     <td  valign="top"align="right">{{.Age}}&nbsp;</td>
                     <td  valign="top"align="right">{{.Display.Tonnage}}&nbsp;</td>
-                    <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
+                    <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Abbr}}&nbsp;<br/>{{end}}</td>
                   </tr>
                 {{ end }}
                 </tbody>
@@ -163,6 +165,7 @@
             <br/>
           {{ end }}
 
+          <hr />
           <h3>Warship Summary</h3>
           {{ with .Fleet.Warships }}
             <table border="2">
@@ -176,7 +179,7 @@
                   {{end}}
                   <td  valign="top"align="right">{{.Age}}&nbsp;</td>
                   <td  valign="top"align="right">{{.Display.Tonnage}}&nbsp;</td>
-                  <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Code}}&nbsp;<br/>{{end}}</td>
+                  <td valign="top" align="right">{{range .Inventory}}{{.Quantity}} {{.Abbr}}&nbsp;<br/>{{end}}</td>
                 </tr>
               {{ end }}
               </tbody>
@@ -184,9 +187,10 @@
           {{ else }}
             <p>The species has no warships.</p>
           {{ end }}
-        </div>
+        <!-- /div -->
 
-        <div class="trio3">
+        <!-- div class="trio3" -->
+          <hr />
           <h3>Transport Summary</h3>
           {{ with .Fleet.Transports }}
             <table border="2">
@@ -208,7 +212,7 @@
           {{ else }}
             <p>The species has no transports.</p>
           {{ end }}
-        </div>
+        <!-- /div -->
       {{ end }}
     {{ end }}
     <hr class="clear" />
